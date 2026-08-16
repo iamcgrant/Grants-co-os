@@ -3,6 +3,14 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 
+type AcceptJsCheckout = {
+  enabled: boolean;
+  environment: "sandbox" | "production";
+  scriptUrl: string;
+  apiLoginId: string | null;
+  clientKey: string | null;
+};
+
 type InvoicePayload = {
   id: string;
   invoiceNumber: string;
@@ -19,6 +27,28 @@ type InvoicePayload = {
   };
 };
 
+type AcceptJsOpaqueResponse = {
+  opaqueData?: { dataDescriptor?: string; dataValue?: string };
+  messages?: {
+    resultCode?: string;
+    message?: Array<{ code?: string; text?: string }>;
+  };
+};
+
+declare global {
+  interface Window {
+    Accept?: {
+      dispatchData: (
+        payload: {
+          authData: { clientKey: string; apiLoginID: string };
+          cardData: { cardNumber: string; month: string; year: string; cardCode: string };
+        },
+        callback: (response: AcceptJsOpaqueResponse) => void,
+      ) => void;
+    };
+  }
+}
+
 function formatUsd(cents: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
 }
@@ -27,7 +57,12 @@ export default function GrantsPayPage() {
   const params = useParams<{ invoiceNumber: string }>();
   const invoiceNumber = params.invoiceNumber;
   const [invoice, setInvoice] = useState<InvoicePayload | null>(null);
+  const [acceptJs, setAcceptJs] = useState<AcceptJsCheckout | null>(null);
   const [token, setToken] = useState("tok_visa_4242");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardMonth, setCardMonth] = useState("");
+  const [cardYear, setCardYear] = useState("");
+  const [cardCode, setCardCode] = useState("");
   const [error, setError] = useState("");
   const [receipt, setReceipt] = useState<{
     receiptNumber: string;
@@ -57,8 +92,61 @@ export default function GrantsPayPage() {
       .then((d) => {
         if (d.invoice) setInvoice(d.invoice);
         else setError(d.error || "Invoice not found");
+        if (d.checkout?.acceptJs) setAcceptJs(d.checkout.acceptJs);
       });
   }, [invoiceNumber]);
+
+  useEffect(() => {
+    if (!acceptJs?.enabled || !acceptJs.scriptUrl) return;
+    if (document.querySelector(`script[data-gc-acceptjs="1"]`)) return;
+    const script = document.createElement("script");
+    script.src = acceptJs.scriptUrl;
+    script.async = true;
+    script.dataset.gcAcceptjs = "1";
+    document.body.appendChild(script);
+  }, [acceptJs]);
+
+  function tokenizeWithAcceptJs(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      if (!acceptJs?.enabled || !acceptJs.apiLoginId || !acceptJs.clientKey) {
+        reject(new Error("Authorize.Net Accept.js is not configured."));
+        return;
+      }
+      if (!window.Accept) {
+        reject(new Error("Accept.js is not loaded. Sandbox checkout is unavailable."));
+        return;
+      }
+      window.Accept.dispatchData(
+        {
+          authData: {
+            clientKey: acceptJs.clientKey,
+            apiLoginID: acceptJs.apiLoginId,
+          },
+          cardData: {
+            cardNumber: cardNumber.replace(/\s+/g, ""),
+            month: cardMonth,
+            year: cardYear,
+            cardCode,
+          },
+        },
+        (response) => {
+          if (response.messages?.resultCode === "Error" || !response.opaqueData?.dataValue) {
+            const msg =
+              response.messages?.message?.map((m) => m.text).filter(Boolean).join(" ") ||
+              "Accept.js tokenization failed.";
+            reject(new Error(msg));
+            return;
+          }
+          resolve(
+            JSON.stringify({
+              dataDescriptor: response.opaqueData.dataDescriptor,
+              dataValue: response.opaqueData.dataValue,
+            }),
+          );
+        },
+      );
+    });
+  }
 
   async function pay(simulateFailure = false) {
     if (!invoice) return;
@@ -66,12 +154,18 @@ export default function GrantsPayPage() {
     setError("");
     try {
       const key = simulateFailure ? `${currentKey}-fail-${Date.now()}` : currentKey;
+      const paymentToken =
+        simulateFailure
+          ? "fail"
+          : acceptJs?.enabled
+            ? await tokenizeWithAcceptJs()
+            : token;
       const res = await fetch("/api/pay/charge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           invoiceId: invoice.id,
-          paymentToken: simulateFailure ? "fail" : token,
+          paymentToken,
           idempotencyKey: key,
           simulateFailure,
         }),
@@ -179,14 +273,55 @@ export default function GrantsPayPage() {
                 Payment Method
               </label>
               <p className="text-xs text-[var(--gc-muted)] mb-3">
-                Production uses processor-hosted tokenization. Never enter raw card numbers into Grants &amp; Co servers.
+                {acceptJs?.enabled
+                  ? "Card details go to Authorize.Net Accept.js only. Grants & Co never receives PAN/CVV."
+                  : "Production uses processor-hosted tokenization. Never enter raw card numbers into Grants & Co servers."}
               </p>
-              <input
-                className="gc-input"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                placeholder="Payment token"
-              />
+              {acceptJs?.enabled ? (
+                <div className="space-y-3">
+                  <input
+                    className="gc-input"
+                    inputMode="numeric"
+                    autoComplete="cc-number"
+                    placeholder="Card number"
+                    value={cardNumber}
+                    onChange={(e) => setCardNumber(e.target.value)}
+                  />
+                  <div className="grid grid-cols-3 gap-3">
+                    <input
+                      className="gc-input"
+                      inputMode="numeric"
+                      autoComplete="cc-exp-month"
+                      placeholder="MM"
+                      value={cardMonth}
+                      onChange={(e) => setCardMonth(e.target.value)}
+                    />
+                    <input
+                      className="gc-input"
+                      inputMode="numeric"
+                      autoComplete="cc-exp-year"
+                      placeholder="YYYY"
+                      value={cardYear}
+                      onChange={(e) => setCardYear(e.target.value)}
+                    />
+                    <input
+                      className="gc-input"
+                      inputMode="numeric"
+                      autoComplete="cc-csc"
+                      placeholder="CVV"
+                      value={cardCode}
+                      onChange={(e) => setCardCode(e.target.value)}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <input
+                  className="gc-input"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  placeholder="Payment token"
+                />
+              )}
             </div>
 
             {error && <p className="text-sm text-[var(--gc-danger)] text-center">{error}</p>}
@@ -194,14 +329,16 @@ export default function GrantsPayPage() {
             <button type="submit" className="gc-btn gc-btn-gold w-full" disabled={loading}>
               {loading ? "Processing…" : "Pay Securely"}
             </button>
-            <button
-              type="button"
-              className="gc-btn gc-btn-ghost w-full"
-              disabled={loading}
-              onClick={() => void pay(true)}
-            >
-              Simulate Failed Payment
-            </button>
+            {!acceptJs?.enabled && (
+              <button
+                type="button"
+                className="gc-btn gc-btn-ghost w-full"
+                disabled={loading}
+                onClick={() => void pay(true)}
+              >
+                Simulate Failed Payment
+              </button>
+            )}
           </form>
         ) : (
           <p className="text-center text-[var(--gc-danger)]">{error}</p>

@@ -85,7 +85,7 @@ GRANTS & CO OS (Next.js App Router + TypeScript + Prisma)
 
 | Track | Meaning | Status | Notes |
 |-------|---------|--------|-------|
-| **X1 — Grants Pay (money)** | Authorize.Net primary + Commas secondary + mock | **X1.A Mock = DONE** · **X1.B Live processors = NOT STARTED** | Preferred primary = **Authorize.Net** (Accept.js for proprietary checkout + immediate → DisputeFox). Commas = MoR / payment_link secondary. Live charges locked behind `*_LIVE_CHARGES=true`. Ecrypt/NMI **removed** (never used). |
+| **X1 — Grants Pay (money)** | Authorize.Net primary + Commas secondary + mock | **X1.A Mock = DONE** · **X1.B Sandbox Accept.js = WIRED (fail-closed without creds)** · live processors still locked | Preferred primary = **Authorize.Net** (Accept.js for proprietary checkout + immediate → DisputeFox). Commas = MoR / payment_link secondary. Live charges locked behind `*_LIVE_CHARGES=true`. Ecrypt/NMI **removed** (never used). |
 | **X2 — Operations connectors** | GHL + DisputeFox under OS | **X2.A Mocks + portal creds in local env = DONE** · **X2.B Live API sync = NOT STARTED** | Portal login email/password stored in **gitignored `.env` only**. Prefer API keys for production sync. Post-payment intake bridge exists; needs `DISPUTEFOX_INTAKE_URL_TEMPLATE`. |
 | **X3 — Credit Pulse / attribution** | SmartCredit sponsor + bureau connectors | **X3.A Sponsor URL wired = DONE** · **X3.B Live bureau APIs = NOT STARTED** | Sponsor link configured: `https://www.smartcredit.com/join/?pid=69411` (preserves `pid`, appends `gc_ref`). Credit Karma/Experian are mocks / read-only architecture. |
 
@@ -95,10 +95,11 @@ GRANTS & CO OS (Next.js App Router + TypeScript + Prisma)
 - Full payment domain model + idempotency
 - Mock charge / fail / refund / webhook dedupe tested
 - Finance dashboard + Grants Pay UI + receipt + continue-to-intake flow
-- Authorize.Net + Commas adapter scaffolds (no live calls)
+- Authorize.Net sandbox Accept.js charge path (fail-closed without credentials; mocked success covered)
+- Commas adapter scaffold (no live calls)
 
 **X1 Not done**
-- Sandbox Authorize.Net Accept.js checkout
+- Live Authorize.Net / Commas charges (explicitly locked)
 - Sandbox Commas checkout-session
 - Production activation (explicitly blocked)
 - Real settlement/payout reconciliation with bank
@@ -186,7 +187,7 @@ Checkout demo invoice pattern: `/pay/GC-1051` (or reseed / create due invoice)
 
 | Item | Blocker type |
 |------|----------------|
-| Authorize.Net sandbox Accept.js charges | Need sandbox API Login ID, Transaction Key, Public Client Key, Signature Key |
+| Authorize.Net sandbox Accept.js charges | Adapter wired; fail-closed until `AUTHORIZE_NET_SANDBOX_API_LOGIN_ID` + `AUTHORIZE_NET_SANDBOX_TRANSACTION_KEY` (+ `AUTHORIZE_NET_SANDBOX_CLIENT_KEY` for browser Accept.js) are in host/secrets |
 | Commas sandbox checkout | Need sandbox API key + webhook secret |
 | Live payment activation | Explicit owner approval + `*_LIVE_CHARGES=true` |
 | GHL live sync | Prefer Agency/Location API key (portal password alone is weak for automation) |
@@ -210,11 +211,7 @@ Checkout demo invoice pattern: `/pay/GC-1051` (or reseed / create due invoice)
 ⚠️ Those passwords were pasted in chat — **rotate when practical** and store only in secrets.
 
 ### Still needed to advance X1 (payments)
-1. **Authorize.Net sandbox**
-   - Merchant Interface → Account → Settings → Security Settings → API Credentials & Keys  
-   - Provide: `AUTHORIZE_NET_API_LOGIN_ID`, `AUTHORIZE_NET_TRANSACTION_KEY`, `AUTHORIZE_NET_PUBLIC_CLIENT_KEY`, `AUTHORIZE_NET_SIGNATURE_KEY`  
-   - Environment: `sandbox`  
-   - **Do not enable live charges yet**
+1. **Authorize.Net sandbox** — adapter is wired and fail-closed. When ready, put these names in host/Cursor Secrets (never chat, never git): `AUTHORIZE_NET_SANDBOX_API_LOGIN_ID`, `AUTHORIZE_NET_SANDBOX_TRANSACTION_KEY`, `AUTHORIZE_NET_SANDBOX_CLIENT_KEY`. Keep `AUTHORIZE_NET_ENVIRONMENT=sandbox`. **Do not enable live charges.**
 2. Optional secondary: **Commas sandbox** `COMMAS_API_KEY`, `COMMAS_WEBHOOK_SECRET`
 
 ### Still needed to advance X2 (ops)
@@ -248,7 +245,7 @@ Checkout demo invoice pattern: `/pay/GC-1051` (or reseed / create due invoice)
 
 ## 9. What should happen next (dependency order)
 
-1. **Keep mock Grants Pay as source of truth for money flows** while wiring Authorize.Net **sandbox** Accept.js into the existing `PaymentProvider` interface.  
+1. **Keep mock Grants Pay as the default money path.** Authorize.Net sandbox Accept.js is wired and fail-closed without credentials; do not enable live charges.  
 2. Connect post-payment continue → real DisputeFox intake URL template.  
 3. Replace GHL password-login assumption with API key sync (contacts, messages, pipeline) attaching external IDs to Grants Clients (no duplicate masters).  
 4. DisputeFox status sync under `DisputeProcessingProvider`.  
@@ -300,7 +297,7 @@ npm run build
 - [x] Brand direction applied from website (visual only)  
 - [x] SmartCredit `pid` attribution configured locally  
 - [x] GHL/DisputeFox portal creds in local `.env` (not git)  
-- [ ] Authorize.Net sandbox wired  
+- [x] Authorize.Net sandbox wired (fail-closed without creds; live charges locked)  
 - [ ] Commas sandbox optional  
 - [ ] Live GHL API sync  
 - [ ] Live DisputeFox sync + intake URL  

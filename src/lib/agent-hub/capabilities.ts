@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db/prisma";
 import { integrationCredentialStatus, isGhlLiveConfigured } from "@/lib/integrations/credentials";
 import { isGhlApiReady } from "@/lib/integrations/ghl/http";
 import { getGcEnvironment } from "@/lib/integrations/env";
+import { authorizeNetCredentialStatus } from "@/lib/payments/authorize-net-config";
 import { getBusinessConfiguration } from "./context";
 import { scrubSecrets } from "./types";
 
@@ -28,6 +29,7 @@ export async function getSystemHealth() {
     payments: {
       provider: process.env.PAYMENT_PROVIDER || "mock",
       status: (process.env.PAYMENT_PROVIDER || "mock") === "mock" ? "DEV_MOCK" : "CONFIGURED",
+      authorizeNet: authorizeNetCredentialStatus(),
     },
     integrations: integrations.map((i) => ({
       provider: i.provider,
@@ -180,6 +182,7 @@ export async function getPaymentState(input?: { grantsClientId?: string; invoice
   return scrubSecrets({
     provider: process.env.PAYMENT_PROVIDER || "mock",
     liveChargesEnabled: process.env.AUTHORIZE_NET_LIVE_CHARGES === "true",
+    authorizeNet: authorizeNetCredentialStatus(),
     note: "Provide grantsClientId or invoiceNumber for client-specific payment state.",
   });
 }

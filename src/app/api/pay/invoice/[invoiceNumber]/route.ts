@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
+import { getAuthorizeNetPublicCheckoutConfig } from "@/lib/payments/authorize-net-config";
 
 export async function GET(
   _req: Request,
@@ -24,6 +25,8 @@ export async function GET(
 
   if (!invoice) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  const acceptJs = getAuthorizeNetPublicCheckoutConfig();
+
   return NextResponse.json({
     invoice: {
       id: invoice.id,
@@ -36,6 +39,10 @@ export async function GET(
       client: invoice.client,
       serviceName: invoice.clientService?.service.name || invoice.description,
       items: invoice.items,
+    },
+    checkout: {
+      provider: process.env.PAYMENT_PROVIDER || "mock",
+      acceptJs,
     },
   });
 }
