@@ -16,12 +16,14 @@ All integrations are adapters beneath Grants & Co OS.
 Do **not** paste passwords into chat, GitHub, or source files. Store them in Cursor Secrets / host environment variables.
 
 ### GoHighLevel
-- Login email / password (staff portal) → `GHL_LOGIN_EMAIL`, `GHL_LOGIN_PASSWORD`
-- Preferred for automation: **API Key** + **Location ID** → Settings → Integrations → API Keys
+- Login email / password (staff portal) → `GHL_LOGIN_EMAIL`, `GHL_LOGIN_PASSWORD` (local/secrets only)
+- Preferred for automation: **API Key** + **Location ID** → Settings → Integrations → API Keys → `GHL_API_KEY`, `GHL_LOCATION_ID`
+
+Portal passwords enable staff-browser / connector scaffolding. Production sync should prefer API keys when available.
 
 ### DisputeFox
-- Login email / password → `DISPUTEFOX_LOGIN_EMAIL`, `DISPUTEFOX_LOGIN_PASSWORD`
-- Preferred for automation: API key from DisputeFox admin when available
+- Login email / password → `DISPUTEFOX_LOGIN_EMAIL`, `DISPUTEFOX_LOGIN_PASSWORD` (local/secrets only)
+- Preferred for automation: API key from DisputeFox admin when available → `DISPUTEFOX_API_KEY`
 - Intake URL template → `DISPUTEFOX_INTAKE_URL_TEMPLATE`
 
 ### SmartCredit (affiliate payouts)
