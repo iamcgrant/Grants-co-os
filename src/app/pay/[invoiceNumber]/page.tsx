@@ -131,6 +131,20 @@ export default function GrantsPayPage() {
               Return to OS
             </a>
           </div>
+        ) : invoice && (invoice.status === "SUCCEEDED" || invoice.status === "REFUNDED" || invoice.status === "PARTIALLY_REFUNDED") ? (
+          <div className="gc-fade-up text-center space-y-4">
+            <p className="text-[0.7rem] tracking-[0.2em] uppercase text-[var(--gc-muted)]">
+              {invoice.status.replaceAll("_", " ")}
+            </p>
+            <h2 className="text-3xl">
+              {invoice.client.firstName} {invoice.client.lastName}
+            </h2>
+            <p className="display text-5xl">{formatUsd(invoice.amountCents)}</p>
+            <p className="text-sm text-[var(--gc-muted)]">Invoice {invoice.invoiceNumber}</p>
+            <a href="/dashboard" className="gc-btn gc-btn-primary inline-flex mt-4">
+              Return to OS
+            </a>
+          </div>
         ) : invoice ? (
           <form onSubmit={onSubmit} className="gc-fade-up-delay space-y-6">
             <div className="text-center">
