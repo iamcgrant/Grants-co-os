@@ -51,7 +51,7 @@ async function main() {
     cursorRunId: CURSOR_RUN_ID,
     title: "Agent Hub live bridge proof",
     idempotencyKey: "live-bridge-proof:2026-08-16",
-    forceWaiting: before?.status !== "COMPLETED",
+    forceWaiting: true,
     prompt:
       "Confirm Agent Hub bots→Cursor path. Add a one-line note to docs/AGENT-HUB.md under a Live bridge verified section.",
   });

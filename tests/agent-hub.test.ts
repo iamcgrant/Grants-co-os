@@ -128,6 +128,14 @@ describe("Grants Agent Hub — bidirectional bridge", () => {
     expect(isCursorLaunchReady()).toBe(false);
   });
 
+  it("does not redact git branch names as secrets", async () => {
+    const { scrubSecrets } = await import("../src/lib/agent-hub/types");
+    expect(scrubSecrets("cursor/agent-hub-live-bridge-proof-7eaf")).toBe(
+      "cursor/agent-hub-live-bridge-proof-7eaf",
+    );
+    expect(scrubSecrets("sk_live_abcdefghijklmnopqrstuvwxyz012345")).toBe("[REDACTED]");
+  });
+
   it("classifies Cursor v1 run statuses for the Hub return path", () => {
     expect(classifyCursorRunStatus("FINISHED")).toBe("COMPLETED");
     expect(classifyCursorRunStatus("ERROR")).toBe("FAILED");

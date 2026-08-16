@@ -16,9 +16,21 @@ Intelligence / coordination layer under Grants & Co OS.
 2026-08-16 — Live X1 → Cursor Cloud Agents API (`POST https://api.cursor.com/v1/agents`), not a local stand-in.
 
 - Hub task: `cmsw2whyf000gnpjsdjg6al0m` (`live-bridge-proof:2026-08-16`)
-- Cursor agent: https://cursor.com/agents/bc-f5d398c9-5cb7-45e3-99ea-6dd1ead13bcd (`source: api`, `GET /v1/agents/:id` = ACTIVE)
+- Cursor agent: https://cursor.com/agents/bc-f5d398c9-5cb7-45e3-99ea-6dd1ead13bcd (`source: api`)
 - Run: `run-04ba96bf-63c3-4a8b-99ec-75acbe1edcc6`
 - Queue leftover: `AWAITING_CURSOR_API_KEY` = 0
+
+### Live Cursor → Hub return verified
+
+2026-08-16 — Same Hub, no human relay. v1 has no webhooks; Hub polled the Cloud Agents API and wrote completion onto the launch task.
+
+- Endpoint: `GET https://api.cursor.com/v1/agents/bc-f5d398c9-5cb7-45e3-99ea-6dd1ead13bcd` + `GET …/runs/run-04ba96bf-63c3-4a8b-99ec-75acbe1edcc6`
+- Hub ingest: `ingestCursorAgentReturn` / `POST /api/agent-hub/cursor` `{ "action": "ingest" }`
+- Before: task missing in this VM’s SQLite (ephemeral Hub DB) → tracked as `WAITING_CURSOR`
+- Cursor run status: `FINISHED`
+- After: Hub task `cmsw2whyf000gnpjsdjg6al0m` = `COMPLETED`
+- Attached PR: https://github.com/iamcgrant/Grants-co-os/pull/4
+- Branch: `cursor/agent-hub-live-bridge-proof-7eaf`
 
 ## Bot connection modes
 

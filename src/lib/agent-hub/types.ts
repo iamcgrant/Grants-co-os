@@ -75,9 +75,10 @@ export const RESOLVE_BEFORE_ESCALATE = [
 export function scrubSecrets<T>(value: T): T {
   if (value == null) return value;
   if (typeof value === "string") {
-    // Redact only credential-like literals, not sentences that mention env var names.
+    // Redact only credential-like literals, not sentences or git refs (cursor/…).
     if (
-      /^(Bearer\s+)?[A-Za-z0-9_\-+/=]{32,}$/.test(value.trim()) ||
+      /^(Bearer\s+)[A-Za-z0-9_\-+/=.]{20,}$/.test(value.trim()) ||
+      /^(?!.*[/\s])[A-Za-z0-9_\-+=]{32,}$/.test(value.trim()) ||
       /^sk_live_[A-Za-z0-9]+$/.test(value.trim()) ||
       /^crsr_[A-Za-z0-9]+$/.test(value.trim())
     ) {
