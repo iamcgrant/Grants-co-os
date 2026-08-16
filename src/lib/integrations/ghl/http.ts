@@ -32,6 +32,7 @@ export type GhlApiContact = {
   tags?: string[];
   assignedTo?: string | null;
   contactType?: string | null;
+  /** GHL contact source label only. Do not map to LeadAttribution this PR. */
   source?: string | null;
   dateAdded?: string | null;
   dateUpdated?: string | null;

@@ -4,7 +4,7 @@ Canonical schema: `prisma/schema.prisma`.
 
 ## Core entities
 
-users, staff_profiles, clients, client_identifiers, addresses, services, client_services, contracts, service_milestones, billing_policies, invoices, invoice_items, payment_customers, payment_methods, payment_transactions, payment_attempts, refunds, payment_disputes, payouts, webhook_events, integration_connections, integration_sync_events, documents, tasks, client_assignments, client_timeline_events, notifications, audit_logs, system_events, credit_connections, credit_snapshots, credit_scores, credit_changes, credit_accounts, credit_monitoring_events, marketing_sources, marketing_campaigns, lead_sources, conversion_events, id_sequences
+users, staff_profiles, clients, client_identifiers, addresses, services, client_services, contracts, service_milestones, billing_policies, invoices, invoice_items, payment_customers, payment_methods, payment_transactions, payment_attempts, refunds, payment_disputes, payouts, webhook_events, integration_connections, integration_sync_events, documents, tasks, client_assignments, client_timeline_events, notifications, audit_logs, system_events, credit_connections, credit_snapshots, credit_scores, credit_changes, credit_accounts, credit_monitoring_events, marketing_sources, marketing_campaigns, lead_sources, conversion_events, lead_attributions, id_sequences
 
 ## Master Client ID
 
