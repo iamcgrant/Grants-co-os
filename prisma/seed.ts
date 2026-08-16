@@ -2,27 +2,19 @@ import "dotenv/config";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient, Role, CreditBureau } from "../src/generated/prisma/client";
 import bcrypt from "bcryptjs";
+import { MASTER_ONBOARDING_ITEMS } from "../src/lib/clients/onboarding";
 
 const dbUrl = process.env.DATABASE_URL || "file:./dev.db";
 const adapter = new PrismaBetterSqlite3({ url: dbUrl });
 const prisma = new PrismaClient({ adapter });
 
-const ONBOARDING = [
-  { key: "intake", label: "Intake" },
-  { key: "identification", label: "Identification" },
-  { key: "proof_of_address", label: "Proof of address" },
-  { key: "ssn_card", label: "Social Security card" },
-  { key: "monitoring", label: "Monitoring setup" },
-  { key: "smartcredit", label: "SmartCredit" },
-  { key: "updated_report", label: "Updated report" },
-  { key: "poa", label: "Power of attorney" },
-  { key: "agreements", label: "Required agreements" },
-  { key: "portal_access", label: "Portal access" },
-];
+const ONBOARDING = MASTER_ONBOARDING_ITEMS;
 
 async function main() {
   console.log("Seeding Grants & Co OS (Charles / Simon / Jona)…");
 
+  await prisma.partnerReferral.deleteMany();
+  await prisma.partner.deleteMany();
   await prisma.messageMention.deleteMany();
   await prisma.message.deleteMany();
   await prisma.conversationParticipant.deleteMany();

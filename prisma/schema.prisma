@@ -160,6 +160,15 @@ model Client {
   nextDueAt       DateTime?
   duplicateFlag   Boolean  @default(false)
   notes           String?
+  /// Engine B — consumer lead pipeline. Null when the master is not an acquisition lead.
+  acquisitionStage           ConsumerLeadStage?
+  /// Command-center source. Null = unknown (never coerced to ORGANIC).
+  acquisitionSource          AcquisitionSource?
+  grantsLeadScore            Int?
+  grantsLeadScoreReasonsJson String?
+  referredByPartnerId        String?
+  doNotContact               Boolean  @default(false)
+  unsubscribed               Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -190,10 +199,15 @@ model Client {
   creditMonitoringEvents CreditMonitoringEvent[]
   conversionEvents    ConversionEvent[]
   leadAttributions    LeadAttribution[]
+  referredByPartner   Partner?              @relation("PartnerReferredClients", fields: [referredByPartnerId], references: [id], onDelete: SetNull)
+  partnerReferrals    PartnerReferral[]
 
   @@unique([emailNormalized])
   @@index([phoneNormalized])
   @@index([lastName, firstName])
+  @@index([acquisitionStage])
+  @@index([acquisitionSource])
+  @@index([referredByPartnerId])
 }
 
 model ClientIdentifier {
@@ -887,6 +901,100 @@ model LeadAttribution {
   @@index([contentId])
 }
 
+/// Engine A — referral partner pipeline. Enum only; not live GHL writes.
+enum PartnerPipelineStage {
+  NEW_PROSPECT
+  QUALIFIED_PARTNER_PROSPECT
+  OUTREACH_READY
+  CONTACTED
+  REPLIED
+  INTRO_CALL
+  PARTNER_INTERESTED
+  ACTIVE_REFERRAL_PARTNER
+  REFERRED_FIRST_CLIENT
+  ACTIVE_PRODUCING_PARTNER
+  NURTURE
+  NOT_INTERESTED
+  DND
+}
+
+/// Engine B — consumer lead pipeline on the existing Client master.
+enum ConsumerLeadStage {
+  NEW_LEAD
+  ATTEMPTING_CONTACT
+  ENGAGED
+  CONSULTATION_BOOKED
+  CONSULTATION_COMPLETED
+  QUALIFIED
+  PAYMENT_PENDING
+  PAID_ONBOARDING
+  CONVERTED_CLIENT
+  NURTURE
+  LOST
+  DND
+}
+
+/// Command-center source taxonomy. Missing stamp ≠ ORGANIC (see parseAcquisitionSource).
+enum AcquisitionSource {
+  GHL_PROSPECTING
+  PROSPECT_AI
+  REALTOR_PARTNER
+  MORTGAGE_PARTNER
+  BUILDER_PARTNER
+  FORMER_CLIENT_REFERRAL
+  FACEBOOK
+  INSTAGRAM
+  GOOGLE
+  WEBSITE
+  ORGANIC
+  EMAIL_CAMPAIGN
+  REACTIVATION_CAMPAIGN
+  OTHER
+}
+
+/// Business referral partner — never a Client / credit-repair human.
+model Partner {
+  id                         String               @id @default(cuid())
+  businessName               String
+  contactFirstName           String?
+  contactLastName            String?
+  email                      String?
+  emailNormalized            String?
+  phone                      String?
+  phoneNormalized            String?
+  partnerType                String?
+  pipelineStage              PartnerPipelineStage @default(NEW_PROSPECT)
+  acquisitionSource          AcquisitionSource?
+  grantsLeadScore            Int?
+  grantsLeadScoreReasonsJson String?
+  doNotContact               Boolean              @default(false)
+  unsubscribed               Boolean              @default(false)
+  notes                      String?
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
+
+  referrals       PartnerReferral[]
+  referredClients Client[]          @relation("PartnerReferredClients")
+
+  @@index([pipelineStage])
+  @@index([emailNormalized])
+  @@index([phoneNormalized])
+}
+
+/// Links Partner → Client only after the referred consumer converts on an existing master.
+model PartnerReferral {
+  id        String   @id @default(cuid())
+  partnerId String
+  clientId  String
+  createdAt DateTime @default(now())
+
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  client  Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerId, clientId])
+  @@index([partnerId])
+  @@index([clientId])
+}
 
 enum ConversationKind {
   CLIENT

@@ -55,4 +55,4 @@ Invoice **GC-1051** (Donna James) is due — open `/pay/GC-1051`.
 
 ## Documentation
 
-See `/docs` for architecture, payments, security, database, integrations, credit pulse, client app, marketing, lead attribution, roadmap, and deployment.
+See `/docs` for architecture, payments, security, database, integrations, credit pulse, client app, marketing, lead attribution, acquisition, roadmap, and deployment.

@@ -57,6 +57,15 @@ export default async function MorePage() {
           <p className="text-xl display">Intelligence</p>
           <p className="text-sm text-[var(--gc-muted)] mt-2">Summaries, risks, and operational insights.</p>
         </Link>
+        {hasPermission(user.role, "VIEW_MARKETING") && (
+          <Link href="/acquisition" className="gc-card hover:bg-white/[0.06] transition-colors">
+            <p className="gc-eyebrow mb-2">Growth</p>
+            <p className="text-xl display">Acquisition</p>
+            <p className="text-sm text-[var(--gc-muted)] mt-2">
+              Partner vs consumer engines — scaffolding, no live outreach.
+            </p>
+          </Link>
+        )}
         <Link href="/credit-pulse" className="gc-card hover:bg-white/[0.06] transition-colors">
           <p className="gc-eyebrow mb-2">Credit</p>
           <p className="text-xl display">Friday Pulse</p>
