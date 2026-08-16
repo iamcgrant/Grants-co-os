@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/session";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 export default async function PortalLayout({
   children,
@@ -9,15 +10,16 @@ export default async function PortalLayout({
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (user.role !== "CLIENT") redirect("/dashboard");
+  if (user.role !== "CLIENT") redirect("/home");
 
   return (
     <div className="min-h-dvh pb-24">
-      <header className="px-5 py-5 border-b border-[var(--gc-border)]">
-        <p className="text-[0.7rem] tracking-[0.35em] uppercase text-[var(--gc-gold)]">
-          Grants &amp; Co
-        </p>
-        <p className="text-sm text-[var(--gc-muted)] mt-1">
+      {process.env.NODE_ENV !== "production" || process.env.GC_ENV === "development" ? (
+        <div className="gc-dev-banner">Client portal · development data</div>
+      ) : null}
+      <header className="px-5 py-5 border-b border-[var(--gc-border)] flex items-center justify-between gap-4">
+        <BrandLogo href="/portal" size="sm" />
+        <p className="text-sm text-[var(--gc-muted)]">
           {user.firstName} {user.lastName}
         </p>
       </header>

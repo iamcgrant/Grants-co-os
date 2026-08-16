@@ -1,35 +1,36 @@
 # Brand System — Grants & Co OS
 
-Visual reference: [grantandconsultants.com](https://grantandconsultants.com)  
-Purpose: brand identity only — not layout, pricing, forms, or business logic.
+Visual source of truth: [grantandconsultants.com](https://grantandconsultants.com)
 
-## Extracted brand language
+The OS is the private members / operations side of the same brand — not a separate black-and-gold fintech template.
 
-| Token | Value | Use in OS |
-|-------|-------|-----------|
-| Charcoal base | `#16161a` | App shell background |
-| Near-black | `#0a0b0e` | Depth |
-| Navy | `#202a44` / `#2e3e68` | Secondary structure, button text |
-| Gold accent | `#f5b82a` | Eyebrows, CTAs, focus rings |
-| Ice blue | `#b2d4ff` / `#6887d6` | Soft atmospheric glow (sparingly) |
-| Muted | `#8a93a5` / `#929292` | Secondary labels |
-| Display type | **Fraunces** | Headlines, amounts, brand wordmark |
-| Body type | **Manrope** | UI, forms, navigation |
-| Surfaces | Glass + hairline white borders | Panels, nav, inputs |
-| Motion | Soft fade-up, restrained sheen | Hierarchy, not noise |
+## Extracted from the live website
 
-## OS interpretation (not a website clone)
+| Token | Value | Use |
+|-------|-------|-----|
+| Charcoal base | `#16161a` | Shell background |
+| Near-black | `#040404` | Depth / overlays |
+| Navy | `#202a44` | Primary button text |
+| Ice blue | `#b2d4ff` | Eyebrows, status, accents, charts |
+| Gold | `#f5b82a` | Sparse punctuation (stars, rare CTAs) |
+| Muted | `#929292` / `#94a1b2` | Secondary labels |
+| Display | **Fraunces** | Headlines, money, scores |
+| Body | **Manrope** | UI, nav, forms |
+| Primary CTA | White pill + circle-arrow DNA | `.gc-btn-primary` |
+| Secondary CTA | Ghost / outline white | `.gc-btn-outline` |
+| Logo | `/public/brand/logo.png` | Official site wordmark |
 
-Grants OS should feel like **luxury fintech + Apple simplicity**:
+## OS interpretation
 
-- App shell, not marketing page
-- One job per screen
-- Large Fraunces figures for money/scores
-- Manrope for controls and density
-- Dark charcoal atmosphere with gold punctuation
-- No service cards, pricing blocks, testimonials, or marketing CTAs pulled from the website
+- Website DNA + software density
+- Progressive disclosure (counts → lists → Client 360)
+- Ice for structure; gold sparingly
+- Development banner when not production
+- Never invent a generic luxury identity that conflicts with the site
 
 ## Implementation
 
-CSS variables live in `src/app/globals.css`.  
-Fonts loaded in `src/app/layout.tsx`.
+- Tokens: `src/app/globals.css`
+- Logo: `src/components/brand/BrandLogo.tsx`
+- Shell: `src/components/layout/StaffShell.tsx`
+- Role nav: `src/lib/nav/role-nav.ts`

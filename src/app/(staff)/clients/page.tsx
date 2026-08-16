@@ -15,18 +15,27 @@ export default async function ClientsPage() {
   const clients = await prisma.client.findMany({
     orderBy: { createdAt: "desc" },
     take: 100,
+    select: {
+      id: true,
+      grantsClientId: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      status: true,
+      stage: true,
+      nextAction: true,
+      urgency: true,
+    },
   });
 
   return (
     <div>
       <div className="gc-fade-up mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
         <div>
-          <p className="text-[0.7rem] tracking-[0.3em] uppercase text-[var(--gc-gold)] mb-2">
-            Master Identity
-          </p>
+          <p className="gc-eyebrow mb-2">Master identity</p>
           <h1 className="text-4xl md:text-5xl mb-2">Clients</h1>
           <p className="text-sm text-[var(--gc-muted)]">
-            Every person has one permanent Grants Client ID.
+            One human. One Grants Client ID. Open Client 360 for the full dossier.
           </p>
         </div>
       </div>
@@ -49,12 +58,11 @@ export default async function ClientsPage() {
                 {c.firstName} {c.lastName}
               </p>
               <p className="text-xs text-[var(--gc-muted)]">
-                {c.grantsClientId} · {c.email}
+                {c.grantsClientId} · {c.stage.replaceAll("_", " ")}
+                {c.nextAction ? ` · ${c.nextAction}` : ""}
               </p>
             </div>
-            <span className="text-[0.65rem] tracking-[0.16em] uppercase text-[var(--gc-gold)]">
-              View
-            </span>
+            <span className="gc-status gc-status-ice">360</span>
           </Link>
         ))}
       </div>

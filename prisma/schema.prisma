@@ -109,6 +109,9 @@ model User {
   clientAssignments  ClientAssignment[]   @relation("StaffAssignments")
   completedMilestones ServiceMilestone[]  @relation("MilestoneCompleter")
   timelineEvents     ClientTimelineEvent[] @relation("TimelineActor")
+  conversationParts  ConversationParticipant[]
+  messagesSent       Message[]            @relation("MessageSender")
+  teamMentions       MessageMention[]
 }
 
 model Session {
@@ -149,12 +152,22 @@ model Client {
   firstName       String
   lastName        String
   status          String   @default("ACTIVE")
+  stage           String   @default("NEW_ENROLLMENT")
+  nextAction      String?
+  nextActionOwner String? // CHARLES | SIMON | JONA | CLIENT | SYSTEM
+  urgency         String   @default("NORMAL") // LOW NORMAL HIGH CRITICAL
+  lastInteractionAt DateTime?
+  nextDueAt       DateTime?
   duplicateFlag   Boolean  @default(false)
   notes           String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   user                User?                 @relation(fields: [userId], references: [id])
+  conversations       Conversation[]
+  onboardingChecklist OnboardingItem[]
+  disputeRounds       DisputeRound[]
+  fridayPulseItems    FridayPulseItem[]
   identifiers         ClientIdentifier[]
   addresses           Address[]
   clientServices      ClientService[]
@@ -807,6 +820,157 @@ model ConversionEvent {
   campaign MarketingCampaign? @relation(fields: [campaignId], references: [id])
 
   @@index([eventType])
+  @@index([clientId])
+}
+
+
+enum ConversationKind {
+  CLIENT
+  TEAM
+  CLIENT_INTERNAL
+}
+
+enum MessageChannel {
+  INTERNAL
+  SMS
+  EMAIL
+  CALL
+  VOICEMAIL
+  NOTE
+  SYSTEM
+}
+
+model Conversation {
+  id            String           @id @default(cuid())
+  kind          ConversationKind
+  subject       String?
+  clientId      String?
+  lastMessageAt DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  client       Client?                   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([kind, lastMessageAt])
+  @@index([clientId])
+}
+
+model ConversationParticipant {
+  id             String    @id @default(cuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String         @id @default(cuid())
+  conversationId String
+  senderId       String?
+  channel        MessageChannel @default(INTERNAL)
+  body           String
+  isInternal     Boolean        @default(true)
+  deliveryStatus String         @default("RECORDED") // RECORDED SENT DELIVERED FAILED
+  metadataJson   String?
+  createdAt      DateTime       @default(now())
+
+  conversation Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User?            @relation("MessageSender", fields: [senderId], references: [id])
+  mentions     MessageMention[]
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+}
+
+model MessageMention {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+}
+
+model OnboardingItem {
+  id          String    @id @default(cuid())
+  clientId    String
+  key         String
+  label       String
+  status      String    @default("MISSING") // COMPLETE MISSING WAIVED
+  completedAt DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, key])
+  @@index([clientId, status])
+}
+
+model DisputeRound {
+  id                 String    @id @default(cuid())
+  clientId           String
+  roundNumber        Int
+  status             String    @default("PREPARING")
+  preparedAt         DateTime?
+  sentAt             DateTime?
+  resultsReceivedAt  DateTime?
+  nextReviewAt       DateTime?
+  negativeItemsCount Int       @default(0)
+  deletedItemsCount  Int       @default(0)
+  remainingItemsCount Int      @default(0)
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, roundNumber])
+  @@index([clientId, status])
+}
+
+model FridayPulseRun {
+  id          String   @id @default(cuid())
+  weekOf      DateTime
+  status      String   @default("DRAFT") // DRAFT RUNNING COMPLETED
+  triggeredBy String?
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+
+  items FridayPulseItem[]
+
+  @@index([weekOf])
+}
+
+model FridayPulseItem {
+  id              String   @id @default(cuid())
+  runId           String
+  clientId        String
+  statusUpdate    String
+  updateStatus    String   @default("PENDING") // PENDING SENT FAILED SKIPPED
+  scoreRequestStatus String @default("PENDING")
+  scoreResponseStatus String @default("NONE")
+  reviewRequired  Boolean  @default(false)
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  run    FridayPulseRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  client Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, clientId])
   @@index([clientId])
 }
 

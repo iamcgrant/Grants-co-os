@@ -2,16 +2,35 @@ import "dotenv/config";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient, Role, CreditBureau } from "../src/generated/prisma/client";
 import bcrypt from "bcryptjs";
-import path from "node:path";
 
 const dbUrl = process.env.DATABASE_URL || "file:./dev.db";
 const adapter = new PrismaBetterSqlite3({ url: dbUrl });
 const prisma = new PrismaClient({ adapter });
 
-async function main() {
-  console.log("Seeding Grants & Co OS…");
+const ONBOARDING = [
+  { key: "intake", label: "Intake" },
+  { key: "identification", label: "Identification" },
+  { key: "proof_of_address", label: "Proof of address" },
+  { key: "ssn_card", label: "Social Security card" },
+  { key: "monitoring", label: "Monitoring setup" },
+  { key: "smartcredit", label: "SmartCredit" },
+  { key: "updated_report", label: "Updated report" },
+  { key: "poa", label: "Power of attorney" },
+  { key: "agreements", label: "Required agreements" },
+  { key: "portal_access", label: "Portal access" },
+];
 
-  // Clean in dependency order for idempotent reseed
+async function main() {
+  console.log("Seeding Grants & Co OS (Charles / Simon / Jona)…");
+
+  await prisma.messageMention.deleteMany();
+  await prisma.message.deleteMany();
+  await prisma.conversationParticipant.deleteMany();
+  await prisma.conversation.deleteMany();
+  await prisma.fridayPulseItem.deleteMany();
+  await prisma.fridayPulseRun.deleteMany();
+  await prisma.disputeRound.deleteMany();
+  await prisma.onboardingItem.deleteMany();
   await prisma.conversionEvent.deleteMany();
   await prisma.leadSource.deleteMany();
   await prisma.marketingCampaign.deleteMany();
@@ -63,47 +82,36 @@ async function main() {
 
   const passwordHash = await bcrypt.hash("GrantsCo2026!", 12);
 
-  const owner = await prisma.user.create({
+  const charles = await prisma.user.create({
     data: {
       email: "owner@grantsandco.com",
       passwordHash,
       firstName: "Charles",
       lastName: "Grant",
       role: Role.OWNER,
-      staffProfile: { create: { title: "Owner" } },
+      staffProfile: { create: { title: "Owner / Administrator" } },
     },
   });
 
-  const manager = await prisma.user.create({
+  const simon = await prisma.user.create({
     data: {
-      email: "manager@grantsandco.com",
+      email: "simon@grantsandco.com",
       passwordHash,
-      firstName: "Maya",
-      lastName: "Brooks",
-      role: Role.MANAGER,
-      staffProfile: { create: { title: "Operations Manager" } },
+      firstName: "Simon",
+      lastName: "Young",
+      role: Role.CUSTOMER_SERVICE,
+      staffProfile: { create: { title: "Client Service / Follow-Up" } },
     },
   });
 
-  const preparer = await prisma.user.create({
+  const jona = await prisma.user.create({
     data: {
-      email: "preparer@grantsandco.com",
+      email: "jona@grantsandco.com",
       passwordHash,
-      firstName: "Jordan",
-      lastName: "Lee",
+      firstName: "Jona",
+      lastName: "Processing",
       role: Role.FILE_PREPARER,
-      staffProfile: { create: { title: "File Preparer" } },
-    },
-  });
-
-  const marketing = await prisma.user.create({
-    data: {
-      email: "marketing@grantsandco.com",
-      passwordHash,
-      firstName: "Ava",
-      lastName: "Nguyen",
-      role: Role.MARKETING,
-      staffProfile: { create: { title: "Marketing" } },
+      staffProfile: { create: { title: "File Preparation / Dispute Processing" } },
     },
   });
 
@@ -125,23 +133,14 @@ async function main() {
             name: "Manual invoice",
             amountCents: 75000,
           },
-          {
-            type: "RECURRING_AFTER_MILESTONE",
-            name: "Recurring after milestone",
-            amountCents: 14900,
-            configJson: JSON.stringify({ intervalDays: 30 }),
-          },
         ],
       },
     },
     include: { billingPolicies: true },
   });
 
-  const milestonePolicy = service.billingPolicies.find(
-    (p) => p.type === "AFTER_SERVICE_MILESTONE",
-  )!;
+  const milestonePolicy = service.billingPolicies.find((p) => p.type === "AFTER_SERVICE_MILESTONE")!;
 
-  // Client: Donna James
   const donna = await prisma.client.create({
     data: {
       grantsClientId: "GC-000001",
@@ -151,6 +150,13 @@ async function main() {
       phoneNormalized: "5552018844",
       firstName: "Donna",
       lastName: "James",
+      status: "ACTIVE",
+      stage: "READY_FOR_PROCESSING",
+      nextAction: "Prepare Round 2 dispute package",
+      nextActionOwner: "JONA",
+      urgency: "HIGH",
+      lastInteractionAt: new Date(),
+      nextDueAt: new Date(Date.now() + 86400000),
       addresses: {
         create: {
           line1: "1842 Magnolia Ave",
@@ -162,9 +168,65 @@ async function main() {
     },
   });
 
-  await prisma.idSequence.update({
-    where: { name: "grants_client" },
-    data: { value: 1 },
+  const antionette = await prisma.client.create({
+    data: {
+      grantsClientId: "GC-000003",
+      email: "antionette.greene@example.com",
+      emailNormalized: "antionette.greene@example.com",
+      phone: "(843) 555-0199",
+      phoneNormalized: "8435550199",
+      firstName: "Antionette",
+      lastName: "Greene",
+      status: "ACTIVE",
+      stage: "WAITING_ON_CLIENT",
+      nextAction: "Obtain updated credit report",
+      nextActionOwner: "SIMON",
+      urgency: "NORMAL",
+      lastInteractionAt: new Date(),
+      nextDueAt: new Date(),
+    },
+  });
+
+  const marcus = await prisma.client.create({
+    data: {
+      grantsClientId: "GC-000002",
+      email: "marcus.wells@example.com",
+      emailNormalized: "marcus.wells@example.com",
+      phone: "5559981122",
+      phoneNormalized: "5559981122",
+      firstName: "Marcus",
+      lastName: "Wells",
+      status: "ACTIVE",
+      stage: "WAITING_FOR_RESULTS",
+      nextAction: "Wait for bureau results",
+      nextActionOwner: "SYSTEM",
+      urgency: "LOW",
+    },
+  });
+
+  await prisma.idSequence.update({ where: { name: "grants_client" }, data: { value: 3 } });
+
+  for (const client of [donna, antionette, marcus]) {
+    await prisma.onboardingItem.createMany({
+      data: ONBOARDING.map((item, idx) => ({
+        clientId: client.id,
+        key: item.key,
+        label: item.label,
+        status:
+          client.id === antionette.id && idx > 5
+            ? "MISSING"
+            : client.id === marcus.id && idx > 7
+              ? "MISSING"
+              : "COMPLETE",
+        completedAt: new Date(),
+      })),
+    });
+  }
+
+  // Antionette still missing a few — mark incomplete properly
+  await prisma.onboardingItem.updateMany({
+    where: { clientId: antionette.id, key: { in: ["updated_report", "smartcredit"] } },
+    data: { status: "MISSING", completedAt: null },
   });
 
   const donnaService = await prisma.clientService.create({
@@ -179,7 +241,7 @@ async function main() {
           sequence: 1,
           isCompleted: true,
           completedAt: new Date(),
-          completedByUserId: manager.id,
+          completedByUserId: simon.id,
           invoiceEligible: true,
           invoiceCreated: true,
           paymentEligible: true,
@@ -191,7 +253,7 @@ async function main() {
 
   const invoice = await prisma.invoice.create({
     data: {
-      invoiceNumber: "GC-1048",
+      invoiceNumber: "GC-1051",
       clientId: donna.id,
       clientServiceId: donnaService.id,
       milestoneId: donnaService.milestones[0].id,
@@ -210,28 +272,7 @@ async function main() {
     },
   });
 
-  await prisma.idSequence.update({
-    where: { name: "invoice" },
-    data: { value: 1048 },
-  });
-
-  // Second client with payment history
-  const marcus = await prisma.client.create({
-    data: {
-      grantsClientId: "GC-000002",
-      email: "marcus.wells@example.com",
-      emailNormalized: "marcus.wells@example.com",
-      phone: "5559981122",
-      phoneNormalized: "5559981122",
-      firstName: "Marcus",
-      lastName: "Wells",
-    },
-  });
-
-  await prisma.idSequence.update({
-    where: { name: "grants_client" },
-    data: { value: 2 },
-  });
+  await prisma.idSequence.update({ where: { name: "invoice" }, data: { value: 1051 } });
 
   const paidInvoice = await prisma.invoice.create({
     data: {
@@ -282,7 +323,6 @@ async function main() {
     },
   });
 
-  // Failed payment example
   await prisma.paymentTransaction.create({
     data: {
       clientId: donna.id,
@@ -306,7 +346,6 @@ async function main() {
     },
   });
 
-  // Refund example on marcus
   await prisma.refund.create({
     data: {
       clientId: marcus.id,
@@ -326,7 +365,6 @@ async function main() {
     data: { amountPaidCents: 70000, status: "PARTIALLY_REFUNDED" },
   });
 
-  // Chargeback example
   await prisma.paymentDispute.create({
     data: {
       clientId: marcus.id,
@@ -340,36 +378,21 @@ async function main() {
     },
   });
 
-  // Identifiers
   await prisma.clientIdentifier.createMany({
     data: [
       { clientId: donna.id, provider: "GHL", externalId: "ghl_contact_donna_001" },
       { clientId: donna.id, provider: "DISPUTEFOX", externalId: "df_donna_001" },
+      { clientId: antionette.id, provider: "GHL", externalId: "ghl_contact_antionette_001" },
       { clientId: marcus.id, provider: "PAYMENT", externalId: "mock_cus_marcus" },
     ],
   });
 
-  // Credit connections + history
   await prisma.creditConnection.createMany({
     data: [
-      {
-        clientId: donna.id,
-        provider: "SMARTCREDIT",
-        status: "CONNECTED",
-        externalId: "sc_donna01",
-      },
-      {
-        clientId: donna.id,
-        provider: "CREDIT_KARMA",
-        status: "CONNECTED",
-        credentialRef: "enc_ref_ck_donna",
-      },
-      {
-        clientId: donna.id,
-        provider: "EXPERIAN",
-        status: "CONNECTED",
-        credentialRef: "enc_ref_ex_donna",
-      },
+      { clientId: donna.id, provider: "SMARTCREDIT", status: "CONNECTED", externalId: "sc_donna01" },
+      { clientId: donna.id, provider: "CREDIT_KARMA", status: "CONNECTED", credentialRef: "enc_ref_ck_donna" },
+      { clientId: donna.id, provider: "EXPERIAN", status: "CONNECTED", credentialRef: "enc_ref_ex_donna" },
+      { clientId: antionette.id, provider: "CREDIT_KARMA", status: "CONNECTED" },
     ],
   });
 
@@ -383,11 +406,7 @@ async function main() {
     [august, [660, 682, 641]],
   ] as const) {
     const snap = await prisma.creditSnapshot.create({
-      data: {
-        clientId: donna.id,
-        source: "SMARTCREDIT",
-        capturedAt: date,
-      },
+      data: { clientId: donna.id, source: "SMARTCREDIT", capturedAt: date },
     });
     await prisma.creditScore.createMany({
       data: [
@@ -422,7 +441,6 @@ async function main() {
     });
   }
 
-  // Also store Experian FICO separately — never conflate models
   await prisma.creditScore.create({
     data: {
       clientId: donna.id,
@@ -434,105 +452,374 @@ async function main() {
     },
   });
 
-  // Tasks & assignments
-  await prisma.clientAssignment.create({
-    data: {
-      clientId: donna.id,
-      staffId: preparer.id,
-      roleLabel: "File Preparer",
-      isPrimary: true,
-    },
+  await prisma.creditScore.createMany({
+    data: [
+      {
+        clientId: antionette.id,
+        bureau: CreditBureau.TRANSUNION,
+        score: 620,
+        scoringModel: "VantageScore 3.0",
+        source: "CREDIT_KARMA",
+        capturedAt: june,
+      },
+      {
+        clientId: antionette.id,
+        bureau: CreditBureau.TRANSUNION,
+        score: 641,
+        scoringModel: "VantageScore 3.0",
+        source: "CREDIT_KARMA",
+        capturedAt: july,
+      },
+      {
+        clientId: antionette.id,
+        bureau: CreditBureau.TRANSUNION,
+        score: 656,
+        scoringModel: "VantageScore 3.0",
+        source: "CREDIT_KARMA",
+        capturedAt: august,
+      },
+      {
+        clientId: antionette.id,
+        bureau: CreditBureau.EQUIFAX,
+        score: 610,
+        scoringModel: "VantageScore 3.0",
+        source: "CREDIT_KARMA",
+        capturedAt: june,
+      },
+      {
+        clientId: antionette.id,
+        bureau: CreditBureau.EQUIFAX,
+        score: 628,
+        scoringModel: "VantageScore 3.0",
+        source: "CREDIT_KARMA",
+        capturedAt: august,
+      },
+    ],
+  });
+
+  await prisma.creditChange.createMany({
+    data: [
+      {
+        clientId: antionette.id,
+        bureau: CreditBureau.TRANSUNION,
+        previousScore: 641,
+        newScore: 656,
+        scoringModel: "VantageScore 3.0",
+        source: "CREDIT_KARMA",
+        changeAmount: 15,
+      },
+      {
+        clientId: donna.id,
+        bureau: CreditBureau.EQUIFAX,
+        previousScore: 638,
+        newScore: 660,
+        scoringModel: "VantageScore 3.0",
+        source: "SMARTCREDIT",
+        changeAmount: 22,
+      },
+    ],
+  });
+
+  await prisma.disputeRound.createMany({
+    data: [
+      {
+        clientId: donna.id,
+        roundNumber: 1,
+        status: "RESULTS_RECEIVED",
+        preparedAt: new Date("2026-07-01"),
+        sentAt: new Date("2026-07-03"),
+        resultsReceivedAt: new Date("2026-08-01"),
+        negativeItemsCount: 18,
+        deletedItemsCount: 4,
+        remainingItemsCount: 14,
+      },
+      {
+        clientId: donna.id,
+        roundNumber: 2,
+        status: "PREPARING",
+        preparedAt: null,
+        negativeItemsCount: 14,
+        deletedItemsCount: 0,
+        remainingItemsCount: 14,
+      },
+      {
+        clientId: marcus.id,
+        roundNumber: 1,
+        status: "SUBMITTED",
+        preparedAt: new Date("2026-08-01"),
+        sentAt: new Date("2026-08-02"),
+        negativeItemsCount: 11,
+        deletedItemsCount: 0,
+        remainingItemsCount: 11,
+      },
+    ],
+  });
+
+  await prisma.clientAssignment.createMany({
+    data: [
+      { clientId: donna.id, staffId: jona.id, roleLabel: "File Preparation", isPrimary: true },
+      { clientId: donna.id, staffId: simon.id, roleLabel: "Client Care", isPrimary: false },
+      { clientId: antionette.id, staffId: simon.id, roleLabel: "Client Care", isPrimary: true },
+      { clientId: marcus.id, staffId: jona.id, roleLabel: "File Preparation", isPrimary: true },
+    ],
   });
 
   await prisma.task.createMany({
     data: [
       {
         clientId: donna.id,
-        title: "Review onboarding documents",
+        title: "Prepare Round 2 for Donna James",
         status: "OPEN",
         priority: "HIGH",
-        assigneeId: preparer.id,
-        createdById: manager.id,
-        category: "MISSING_DOCUMENTS",
+        assigneeId: jona.id,
+        createdById: simon.id,
+        category: "file preparation",
         dueAt: new Date(),
       },
       {
-        clientId: donna.id,
-        title: "Follow up on failed payment",
+        clientId: antionette.id,
+        title: "Request updated report from Antionette",
         status: "OPEN",
-        priority: "URGENT",
-        assigneeId: manager.id,
-        createdById: owner.id,
-        category: "PAYMENT_ISSUES",
+        priority: "HIGH",
+        assigneeId: simon.id,
+        createdById: charles.id,
+        category: "client follow-up",
         dueAt: new Date(),
+      },
+      {
+        clientId: antionette.id,
+        title: "SmartCredit reactivation check",
+        status: "OPEN",
+        priority: "MEDIUM",
+        assigneeId: simon.id,
+        createdById: simon.id,
+        category: "monitoring",
       },
       {
         clientId: marcus.id,
-        title: "Send Friday credit update",
-        status: "OPEN",
+        title: "Monitor Round 1 results",
+        status: "IN_PROGRESS",
         priority: "MEDIUM",
-        assigneeId: preparer.id,
-        createdById: manager.id,
-        category: "CREDIT_UPDATES",
+        assigneeId: jona.id,
+        createdById: jona.id,
+        category: "results",
       },
     ],
   });
 
-  // Timeline
+  await prisma.document.createMany({
+    data: [
+      {
+        clientId: donna.id,
+        name: "Driver License.pdf",
+        mimeType: "application/pdf",
+        storageKey: "dev/donna/dl.pdf",
+        category: "identification",
+        uploadedById: simon.id,
+      },
+      {
+        clientId: donna.id,
+        name: "POA signed.pdf",
+        mimeType: "application/pdf",
+        storageKey: "dev/donna/poa.pdf",
+        category: "poa",
+        uploadedById: simon.id,
+      },
+      {
+        clientId: antionette.id,
+        name: "Proof of address.pdf",
+        mimeType: "application/pdf",
+        storageKey: "dev/antionette/address.pdf",
+        category: "proof of address",
+        uploadedById: simon.id,
+      },
+    ],
+  });
+
+  // Conversations
+  const team = await prisma.conversation.create({
+    data: {
+      kind: "TEAM",
+      subject: "Grants & Co Team",
+      lastMessageAt: new Date(),
+      participants: {
+        create: [{ userId: charles.id }, { userId: simon.id }, { userId: jona.id }],
+      },
+    },
+  });
+
+  await prisma.message.create({
+    data: {
+      conversationId: team.id,
+      senderId: charles.id,
+      channel: "INTERNAL",
+      isInternal: true,
+      body: "Welcome to Grants & Co OS team chat. Keep client work linked from Client 360 whenever possible.",
+      deliveryStatus: "RECORDED",
+    },
+  });
+
+  const donnaClientConv = await prisma.conversation.create({
+    data: {
+      kind: "CLIENT",
+      clientId: donna.id,
+      subject: "Donna James",
+      lastMessageAt: new Date(),
+      participants: { create: [{ userId: simon.id }, { userId: jona.id }] },
+    },
+  });
+
+  await prisma.message.createMany({
+    data: [
+      {
+        conversationId: donnaClientConv.id,
+        senderId: simon.id,
+        channel: "SMS",
+        isInternal: false,
+        body: "Hi Donna — your Round 1 results are in. I’ll walk you through next steps.",
+        deliveryStatus: "DELIVERED",
+      },
+    ],
+  });
+
+  const donnaInternal = await prisma.conversation.create({
+    data: {
+      kind: "CLIENT_INTERNAL",
+      clientId: donna.id,
+      subject: "Donna James · Internal",
+      lastMessageAt: new Date(),
+      participants: { create: [{ userId: simon.id }, { userId: jona.id }, { userId: charles.id }] },
+    },
+  });
+
+  const internalMsg = await prisma.message.create({
+    data: {
+      conversationId: donnaInternal.id,
+      senderId: simon.id,
+      channel: "INTERNAL",
+      isInternal: true,
+      body: "@Jona updated report received — ready for Round 2.",
+      deliveryStatus: "RECORDED",
+    },
+  });
+
+  await prisma.messageMention.create({
+    data: { messageId: internalMsg.id, userId: jona.id },
+  });
+
+  const antConv = await prisma.conversation.create({
+    data: {
+      kind: "CLIENT",
+      clientId: antionette.id,
+      subject: "Antionette Greene",
+      lastMessageAt: new Date(),
+      participants: { create: [{ userId: simon.id }] },
+    },
+  });
+
+  await prisma.message.create({
+    data: {
+      conversationId: antConv.id,
+      senderId: simon.id,
+      channel: "SMS",
+      isInternal: false,
+      body: "Antionette — please upload your updated credit report when you have a moment.",
+      deliveryStatus: "SENT",
+    },
+  });
+
   await prisma.clientTimelineEvent.createMany({
     data: [
       {
         clientId: donna.id,
-        actorId: owner.id,
+        actorId: charles.id,
         eventType: "CLIENT_CREATED",
-        title: "Client Created",
+        title: "Client created",
         description: "Donna James · GC-000001",
         idempotencyKey: "seed:donna:created",
       },
       {
         clientId: donna.id,
-        actorId: manager.id,
-        eventType: "SERVICE_ADDED",
-        title: "Service Added",
-        description: "Credit Optimization Service",
-        idempotencyKey: "seed:donna:service",
+        actorId: simon.id,
+        eventType: "READY_FOR_PROCESSING",
+        title: "Ready for processing",
+        description: "Handed to Jona by Simon",
+        idempotencyKey: "seed:donna:handoff",
       },
       {
         clientId: donna.id,
-        actorId: manager.id,
-        eventType: "MILESTONE_COMPLETED",
-        title: "Milestone Completed",
-        description: "Onboarding Complete",
-        idempotencyKey: "seed:donna:milestone",
+        eventType: "ROUND_SENT",
+        title: "Round 1 sent",
+        description: "Dispute package submitted",
+        idempotencyKey: "seed:donna:r1",
       },
       {
-        clientId: donna.id,
-        eventType: "INVOICE_CREATED",
-        title: "Invoice Created",
-        description: "Invoice GC-1048 for $750.00",
-        idempotencyKey: "seed:donna:invoice",
+        clientId: antionette.id,
+        actorId: simon.id,
+        eventType: "CLIENT_CREATED",
+        title: "Client created",
+        description: "Antionette Greene · GC-000003",
+        idempotencyKey: "seed:ant:created",
       },
       {
-        clientId: donna.id,
-        eventType: "SMARTCREDIT_CONNECTED",
-        title: "SmartCredit Connected",
-        idempotencyKey: "seed:donna:sc",
+        clientId: antionette.id,
+        actorId: simon.id,
+        eventType: "FRIDAY_UPDATE_SENT",
+        title: "Friday update sent",
+        description: "Status + Credit Karma score request",
+        idempotencyKey: "seed:ant:pulse",
       },
     ],
   });
 
-  // Integrations
+  const pulse = await prisma.fridayPulseRun.create({
+    data: {
+      weekOf: new Date("2026-08-15"),
+      status: "RUNNING",
+      triggeredBy: charles.id,
+      items: {
+        create: [
+          {
+            clientId: donna.id,
+            statusUpdate: "next round preparation",
+            updateStatus: "SENT",
+            scoreRequestStatus: "SENT",
+            scoreResponseStatus: "RECEIVED",
+          },
+          {
+            clientId: antionette.id,
+            statusUpdate: "documents needed",
+            updateStatus: "SENT",
+            scoreRequestStatus: "SENT",
+            scoreResponseStatus: "MISSING",
+            reviewRequired: true,
+          },
+          {
+            clientId: marcus.id,
+            statusUpdate: "waiting on results",
+            updateStatus: "PENDING",
+            scoreRequestStatus: "PENDING",
+            scoreResponseStatus: "NONE",
+          },
+        ],
+      },
+    },
+  });
+  void pulse;
+
   await prisma.integrationConnection.createMany({
     data: [
-      { provider: "gohighlevel", status: "MOCK" },
-      { provider: "disputefox", status: "MOCK" },
+      { provider: "gohighlevel", status: "MOCK", lastSyncAt: new Date() },
+      { provider: "disputefox", status: "MOCK", lastSyncAt: new Date() },
       { provider: "smartcredit", status: "MOCK" },
       { provider: "credit_karma", status: "MOCK" },
       { provider: "experian", status: "MOCK" },
+      { provider: "authorize_net", status: "MOCK" },
+      { provider: "commas", status: "MOCK" },
+      { provider: "communications", status: "MOCK" },
     ],
   });
 
-  // Marketing
   const source = await prisma.marketingSource.create({
     data: { name: "Instagram Organic", platform: "instagram" },
   });
@@ -558,18 +845,11 @@ async function main() {
   await prisma.conversionEvent.createMany({
     data: [
       { clientId: donna.id, campaignId: campaign.id, eventType: "LEAD", revenueCents: 0 },
-      { clientId: donna.id, campaignId: campaign.id, eventType: "CONSULTATION", revenueCents: 0 },
       { clientId: donna.id, campaignId: campaign.id, eventType: "CLIENT", revenueCents: 0 },
-      {
-        clientId: marcus.id,
-        campaignId: campaign.id,
-        eventType: "PAYMENT",
-        revenueCents: 70000,
-      },
+      { clientId: marcus.id, campaignId: campaign.id, eventType: "PAYMENT", revenueCents: 70000 },
     ],
   });
 
-  // Client portal user for Donna
   await prisma.user.create({
     data: {
       email: "donna.james@example.com",
@@ -582,9 +862,8 @@ async function main() {
   });
 
   console.log("Seed complete.");
-  console.log("Login: owner@grantsandco.com / GrantsCo2026!");
-  console.log("Also: manager@, preparer@, marketing@, donna.james@example.com");
-  console.log(`Invoice ready for checkout: ${invoice.invoiceNumber} (${invoice.id})`);
+  console.log("Staff: owner@ / simon@ / jona@ grantsandco.com");
+  console.log(`Invoice ready: ${invoice.invoiceNumber}`);
 }
 
 main()

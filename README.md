@@ -15,19 +15,20 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
-### Demo accounts
+### Development staff accounts
+
+Passwords are for local/dev only — never shown in the product UI.
 
 | Role | Email | Password |
 |------|-------|----------|
-| Owner | owner@grantsandco.com | GrantsCo2026! |
-| Manager | manager@grantsandco.com | GrantsCo2026! |
-| File Preparer | preparer@grantsandco.com | GrantsCo2026! |
-| Marketing | marketing@grantsandco.com | GrantsCo2026! |
-| Client | donna.james@example.com | GrantsCo2026! |
+| Charles (Owner) | owner@grantsandco.com | GrantsCo2026! |
+| Simon (Client Care) | simon@grantsandco.com | GrantsCo2026! |
+| Jona (File Prep) | jona@grantsandco.com | GrantsCo2026! |
+| Client portal | donna.james@example.com | GrantsCo2026! |
 
 ### Grants Pay demo
 
-Invoice **GC-1048** (Donna James) is due — open `/pay/GC-1048`.
+Invoice **GC-1051** (Donna James) is due — open `/pay/GC-1051`.
 
 ## Priority
 
