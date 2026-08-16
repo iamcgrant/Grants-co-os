@@ -8,7 +8,10 @@
  */
 
 import { CONFIRMED_MASTERS } from "@/lib/clients/confirmed-masters";
-import { normalizeEmail } from "@/lib/clients/identity";
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
 
 export const CONFIRMED_DF_RECON_TAG = "DisputeFox recon 2026-08-15";
 
