@@ -196,6 +196,26 @@ server.tool(
   },
 );
 
+server.tool(
+  "drain_cursor_launch_queue",
+  "Launch all Agent Hub tasks waiting for CURSOR_API_KEY once the key is present.",
+  { limit: z.number().int().min(1).max(50).optional() },
+  async ({ limit }) => {
+    const api = await hub();
+    return text(await api.drainAwaitingCursorLaunches(limit));
+  },
+);
+
+server.tool(
+  "probe_cursor_api_key",
+  "Check whether CURSOR_API_KEY is present and accepted by api.cursor.com (never returns the key).",
+  {},
+  async () => {
+    const api = await hub();
+    return text(await api.probeCursorApiKey());
+  },
+);
+
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);

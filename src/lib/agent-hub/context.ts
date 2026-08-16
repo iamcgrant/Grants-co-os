@@ -68,8 +68,9 @@ export const CORE_BUSINESS_FACTS: {
       fieldKey: "intake_status",
       fieldLabel: "Intake Status",
       mapsTo: "Client.stage / onboarding checklist",
-      osStatus: "PARTIAL",
-      gap: "Client 360 should surface Intake Status mapping explicitly when live GHL sync is connected",
+      osStatus: "COMPLETE",
+      osSurface: "Client 360 Identity & integrations · Intake Status",
+      gap: null,
     },
   },
   {

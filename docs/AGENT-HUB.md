@@ -37,11 +37,27 @@ Tools: `ask_x1`, `ask_payment_processing`, `route_agent_task`, `get_agent_capabi
 
 | Env | Purpose |
 |-----|---------|
-| `CURSOR_API_KEY` | Launch Cloud Agents (bots → Cursor) |
+| `CURSOR_API_KEY` | Launch Cloud Agents (bots → Cursor). Must be visible to the **running** Cloud Agent process. |
 | `AGENT_HUB_TOKEN` | Optional bearer for Hub HTTP API |
 | `AGENT_HUB_ALLOW_UNAUTH` | Dev-only for local MCP (never production) |
 | `AGENT_HUB_SIMULATE_CURSOR` | Dev simulate launch without API key |
 | Existing `GHL_*` / payment secrets | Used only inside capabilities |
+
+### Drain after key arrives
+
+```bash
+# Probe (never prints the key)
+curl -s localhost:3000/api/agent-hub/cursor
+
+# Launch queued CODE_CHANGE_REQUIRED tasks
+curl -s -X POST localhost:3000/api/agent-hub/cursor \
+  -H 'content-type: application/json' \
+  -d '{"action":"drain"}'
+```
+
+Or from Agent Control Center (`/agents`): **Probe Cursor key** → **Drain launch queue**.
+
+MCP tools: `probe_cursor_api_key`, `drain_cursor_launch_queue`.
 
 ## OS surfaces
 

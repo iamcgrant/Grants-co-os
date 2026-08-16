@@ -99,6 +99,7 @@ export default async function Client360Page({
   const integrations = buildClientDossierIntegrations({
     grantsClientId: client.grantsClientId,
     identifiers: client.identifiers,
+    stage: client.stage,
     hasCreditScores: client.creditScores.length > 0,
     hasPaymentRecords: invoices.length > 0 || transactions.length > 0,
     creditConnectionStatuses: client.creditConnections,
@@ -233,6 +234,10 @@ export default async function Client360Page({
                 <div className="flex justify-between gap-2">
                   <span className="text-[var(--gc-muted)]">DisputeFox Client ID</span>
                   <IntegrationValue field={integrations.disputeFoxClientId} />
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--gc-muted)]">Intake Status</span>
+                  <IntegrationValue field={integrations.intakeStatus} />
                 </div>
                 <div className="flex justify-between gap-2">
                   <span className="text-[var(--gc-muted)]">Email</span>

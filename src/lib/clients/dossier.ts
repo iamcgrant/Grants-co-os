@@ -23,6 +23,7 @@ export type ClientDossierIntegrations = {
   grantsClientId: string;
   ghlContactId: IntegrationFieldState;
   disputeFoxClientId: IntegrationFieldState;
+  intakeStatus: IntegrationFieldState;
   credit: IntegrationFieldState;
   payments: IntegrationFieldState;
   ghlMessages: IntegrationFieldState;
@@ -77,6 +78,7 @@ function fieldFromIdentifier(
 export function buildClientDossierIntegrations(input: {
   grantsClientId: string;
   identifiers: Ident[];
+  stage?: string;
   hasCreditScores: boolean;
   hasPaymentRecords: boolean;
   creditConnectionStatuses: { provider: string; status: string }[];
@@ -87,6 +89,26 @@ export function buildClientDossierIntegrations(input: {
 
   const ghl = input.identifiers.find((i) => i.provider === "GHL");
   const df = input.identifiers.find((i) => i.provider === "DISPUTEFOX");
+
+  // Intake Status — OS stage is source of truth; GHL field key intake_status maps here.
+  const stageLabel = (input.stage || "NEW_ENROLLMENT").replaceAll("_", " ");
+  const intakeStatus: IntegrationFieldState = ghlReady
+    ? {
+        state: ghl && isLiveSyncedIdentifier(ghl.metadataJson) ? "LIVE" : "UNMATCHED",
+        value: stageLabel,
+        detail: "Mapped from Client.stage · GHL field key `intake_status`",
+      }
+    : input.stage
+      ? {
+          state: "DEV_SAMPLE",
+          value: stageLabel,
+          detail: "OS stage on file · GHL intake_status sync Awaiting Integration",
+        }
+      : {
+          state: "AWAITING_INTEGRATION",
+          value: null,
+          detail: "Awaiting Integration",
+        };
 
   const liveCredit = input.creditConnectionStatuses.some(
     (c) => c.status === "CONNECTED" && !c.provider.startsWith("MOCK"),
@@ -158,6 +180,7 @@ export function buildClientDossierIntegrations(input: {
     grantsClientId: input.grantsClientId,
     ghlContactId: fieldFromIdentifier(ghl, ghlReady),
     disputeFoxClientId: fieldFromIdentifier(df, dfReady),
+    intakeStatus,
     credit,
     payments,
     ghlMessages,

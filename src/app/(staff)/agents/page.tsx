@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/rbac/permissions";
 import { getControlCenterSnapshot } from "@/lib/agent-hub";
 import { Panel, MetricTile } from "@/components/ui/density";
 import { ApprovalCard } from "@/components/agents/ApprovalCard";
+import { CursorBridgeActions } from "@/components/agents/CursorBridgeActions";
 
 function statusTone(status: string) {
   if (status === "WORKING") return "gc-status-ice";
@@ -56,6 +57,8 @@ export default async function AgentControlCenterPage() {
           tone={snap.bridges.cursorLaunch === "READY" ? "ok" : "warn"}
         />
       </div>
+
+      <CursorBridgeActions />
 
       {snap.approvals.length > 0 && (
         <Panel title="Owner approval cards" eyebrow="Level 3 only">

@@ -61,18 +61,20 @@ export async function askX1(input: {
     } else if (/intake status/i.test(input.question)) {
       const facts = await getBusinessConfiguration({ query: "intake_status" });
       const mapping = facts[0]?.value as Record<string, unknown> | undefined;
+      const osComplete = mapping?.osStatus === "COMPLETE";
       answer = {
         question: input.question,
-        answer:
-          "GHL field key `intake_status` maps toward Client.stage / onboarding. OS coverage is PARTIAL — Client 360 should surface it explicitly when live GHL sync is connected.",
+        answer: osComplete
+          ? "GHL field key `intake_status` maps to Client.stage. Client 360 Identity panel surfaces Intake Status (Awaiting Integration for live GHL field sync when API not connected)."
+          : "GHL field key `intake_status` maps toward Client.stage / onboarding. OS coverage is PARTIAL.",
         mapping,
-        gap: mapping?.gap,
-        recommendation: "Emit CODE_CHANGE_REQUIRED if Cursor should add Intake Status to Client 360.",
+        gap: mapping?.gap ?? null,
         source: "business_facts",
       };
 
-      // Proactively create engineering task when gap detected (no Charles relay)
-      if (mapping?.osStatus === "PARTIAL") {
+      if (!osComplete) {
+        answer.recommendation =
+          "Emit CODE_CHANGE_REQUIRED if Cursor should add Intake Status to Client 360.";
         const codeTask = await createTask({
           type: "CODE_CHANGE_REQUIRED",
           eventKind: "CODE_CHANGE_REQUIRED",
@@ -83,7 +85,6 @@ export async function askX1(input: {
             "Surface on Client 360 identity/integrations panel.",
             "Show Awaiting Integration when GHL not connected.",
             "Development/test scope. No live client communication. No destructive production actions.",
-            "Report completion back to Agent Hub task callback if available.",
           ].join("\n"),
           ownerAgentId: "x1-operations",
           assigneeAgentId: "cursor-engineering",

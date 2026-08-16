@@ -44,12 +44,14 @@ describe("Client 360 dossier integrations", () => {
           metadataJson: JSON.stringify({ source: "seed", dataPlane: "development" }),
         },
       ],
+      stage: "FILE_PREPARATION",
       hasCreditScores: true,
       hasPaymentRecords: true,
       creditConnectionStatuses: [{ provider: "SMARTCREDIT", status: "CONNECTED" }],
     });
     expect(d.ghlContactId.state).toBe("DEV_SAMPLE");
     expect(d.ghlContactId.value).toBe("ghl_contact_donna_001");
+    expect(d.intakeStatus.value).toMatch(/FILE PREPARATION/i);
     expect(d.credit.state).toBe("DEV_SAMPLE");
     expect(d.payments.state).toBe("DEV_SAMPLE");
   });
