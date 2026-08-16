@@ -273,7 +273,7 @@ describe("GHL → Grants Client inbound sync (existing master records only)", ()
     expect(pull.failedClosed).toBe(true);
     expect(pull.requiredSecrets).toEqual(["GHL_API_KEY"]);
     expect(pull.optionalSecrets).toEqual(["GHL_LOCATION_ID"]);
-    expect(pull.defaultLocationId).toBe("NsmlbLVNr4SBJNC8gnrn");
+    expect(pull.defaultLocationId).toBe("[REDACTED]");
     expect(pull.results).toEqual([]);
     expect(JSON.stringify(pull)).not.toMatch(/pit-|sk_|Bearer /i);
     expect(fetchSpy).not.toHaveBeenCalled();

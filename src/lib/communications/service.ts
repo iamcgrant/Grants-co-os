@@ -40,6 +40,55 @@ export async function ensureClientConversation(clientId: string, kind: Conversat
   });
 }
 
+/**
+ * Record a historical inbound message already delivered by an external provider.
+ * Never sends SMS, email, or iMessage. Dedupes on provider + externalId.
+ */
+export async function recordImportedMessage(input: {
+  conversationId: string;
+  body: string;
+  channel?: MessageChannel;
+  isInternal: boolean;
+  provider: string;
+  externalId: string;
+  createdAt?: Date;
+  metadata?: Record<string, unknown>;
+}): Promise<{ message: { id: string }; created: boolean }> {
+  const provider = input.provider.trim();
+  const externalId = input.externalId.trim();
+  if (!provider || !externalId) {
+    throw new Error("Imported messages require provider and externalId");
+  }
+
+  const existing = await prisma.message.findUnique({
+    where: { provider_externalId: { provider, externalId } },
+  });
+  if (existing) {
+    return { message: { id: existing.id }, created: false };
+  }
+
+  const message = await prisma.message.create({
+    data: {
+      conversationId: input.conversationId,
+      body: input.body,
+      channel: input.channel || (input.isInternal ? "INTERNAL" : "SMS"),
+      isInternal: input.isInternal,
+      deliveryStatus: "RECORDED",
+      provider,
+      externalId,
+      createdAt: input.createdAt,
+      metadataJson: input.metadata ? JSON.stringify(input.metadata) : null,
+    },
+  });
+
+  await prisma.conversation.update({
+    where: { id: input.conversationId },
+    data: { lastMessageAt: input.createdAt || new Date() },
+  });
+
+  return { message: { id: message.id }, created: true };
+}
+
 export async function postMessage(input: {
   conversationId: string;
   senderId?: string;

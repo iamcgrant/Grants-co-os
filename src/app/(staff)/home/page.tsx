@@ -14,6 +14,7 @@ import { prisma } from "@/lib/db/prisma";
 import { MetricTile, Panel, StatRow } from "@/components/ui/density";
 import { DonutChart, LineChart } from "@/components/ui/charts";
 import { GhlSyncPanel } from "@/components/integrations/GhlSyncPanel";
+import { GhlConversationPullPanel } from "@/components/integrations/GhlConversationPullPanel";
 import { hasPermission } from "@/lib/rbac/permissions";
 
 const STAGE_COLORS = ["#b2d4ff", "#f5b82a", "#67a671", "#6887d6", "#fdd79a", "#ff6b6b", "#94a1b2", "#ffffff"];
@@ -224,7 +225,10 @@ export default async function HomePage() {
         </div>
 
         {hasPermission(user.role, "MANAGE_OPERATIONS") && (
-          <GhlSyncPanel canSync />
+          <div className="space-y-4">
+            <GhlSyncPanel canSync />
+            <GhlConversationPullPanel canSync />
+          </div>
         )}
 
         {data.recentScores.length > 0 && (

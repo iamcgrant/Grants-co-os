@@ -82,7 +82,7 @@ export async function getGhlSchema(query?: string) {
     source: "business_facts",
     liveApi: isGhlApiReady() ? "READY" : "AWAITING_INTEGRATION",
     fields: ghlFacts.map((f) => f.value),
-    note: "Field catalog from Hub durable mappings. Live inbound contact sync requires GHL_API_KEY (GHL_LOCATION_ID defaults to NsmlbLVNr4SBJNC8gnrn).",
+    note: "Field catalog from Hub durable mappings. Live inbound contact sync requires GHL_API_KEY (GHL_LOCATION_ID defaults to [REDACTED]).",
   });
 }
 
@@ -191,7 +191,7 @@ export async function lookupGhlContactCapability(externalId: string) {
   if (!isGhlApiReady()) {
     return {
       status: "AWAITING_INTEGRATION",
-      message: "GHL API not configured (need GHL_API_KEY; GHL_LOCATION_ID defaults to NsmlbLVNr4SBJNC8gnrn)",
+      message: "GHL API not configured (need GHL_API_KEY; GHL_LOCATION_ID defaults to [REDACTED])",
       externalId,
     };
   }

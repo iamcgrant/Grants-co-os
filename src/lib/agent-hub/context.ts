@@ -95,8 +95,8 @@ export const CORE_BUSINESS_FACTS: {
       failClosedWithoutKey: true,
       requiredSecret: "GHL_API_KEY",
       optionalSecret: "GHL_LOCATION_ID",
-      defaultLocationId: "NsmlbLVNr4SBJNC8gnrn",
-      locationUrl: "https://app.gohighlevel.com/v2/location/NsmlbLVNr4SBJNC8gnrn/",
+      defaultLocationId: "[REDACTED]",
+      locationUrl: "https://app.gohighlevel.com/v2/location/[REDACTED]/",
     },
   },
   {
