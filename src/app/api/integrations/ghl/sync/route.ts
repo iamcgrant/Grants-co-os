@@ -11,11 +11,13 @@ const bodySchema = z.object({
   ghlContactId: z.string().min(1).optional(),
   query: z.string().optional(),
   limit: z.number().int().min(1).max(50).optional(),
+  dryRun: z.boolean().optional(),
 });
 
 /**
- * Inbound GHL → Grants Client sync.
- * Never sends messages. Never creates contacts in GHL.
+ * Inbound GHL → Grants Client sync onto existing master records only.
+ * Never sends messages. Never creates contacts in GHL. Never creates Grants clients.
+ * Without GHL_API_KEY the live path fails closed.
  */
 export async function POST(req: Request) {
   try {
@@ -29,7 +31,9 @@ export async function POST(req: Request) {
       if (!body.ghlContactId) {
         return NextResponse.json({ error: "ghlContactId required" }, { status: 400 });
       }
-      const result = await syncGhlContactById(body.ghlContactId, user.id);
+      const result = await syncGhlContactById(body.ghlContactId, user.id, {
+        dryRun: body.dryRun,
+      });
       return NextResponse.json({
         dataPlane: getGcEnvironment(),
         result,
@@ -40,6 +44,7 @@ export async function POST(req: Request) {
       query: body.query,
       limit: body.limit,
       actorId: user.id,
+      dryRun: body.dryRun,
     });
 
     return NextResponse.json({

@@ -1,20 +1,18 @@
 /**
- * GHL contact → Grants Client Record sync.
+ * GHL contact → Grants Client Record sync (inbound, existing master records only).
  *
  * Rules:
- * - Grants & Co OS is master identity
- * - Never create duplicate clients (match GHL id → email → phone)
+ * - Grants & Co OS is master identity (ONE HUMAN = ONE MASTER CLIENT RECORD)
+ * - Match order: GHL id → email → normalized phone
+ * - Never create duplicate Grants clients — do not create new clients on this path
  * - Never send messages
- * - Never create/update contacts in GHL from this path
+ * - Never create/update/delete contacts in GHL
+ * - Fail closed without GHL_API_KEY
  * - Tag every identifier with dataPlane (development | production)
  */
 
 import { prisma } from "@/lib/db/prisma";
-import {
-  attachExternalIdentifier,
-  createClient,
-  findPossibleDuplicates,
-} from "@/lib/clients/service";
+import { attachExternalIdentifier } from "@/lib/clients/service";
 import { normalizeEmail, normalizePhone } from "@/lib/clients/identity";
 import { addTimelineEvent } from "@/lib/clients/timeline";
 import { writeAuditLog } from "@/lib/audit/log";
@@ -27,21 +25,34 @@ import {
   type GhlApiContact,
   GhlApiError,
 } from "./http";
+import {
+  GHL_API_KEY_ENV,
+  GHL_LOCATION_ID_ENV,
+  GHL_PRODUCTION_LOCATION_ID,
+} from "./location";
 
 export type SyncAction =
-  | "CREATED"
   | "UPDATED"
   | "LINKED"
-  | "SKIPPED_NO_EMAIL"
+  | "SKIPPED_NO_MATCH"
   | "SKIPPED_AMBIGUOUS"
   | "UNCHANGED";
+
+export type MatchBy = "ghl_id" | "email" | "phone";
 
 export type SyncContactResult = {
   action: SyncAction;
   grantsClientId?: string;
   clientId?: string;
   ghlContactId: string;
+  matchedBy?: MatchBy;
+  dryRun?: boolean;
   message?: string;
+};
+
+export type SyncOptions = {
+  dryRun?: boolean;
+  actorId?: string;
 };
 
 function mapContactName(c: GhlApiContact) {
@@ -55,7 +66,7 @@ function buildMeta(c: GhlApiContact): IdentifierMeta {
     source: "ghl_api",
     dataPlane: getGcEnvironment(),
     syncedAt: new Date().toISOString(),
-    locationId: c.locationId,
+    locationId: c.locationId || GHL_PRODUCTION_LOCATION_ID,
     tags: c.tags,
     assignedUserId: c.assignedTo || undefined,
   };
@@ -68,12 +79,22 @@ async function ensureIntegrationConnection(status: string) {
       provider: "gohighlevel",
       status,
       lastSyncAt: new Date(),
-      configJson: JSON.stringify({ dataPlane: getGcEnvironment() }),
+      configJson: JSON.stringify({
+        dataPlane: getGcEnvironment(),
+        locationId: GHL_PRODUCTION_LOCATION_ID,
+        inboundOnly: true,
+        existingMasterRecordsOnly: true,
+      }),
     },
     update: {
       status,
       lastSyncAt: new Date(),
-      configJson: JSON.stringify({ dataPlane: getGcEnvironment() }),
+      configJson: JSON.stringify({
+        dataPlane: getGcEnvironment(),
+        locationId: GHL_PRODUCTION_LOCATION_ID,
+        inboundOnly: true,
+        existingMasterRecordsOnly: true,
+      }),
     },
   });
 }
@@ -103,307 +124,282 @@ async function recordSyncEvent(input: {
   });
 }
 
+export function failClosedWithoutGhlKey(dryRun = false) {
+  return {
+    ready: false as const,
+    dryRun,
+    failedClosed: true as const,
+    results: [] as SyncContactResult[],
+    fetched: 0,
+    requiredSecrets: [GHL_API_KEY_ENV],
+    optionalSecrets: [GHL_LOCATION_ID_ENV],
+    defaultLocationId: GHL_PRODUCTION_LOCATION_ID,
+    message: `Fail-closed: ${GHL_API_KEY_ENV} is not set. Add it to host/runtime secrets (never commit). ${GHL_LOCATION_ID_ENV} defaults to ${GHL_PRODUCTION_LOCATION_ID} when omitted.`,
+  };
+}
+
+type MatchedClient = {
+  id: string;
+  grantsClientId: string;
+  email: string;
+  emailNormalized: string;
+  phone: string | null;
+  phoneNormalized: string | null;
+  firstName: string;
+  lastName: string;
+};
+
 /**
- * Upsert one GHL contact into the Grants master client table.
+ * Match order is strict: GHL id → email → normalized phone.
+ * Never creates a Grants Client.
  */
-export async function syncGhlContactToGrants(
-  contact: GhlApiContact,
-  actorId?: string,
-): Promise<SyncContactResult> {
-  const ghlContactId = contact.id;
+export async function matchExistingGrantsClient(contact: GhlApiContact): Promise<
+  | { client: MatchedClient; matchedBy: MatchBy }
+  | { client: null; matchedBy: null; skip: "NO_MATCH" | "AMBIGUOUS" | "INVALID" }
+> {
+  const ghlContactId = contact.id?.trim();
   if (!ghlContactId) {
-    return { action: "SKIPPED_NO_EMAIL", ghlContactId: "", message: "Missing GHL contact id" };
+    return { client: null, matchedBy: null, skip: "INVALID" };
   }
 
-  const email = contact.email?.trim();
-  if (!email) {
-    await recordSyncEvent({
-      direction: "inbound",
-      entityType: "contact",
-      externalId: ghlContactId,
-      status: "SKIPPED",
-      errorMessage: "Contact has no email — cannot create Grants Client safely",
-    });
-    return {
-      action: "SKIPPED_NO_EMAIL",
-      ghlContactId,
-      message: "GHL contact has no email; skipped to avoid unsafe duplicate creation",
-    };
-  }
-
-  const emailNormalized = normalizeEmail(email);
-  const phoneNormalized = normalizePhone(contact.phone);
-  const { firstName, lastName } = mapContactName(contact);
-  const meta = buildMeta(contact);
-
-  // 1) Exact GHL identifier match
   const existingIdent = await prisma.clientIdentifier.findUnique({
     where: {
       provider_externalId: { provider: "GHL", externalId: ghlContactId },
     },
     include: { client: true },
   });
-
   if (existingIdent) {
-    const client = await prisma.client.update({
-      where: { id: existingIdent.clientId },
-      data: {
-        email,
-        emailNormalized,
-        phone: contact.phone?.trim() || existingIdent.client.phone,
-        phoneNormalized: phoneNormalized || existingIdent.client.phoneNormalized,
-        firstName,
-        lastName,
-        lastInteractionAt: new Date(),
-      },
-    });
+    return { client: existingIdent.client, matchedBy: "ghl_id" };
+  }
 
-    await attachExternalIdentifier({
-      clientId: client.id,
-      provider: "GHL",
-      externalId: ghlContactId,
-      metadata: meta,
+  const emailNormalized = contact.email?.trim() ? normalizeEmail(contact.email) : null;
+  if (emailNormalized) {
+    const byEmail = await prisma.client.findUnique({
+      where: { emailNormalized },
     });
+    if (byEmail) {
+      return { client: byEmail, matchedBy: "email" };
+    }
+  }
 
-    await addTimelineEvent({
-      clientId: client.id,
-      actorId,
-      eventType: "GHL_SYNC",
-      title: "GHL contact synced",
-      description: `Updated from GHL · ${ghlContactId}`,
-      idempotencyKey: `ghl_sync:${ghlContactId}:${meta.syncedAt}`,
+  const phoneNormalized = normalizePhone(contact.phone);
+  if (phoneNormalized) {
+    const byPhone = await prisma.client.findMany({
+      where: { phoneNormalized },
     });
+    if (byPhone.length > 1) {
+      return { client: null, matchedBy: null, skip: "AMBIGUOUS" };
+    }
+    if (byPhone.length === 1) {
+      return { client: byPhone[0], matchedBy: "phone" };
+    }
+  }
 
-    await recordSyncEvent({
-      direction: "inbound",
-      entityType: "contact",
-      externalId: ghlContactId,
-      status: "UPDATED",
-      payload: { grantsClientId: client.grantsClientId },
-    });
+  return { client: null, matchedBy: null, skip: "NO_MATCH" };
+}
 
+async function applyInboundUpdate(input: {
+  client: MatchedClient;
+  contact: GhlApiContact;
+  matchedBy: MatchBy;
+  actorId?: string;
+  dryRun?: boolean;
+}): Promise<SyncContactResult> {
+  const { client, contact, matchedBy, actorId, dryRun } = input;
+  const ghlContactId = contact.id;
+  const action: SyncAction = matchedBy === "ghl_id" ? "UPDATED" : "LINKED";
+
+  if (dryRun) {
     return {
-      action: "UPDATED",
+      action,
       grantsClientId: client.grantsClientId,
       clientId: client.id,
       ghlContactId,
+      matchedBy,
+      dryRun: true,
+      message: `Dry-run: would ${action.toLowerCase()} ${client.grantsClientId} via ${matchedBy}`,
     };
   }
 
-  // 2) Match by email / phone — never create a second Grants Client
-  const duplicates = await findPossibleDuplicates(emailNormalized, phoneNormalized);
-  if (duplicates.length > 1) {
-    const emailMatch = duplicates.find((d) => normalizeEmail(d.email) === emailNormalized);
-    if (!emailMatch) {
+  const email = contact.email?.trim();
+  const emailNormalized = email ? normalizeEmail(email) : client.emailNormalized;
+  const phoneNormalized = normalizePhone(contact.phone) || client.phoneNormalized;
+  const { firstName, lastName } = mapContactName(contact);
+  const meta = buildMeta(contact);
+
+  if (emailNormalized && emailNormalized !== client.emailNormalized) {
+    const taken = await prisma.client.findUnique({ where: { emailNormalized } });
+    if (taken && taken.id !== client.id) {
       await recordSyncEvent({
         direction: "inbound",
         entityType: "contact",
         externalId: ghlContactId,
         status: "AMBIGUOUS",
-        errorMessage: "Multiple Grants clients matched phone/email without clear email winner",
+        errorMessage: "Inbound email belongs to a different Grants client",
       });
       return {
         action: "SKIPPED_AMBIGUOUS",
         ghlContactId,
-        message: "Multiple possible Grants clients — resolve manually before linking",
+        matchedBy,
+        message: "Inbound email belongs to a different Grants client — resolve manually",
       };
     }
-    // Prefer email match when ambiguous
-    const client = await prisma.client.update({
-      where: { id: emailMatch.id },
-      data: {
-        phone: contact.phone?.trim() || emailMatch.phone,
-        phoneNormalized: phoneNormalized || undefined,
-        firstName,
-        lastName,
-        duplicateFlag: true,
-        lastInteractionAt: new Date(),
-      },
-    });
-    await attachExternalIdentifier({
-      clientId: client.id,
-      provider: "GHL",
-      externalId: ghlContactId,
-      metadata: meta,
-    });
-    await addTimelineEvent({
-      clientId: client.id,
-      actorId,
-      eventType: "GHL_LINKED",
-      title: "GHL contact linked",
-      description: `Linked to existing ${client.grantsClientId} (email match; phone collision flagged)`,
-      idempotencyKey: `ghl_link:${ghlContactId}:${client.id}`,
-    });
-    await recordSyncEvent({
-      direction: "inbound",
-      entityType: "contact",
-      externalId: ghlContactId,
-      status: "LINKED",
-      payload: { grantsClientId: client.grantsClientId, ambiguous: true },
-    });
-    return {
-      action: "LINKED",
-      grantsClientId: client.grantsClientId,
-      clientId: client.id,
-      ghlContactId,
-      message: "Linked via email; duplicate phone candidates flagged",
-    };
   }
 
-  if (duplicates.length === 1) {
-    const match = duplicates[0];
-    const client = await prisma.client.update({
-      where: { id: match.id },
-      data: {
-        email,
-        emailNormalized,
-        phone: contact.phone?.trim() || match.phone,
-        phoneNormalized: phoneNormalized || undefined,
-        firstName,
-        lastName,
-        lastInteractionAt: new Date(),
-      },
-    });
-
-    await attachExternalIdentifier({
-      clientId: client.id,
-      provider: "GHL",
-      externalId: ghlContactId,
-      metadata: meta,
-    });
-
-    await addTimelineEvent({
-      clientId: client.id,
-      actorId,
-      eventType: "GHL_LINKED",
-      title: "GHL contact linked",
-      description: `Linked to existing ${client.grantsClientId}`,
-      idempotencyKey: `ghl_link:${ghlContactId}:${client.id}`,
-    });
-
-    await writeAuditLog({
-      actorId,
-      action: "GHL_CONTACT_LINKED",
-      entityType: "Client",
-      entityId: client.id,
-      metadata: { ghlContactId, grantsClientId: client.grantsClientId },
-    });
-
-    await recordSyncEvent({
-      direction: "inbound",
-      entityType: "contact",
-      externalId: ghlContactId,
-      status: "LINKED",
-      payload: { grantsClientId: client.grantsClientId },
-    });
-
-    return {
-      action: "LINKED",
-      grantsClientId: client.grantsClientId,
-      clientId: client.id,
-      ghlContactId,
-    };
-  }
-
-  // 3) Create new Grants Client
-  const created = await createClient({
-    email,
-    phone: contact.phone || undefined,
-    firstName,
-    lastName,
-    actorId,
-    notes: `Synced from GHL (${getGcEnvironment()})`,
+  const updated = await prisma.client.update({
+    where: { id: client.id },
+    data: {
+      email: email || client.email,
+      emailNormalized,
+      phone: contact.phone?.trim() || client.phone,
+      phoneNormalized,
+      firstName,
+      lastName,
+      lastInteractionAt: new Date(),
+    },
   });
 
-  if (created.status !== "CREATED") {
-    // Race: duplicate appeared — link instead
-    const again = await findPossibleDuplicates(emailNormalized, phoneNormalized);
-    if (again[0]) {
-      await attachExternalIdentifier({
-        clientId: again[0].id,
-        provider: "GHL",
-        externalId: ghlContactId,
-        metadata: meta,
-      });
-      return {
-        action: "LINKED",
-        grantsClientId: again[0].grantsClientId,
-        clientId: again[0].id,
-        ghlContactId,
-      };
-    }
-    return {
-      action: "SKIPPED_AMBIGUOUS",
-      ghlContactId,
-      message: "Could not create or link safely",
-    };
-  }
-
   await attachExternalIdentifier({
-    clientId: created.client.id,
+    clientId: updated.id,
     provider: "GHL",
     externalId: ghlContactId,
     metadata: meta,
   });
 
-  await writeAuditLog({
+  await addTimelineEvent({
+    clientId: updated.id,
     actorId,
-    action: "GHL_CONTACT_SYNCED",
-    entityType: "Client",
-    entityId: created.client.id,
-    metadata: { ghlContactId, grantsClientId: created.client.grantsClientId },
+    eventType: matchedBy === "ghl_id" ? "GHL_SYNC" : "GHL_LINKED",
+    title: matchedBy === "ghl_id" ? "GHL contact synced" : "GHL contact linked",
+    description:
+      matchedBy === "ghl_id"
+        ? `Updated from GHL · ${ghlContactId}`
+        : `Linked to existing ${updated.grantsClientId} via ${matchedBy}`,
+    idempotencyKey:
+      matchedBy === "ghl_id"
+        ? `ghl_sync:${ghlContactId}:${meta.syncedAt}`
+        : `ghl_link:${ghlContactId}:${updated.id}`,
   });
+
+  if (matchedBy !== "ghl_id") {
+    await writeAuditLog({
+      actorId,
+      action: "GHL_CONTACT_LINKED",
+      entityType: "Client",
+      entityId: updated.id,
+      metadata: { ghlContactId, grantsClientId: updated.grantsClientId, matchedBy },
+    });
+  }
 
   await recordSyncEvent({
     direction: "inbound",
     entityType: "contact",
     externalId: ghlContactId,
-    status: "CREATED",
-    payload: { grantsClientId: created.client.grantsClientId },
+    status: action,
+    payload: { grantsClientId: updated.grantsClientId, matchedBy },
   });
 
   return {
-    action: "CREATED",
-    grantsClientId: created.client.grantsClientId,
-    clientId: created.client.id,
+    action,
+    grantsClientId: updated.grantsClientId,
+    clientId: updated.id,
     ghlContactId,
+    matchedBy,
   };
+}
+
+/**
+ * Upsert one GHL contact onto an existing Grants master client record.
+ * Does not create Grants clients. Does not write to GHL.
+ */
+export async function syncGhlContactToGrants(
+  contact: GhlApiContact,
+  actorId?: string,
+  options?: SyncOptions,
+): Promise<SyncContactResult> {
+  const dryRun = Boolean(options?.dryRun);
+  const actor = options?.actorId ?? actorId;
+  const ghlContactId = contact.id?.trim() || "";
+
+  const match = await matchExistingGrantsClient(contact);
+  if (!match.client) {
+    const action: SyncAction =
+      match.skip === "AMBIGUOUS" ? "SKIPPED_AMBIGUOUS" : "SKIPPED_NO_MATCH";
+    const message =
+      match.skip === "INVALID"
+        ? "Missing GHL contact id"
+        : match.skip === "AMBIGUOUS"
+          ? "Multiple Grants clients matched normalized phone — resolve manually before linking"
+          : "No existing Grants master client matched GHL id, email, or normalized phone — not created";
+
+    if (!dryRun && ghlContactId) {
+      await recordSyncEvent({
+        direction: "inbound",
+        entityType: "contact",
+        externalId: ghlContactId,
+        status: action,
+        errorMessage: message,
+      });
+    }
+
+    return { action, ghlContactId, dryRun: dryRun || undefined, message };
+  }
+
+  return applyInboundUpdate({
+    client: match.client,
+    contact,
+    matchedBy: match.matchedBy,
+    actorId: actor,
+    dryRun,
+  });
 }
 
 export async function syncGhlContactById(
   ghlContactId: string,
   actorId?: string,
+  options?: SyncOptions,
 ): Promise<SyncContactResult> {
   if (!isGhlApiReady()) {
-    throw new GhlApiError("GHL API not configured (need GHL_API_KEY + GHL_LOCATION_ID)", 503);
+    throw new GhlApiError(
+      `GHL API not configured (need ${GHL_API_KEY_ENV}; ${GHL_LOCATION_ID_ENV} defaults to ${GHL_PRODUCTION_LOCATION_ID})`,
+      503,
+    );
   }
   const contact = await getGhlContact(ghlContactId);
-  const result = await syncGhlContactToGrants(contact, actorId);
-  await ensureIntegrationConnection("CONNECTED");
+  const result = await syncGhlContactToGrants(contact, actorId, options);
+  if (!options?.dryRun) {
+    await ensureIntegrationConnection("CONNECTED");
+  }
   return result;
 }
 
 /**
- * Pull a page of GHL contacts and upsert into Grants Client records.
+ * Pull a page of GHL contacts and link onto existing Grants Client records only.
+ * Without GHL_API_KEY this fails closed (no live fetch, no client writes).
  */
 export async function pullGhlContacts(input: {
   query?: string;
   limit?: number;
   actorId?: string;
+  dryRun?: boolean;
 }): Promise<{
   ready: boolean;
+  dryRun: boolean;
+  failedClosed?: boolean;
   results: SyncContactResult[];
   fetched: number;
   message?: string;
+  requiredSecrets?: string[];
+  optionalSecrets?: string[];
+  defaultLocationId?: string;
 }> {
+  const dryRun = Boolean(input.dryRun);
+
   if (!isGhlApiReady()) {
-    await ensureIntegrationConnection("AWAITING_CREDENTIALS");
-    return {
-      ready: false,
-      results: [],
-      fetched: 0,
-      message: "Awaiting Integration — set GHL_API_KEY and GHL_LOCATION_ID",
-    };
+    if (!dryRun) {
+      await ensureIntegrationConnection("AWAITING_CREDENTIALS");
+    }
+    return failClosedWithoutGhlKey(dryRun);
   }
 
   const limit = Math.min(Math.max(input.limit ?? 25, 1), 50);
@@ -423,9 +419,21 @@ export async function pullGhlContacts(input: {
 
   const results: SyncContactResult[] = [];
   for (const c of contacts) {
-    results.push(await syncGhlContactToGrants(c, input.actorId));
+    results.push(await syncGhlContactToGrants(c, input.actorId, { dryRun }));
   }
 
-  await ensureIntegrationConnection("CONNECTED");
-  return { ready: true, results, fetched: contacts.length };
+  if (!dryRun) {
+    await ensureIntegrationConnection("CONNECTED");
+  }
+
+  return {
+    ready: true,
+    dryRun,
+    results,
+    fetched: contacts.length,
+    defaultLocationId: GHL_PRODUCTION_LOCATION_ID,
+    message: dryRun
+      ? "Dry-run: no Grants client writes. No GHL contact creates/updates/deletes."
+      : "Inbound sync onto existing master client records only. No GHL writes.",
+  };
 }

@@ -40,6 +40,13 @@ export async function GET() {
         locationId: flags.ghlLocation,
         live: flags.ghlLive,
       },
+      envNames: flags.envNames,
+      defaultLocationId: flags.defaultLocationId,
+      inbound: {
+        existingMasterRecordsOnly: true,
+        matchOrder: ["ghl_id", "email", "normalized_phone"],
+        createGhlContacts: false,
+      },
       // Never expose secret values or hints that embed secrets
     });
   } catch (e) {

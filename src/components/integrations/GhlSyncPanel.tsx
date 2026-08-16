@@ -4,12 +4,17 @@ import { useState } from "react";
 
 type PullResponse = {
   ready?: boolean;
+  dryRun?: boolean;
+  failedClosed?: boolean;
   fetched?: number;
   message?: string;
   error?: string;
   awaitingIntegration?: boolean;
   dataPlane?: string;
-  results?: { action: string; grantsClientId?: string; ghlContactId: string }[];
+  requiredSecrets?: string[];
+  optionalSecrets?: string[];
+  defaultLocationId?: string;
+  results?: { action: string; grantsClientId?: string; ghlContactId: string; matchedBy?: string }[];
 };
 
 export function GhlSyncPanel({ canSync }: { canSync: boolean }) {
@@ -17,7 +22,7 @@ export function GhlSyncPanel({ canSync }: { canSync: boolean }) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<PullResponse | null>(null);
 
-  async function runPull() {
+  async function runPull(dryRun: boolean) {
     setBusy(true);
     setResult(null);
     try {
@@ -28,6 +33,7 @@ export function GhlSyncPanel({ canSync }: { canSync: boolean }) {
           mode: "pull",
           query: query.trim() || undefined,
           limit: 25,
+          dryRun,
         }),
       });
       const data = (await res.json()) as PullResponse;
@@ -46,7 +52,8 @@ export function GhlSyncPanel({ canSync }: { canSync: boolean }) {
           GoHighLevel → Grants Client
         </p>
         <p className="text-sm text-[var(--gc-muted)]">
-          Pull real contacts into master client records. Never duplicates. Never sends messages.
+          Link live GHL contacts onto existing master client records only (GHL id → email →
+          phone). Never creates Grants clients. Never creates GHL contacts. Never sends messages.
         </p>
       </div>
       {canSync ? (
@@ -58,7 +65,15 @@ export function GhlSyncPanel({ canSync }: { canSync: boolean }) {
             onChange={(e) => setQuery(e.target.value)}
             disabled={busy}
           />
-          <button type="button" className="gc-btn gc-btn-ice" onClick={runPull} disabled={busy}>
+          <button
+            type="button"
+            className="gc-btn gc-btn-outline"
+            onClick={() => runPull(true)}
+            disabled={busy}
+          >
+            {busy ? "Working…" : "Dry run"}
+          </button>
+          <button type="button" className="gc-btn gc-btn-ice" onClick={() => runPull(false)} disabled={busy}>
             {busy ? "Syncing…" : "Pull from GHL"}
           </button>
         </div>
@@ -67,8 +82,14 @@ export function GhlSyncPanel({ canSync }: { canSync: boolean }) {
       )}
       {result && (
         <div className="text-sm space-y-1">
-          {result.awaitingIntegration || result.ready === false ? (
-            <p className="gc-status gc-status-warn">Awaiting Integration — GHL API key + Location ID</p>
+          {result.awaitingIntegration || result.ready === false || result.failedClosed ? (
+            <p className="gc-status gc-status-warn">
+              Fail-closed — set {result.requiredSecrets?.join(", ") || "GHL_API_KEY"} in host
+              secrets
+              {result.defaultLocationId
+                ? ` · ${result.optionalSecrets?.[0] || "GHL_LOCATION_ID"} defaults to ${result.defaultLocationId}`
+                : ""}
+            </p>
           ) : result.error ? (
             <p className="gc-status gc-status-danger">{result.error}</p>
           ) : (

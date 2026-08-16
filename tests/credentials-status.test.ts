@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { integrationCredentialStatus } from "../src/lib/integrations/credentials";
+import { getGhlApiConfig, integrationCredentialStatus } from "../src/lib/integrations/credentials";
+import { GHL_PRODUCTION_LOCATION_ID } from "../src/lib/integrations/ghl/location";
 
 describe("integration credentials status", () => {
   const keys = [
@@ -38,11 +39,20 @@ describe("integration credentials status", () => {
     expect(JSON.stringify(status)).not.toContain("owner@example.com");
   });
 
-  it("requires both API key and location for live GHL", () => {
-    process.env.GHL_API_KEY = "pk_test";
+  it("requires GHL_API_KEY for live GHL and defaults location to the known Grants id", () => {
     expect(integrationCredentialStatus().ghlLive).toBe(false);
-    process.env.GHL_LOCATION_ID = "loc_1";
+    expect(getGhlApiConfig()).toBeNull();
+
+    process.env.GHL_API_KEY = "pk_test";
     expect(integrationCredentialStatus().ghlLive).toBe(true);
+    expect(getGhlApiConfig()?.locationId).toBe(GHL_PRODUCTION_LOCATION_ID);
+    expect(integrationCredentialStatus().envNames).toEqual({
+      ghlApiKey: "GHL_API_KEY",
+      ghlLocationId: "GHL_LOCATION_ID",
+    });
+
+    process.env.GHL_LOCATION_ID = "loc_override";
+    expect(getGhlApiConfig()?.locationId).toBe("loc_override");
     expect(JSON.stringify(integrationCredentialStatus())).not.toContain("pk_test");
   });
 });
