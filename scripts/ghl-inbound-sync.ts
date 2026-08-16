@@ -12,7 +12,11 @@
  */
 import "dotenv/config";
 import { isGhlApiReady, listGhlContacts, searchGhlContacts } from "../src/lib/integrations/ghl/http";
-import { failClosedWithoutGhlKey, syncGhlContactToGrants } from "../src/lib/integrations/ghl/sync";
+import {
+  failClosedWithoutGhlKey,
+  markGhlInboundConnection,
+  syncGhlContactToGrants,
+} from "../src/lib/integrations/ghl/sync";
 import { resolveGhlLocationId } from "../src/lib/integrations/ghl/location";
 import type { SyncAction, SyncContactResult } from "../src/lib/integrations/ghl/sync";
 
@@ -151,6 +155,10 @@ async function main() {
 
   const counts = summarize(results);
   counts.errors += thrown;
+
+  if (!dryRun) {
+    await markGhlInboundConnection("CONNECTED");
+  }
 
   console.log(
     JSON.stringify(

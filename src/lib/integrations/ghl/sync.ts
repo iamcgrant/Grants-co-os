@@ -72,6 +72,10 @@ function buildMeta(c: GhlApiContact): IdentifierMeta {
   };
 }
 
+export async function markGhlInboundConnection(status = "CONNECTED") {
+  await ensureIntegrationConnection(status);
+}
+
 async function ensureIntegrationConnection(status: string) {
   await prisma.integrationConnection.upsert({
     where: { provider: "gohighlevel" },
