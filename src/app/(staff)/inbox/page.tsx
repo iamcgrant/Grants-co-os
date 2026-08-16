@@ -5,6 +5,8 @@ import { listInbox } from "@/lib/communications/service";
 import { ComposeMessage } from "@/components/inbox/ComposeMessage";
 import { prisma } from "@/lib/db/prisma";
 import { Panel } from "@/components/ui/density";
+import { isGhlApiReady } from "@/lib/integrations/ghl/http";
+import { getGcEnvironment } from "@/lib/integrations/env";
 
 export default async function InboxPage({
   searchParams,
@@ -16,6 +18,8 @@ export default async function InboxPage({
   const { tab: tabRaw, c } = await searchParams;
   const tab = tabRaw === "team" ? "team" : tabRaw === "client" ? "client" : "all";
   const conversations = await listInbox(user.id, tab);
+  const ghlReady = isGhlApiReady();
+  const dataPlane = getGcEnvironment();
 
   const active = c
     ? await prisma.conversation.findUnique({
@@ -41,6 +45,10 @@ export default async function InboxPage({
           <h1 className="text-3xl md:text-4xl mb-1">Inbox</h1>
           <p className="text-sm text-[var(--gc-muted)] max-w-2xl">
             Client messages and internal team chat — visually separated so internal notes never leave by accident.
+            {" · "}
+            {dataPlane} data plane
+            {" · "}
+            GHL channel {ghlReady ? "API ready (no live sends)" : "Awaiting Integration"}
           </p>
         </div>
         <div className="flex gap-2">

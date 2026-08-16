@@ -6,6 +6,8 @@ import { prisma } from "@/lib/db/prisma";
 import { FridayPulseButton } from "@/components/credit/FridayPulseButton";
 import { ScoreIntelligencePanel } from "@/components/credit/ScoreIntelligencePanel";
 import { buildScoreIntelligence } from "@/lib/credit/score-intelligence";
+import { getGcEnvironment } from "@/lib/integrations/env";
+import { integrationCredentialStatus } from "@/lib/integrations/credentials";
 
 export default async function CreditPulsePage() {
   const user = await getCurrentUser();
@@ -50,6 +52,16 @@ export default async function CreditPulsePage() {
       }
     : null;
 
+  const dataPlane = getGcEnvironment();
+  const creds = integrationCredentialStatus();
+  const creditLive = creds.smartCreditSponsor; // sponsor link present ≠ live score sync
+  const creditLabel =
+    dataPlane === "development"
+      ? "Development sample scores · live bureau sync Awaiting Integration"
+      : creditLive
+        ? "Sponsor ready · score sync per client"
+        : "Awaiting Integration";
+
   return (
     <div className="gc-fade-up">
       <div className="mb-10">
@@ -57,6 +69,8 @@ export default async function CreditPulsePage() {
         <h1 className="text-4xl md:text-5xl mb-2">Score Intelligence</h1>
         <p className="text-sm text-[var(--gc-muted)] max-w-2xl leading-relaxed">
           Baseline → previous → current, with source and scoring model preserved. Different models are never treated as interchangeable.
+          {" · "}
+          {creditLabel}
         </p>
       </div>
 

@@ -1,6 +1,23 @@
 import { prisma } from "@/lib/db/prisma";
 import { getFinanceDashboard } from "@/lib/payments/dashboard";
 import { startOfDay, startOfWeek, startOfMonth, subDays } from "date-fns";
+import { getGcEnvironment } from "@/lib/integrations/env";
+import { isGhlApiReady } from "@/lib/integrations/ghl/http";
+import { integrationCredentialStatus } from "@/lib/integrations/credentials";
+
+const clientQueueInclude = {
+  identifiers: { select: { provider: true, externalId: true, metadataJson: true } },
+  assignments: {
+    include: { staff: { select: { firstName: true, lastName: true, role: true } } },
+  },
+} as const;
+
+export function clientSourceLabel(identifiers: { provider: string; metadataJson: string | null }[]) {
+  const ghl = identifiers.find((i) => i.provider === "GHL");
+  if (ghl?.metadataJson?.includes('"source":"ghl_api"')) return "GHL live";
+  if (ghl) return "Dev sample";
+  return "Grants";
+}
 
 export async function getOwnerCommandCenter() {
   const now = new Date();
@@ -26,6 +43,7 @@ export async function getOwnerCommandCenter() {
     integrations,
     pulsePending,
     pulseFailed,
+    ghlLiveLinked,
   ] = await Promise.all([
     prisma.client.count({ where: { status: "ACTIVE" } }),
     prisma.client.count({ where: { createdAt: { gte: week } } }),
@@ -76,6 +94,9 @@ export async function getOwnerCommandCenter() {
     prisma.integrationConnection.findMany({ orderBy: { provider: "asc" } }),
     prisma.fridayPulseItem.count({ where: { updateStatus: "PENDING" } }),
     prisma.fridayPulseItem.count({ where: { updateStatus: "FAILED" } }),
+    prisma.clientIdentifier.count({
+      where: { provider: "GHL", metadataJson: { contains: '"source":"ghl_api"' } },
+    }),
   ]);
 
   const attention = await prisma.client.findMany({
@@ -99,6 +120,7 @@ export async function getOwnerCommandCenter() {
       nextActionOwner: true,
       urgency: true,
       nextDueAt: true,
+      identifiers: { select: { provider: true, metadataJson: true } },
     },
   });
 
@@ -146,6 +168,9 @@ export async function getOwnerCommandCenter() {
     },
   });
 
+  const creds = integrationCredentialStatus();
+  const ghlReady = isGhlApiReady();
+
   return {
     finance,
     ops: {
@@ -155,6 +180,7 @@ export async function getOwnerCommandCenter() {
       readyForSimon,
       readyForJona,
       stuckClients,
+      ghlLiveLinked,
     },
     team: {
       simonOpen,
@@ -171,6 +197,13 @@ export async function getOwnerCommandCenter() {
       pulseFailed,
     },
     integrations,
+    integrationHealth: {
+      dataPlane: getGcEnvironment(),
+      ghlReady,
+      ghlLiveLinked,
+      disputeFoxReady: creds.disputeFoxApi,
+      smartCreditSponsor: creds.smartCreditSponsor,
+    },
     attention,
     recentScores,
     revenueTrend: { labels: dayKeys, values: dayTotals },
@@ -193,6 +226,7 @@ export async function getSimonCareBoard(simonUserId: string) {
     },
     orderBy: [{ urgency: "desc" }, { nextDueAt: "asc" }],
     include: {
+      ...clientQueueInclude,
       tasks: {
         where: { status: { in: ["OPEN", "IN_PROGRESS", "BLOCKED"] }, assigneeId: simonUserId },
         take: 3,
@@ -236,6 +270,7 @@ export async function getJonaProcessingBoard(jonaUserId: string) {
     },
     orderBy: [{ urgency: "desc" }, { nextDueAt: "asc" }],
     include: {
+      ...clientQueueInclude,
       disputeRounds: { orderBy: { roundNumber: "desc" }, take: 2 },
       tasks: {
         where: { status: { in: ["OPEN", "IN_PROGRESS", "BLOCKED"] }, assigneeId: jonaUserId },

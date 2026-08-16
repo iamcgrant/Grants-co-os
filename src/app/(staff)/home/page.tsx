@@ -4,6 +4,7 @@ import { Role } from "@/generated/prisma/client";
 import { getCurrentUser } from "@/lib/auth/session";
 import { formatUsd } from "@/lib/payments/dashboard";
 import {
+  clientSourceLabel,
   getJonaProcessingBoard,
   getOwnerCommandCenter,
   getSimonCareBoard,
@@ -12,6 +13,8 @@ import { roleHomeLabel, type StaffRole } from "@/lib/nav/role-nav";
 import { prisma } from "@/lib/db/prisma";
 import { MetricTile, Panel, StatRow } from "@/components/ui/density";
 import { DonutChart, LineChart } from "@/components/ui/charts";
+import { GhlSyncPanel } from "@/components/integrations/GhlSyncPanel";
+import { hasPermission } from "@/lib/rbac/permissions";
 
 const STAGE_COLORS = ["#b2d4ff", "#f5b82a", "#67a671", "#6887d6", "#fdd79a", "#ff6b6b", "#94a1b2", "#ffffff"];
 
@@ -31,7 +34,12 @@ export default async function HomePage() {
             <p className="gc-eyebrow mb-1">Owner command</p>
             <h1 className="text-3xl md:text-[2.35rem] mb-1 leading-none">{roleHomeLabel(user.role as StaffRole)}</h1>
             <p className="text-[var(--gc-muted)] text-sm">
-              Live operations · money · team · exceptions · systems — multiple panels at once
+              {data.integrationHealth.dataPlane} data plane · money · team · exceptions · systems
+              {" · "}
+              GHL{" "}
+              {data.integrationHealth.ghlReady
+                ? `${data.ops.ghlLiveLinked} live linked`
+                : "Awaiting Integration"}
             </p>
           </div>
           <div className="hidden xl:flex flex-wrap gap-2">
@@ -167,7 +175,9 @@ export default async function HomePage() {
                     <p className="font-medium truncate">
                       {c.firstName} {c.lastName}
                     </p>
-                    <p className="text-xs text-[var(--gc-muted)] truncate">{c.nextAction || "Review"}</p>
+                    <p className="text-xs text-[var(--gc-muted)] truncate">
+                      {c.grantsClientId} · {clientSourceLabel(c.identifiers)} · {c.nextAction || "Review"}
+                    </p>
                   </div>
                   <div className="text-right shrink-0">
                     <span className="gc-status gc-status-ice">{c.stage.replaceAll("_", " ")}</span>
@@ -182,19 +192,40 @@ export default async function HomePage() {
 
           <Panel title="System status" eyebrow="Integrations" className="gc-span-3" action={<Link href="/more#systems" className="text-[0.65rem] uppercase tracking-wider text-[var(--gc-ice)]">All</Link>}>
             <div className="space-y-2">
-              {data.integrations.slice(0, 6).map((i) => (
-                <div key={i.id} className="flex items-center justify-between gap-2 py-1.5">
-                  <span className="text-sm capitalize">{i.provider.replaceAll("_", " ")}</span>
-                  <span className="gc-status gc-status-ok">
-                    {i.status === "MOCK" ? "Healthy" : i.status}
-                  </span>
-                </div>
-              ))}
+              <div className="flex items-center justify-between gap-2 py-1.5">
+                <span className="text-sm">GoHighLevel</span>
+                <span className={`gc-status ${data.integrationHealth.ghlReady ? "gc-status-ok" : "gc-status-warn"}`}>
+                  {data.integrationHealth.ghlReady ? "API ready" : "Awaiting Integration"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2 py-1.5">
+                <span className="text-sm">DisputeFox</span>
+                <span className={`gc-status ${data.integrationHealth.disputeFoxReady ? "gc-status-ok" : "gc-status-warn"}`}>
+                  {data.integrationHealth.disputeFoxReady ? "API ready" : "Awaiting Integration"}
+                </span>
+              </div>
+              {data.integrations
+                .filter((i) => !["gohighlevel", "disputefox"].includes(i.provider))
+                .slice(0, 4)
+                .map((i) => (
+                  <div key={i.id} className="flex items-center justify-between gap-2 py-1.5">
+                    <span className="text-sm capitalize">{i.provider.replaceAll("_", " ")}</span>
+                    <span className="gc-status">
+                      {i.status === "MOCK" || i.status === "AWAITING_CREDENTIALS"
+                        ? "Awaiting Integration"
+                        : i.status}
+                    </span>
+                  </div>
+                ))}
               <StatRow label="Pulse pending" value={data.communication.pulsePending} href="/credit-pulse" />
               <StatRow label="Client msgs (7d)" value={data.communication.unreadClientMessages} href="/inbox" />
             </div>
           </Panel>
         </div>
+
+        {hasPermission(user.role, "MANAGE_OPERATIONS") && (
+          <GhlSyncPanel canSync />
+        )}
 
         {data.recentScores.length > 0 && (
           <Panel title="Recent score movement" eyebrow="Credit intelligence" action={<Link href="/credit-pulse" className="text-[0.65rem] uppercase tracking-wider text-[var(--gc-ice)]">Open</Link>}>
@@ -241,7 +272,9 @@ export default async function HomePage() {
                   <p className="font-medium">
                     {c.firstName} {c.lastName}
                   </p>
-                  <p className="text-sm text-[var(--gc-muted)]">{c.nextAction || "Open Client 360"}</p>
+                  <p className="text-sm text-[var(--gc-muted)]">
+                    {c.grantsClientId} · {clientSourceLabel(c.identifiers)} · {c.nextAction || "Open Client 360"}
+                  </p>
                 </div>
                 <span className="gc-status gc-status-ice">{c.stage.replaceAll("_", " ")}</span>
               </Link>
@@ -276,7 +309,7 @@ export default async function HomePage() {
                     {c.firstName} {c.lastName}
                   </p>
                   <p className="text-sm text-[var(--gc-muted)]">
-                    {c.nextAction || "Open dossier"}
+                    {c.grantsClientId} · {clientSourceLabel(c.identifiers)} · {c.nextAction || "Open dossier"}
                     {c.disputeRounds[0] ? ` · Round ${c.disputeRounds[0].roundNumber}` : ""}
                   </p>
                 </div>

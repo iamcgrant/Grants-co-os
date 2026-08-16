@@ -4,12 +4,40 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { prisma } from "@/lib/db/prisma";
 import {
+  clientSourceLabel,
   getJonaProcessingBoard,
   getOwnerCommandCenter,
   getSimonCareBoard,
 } from "@/lib/ops/command-center";
 import { Role } from "@/generated/prisma/client";
 
+function QueueClientRow({
+  c,
+}: {
+  c: {
+    id: string;
+    grantsClientId: string;
+    firstName: string;
+    lastName: string;
+    nextAction: string | null;
+    stage: string;
+    identifiers: { provider: string; metadataJson: string | null }[];
+  };
+}) {
+  return (
+    <Link href={`/clients/${c.grantsClientId}`} className="py-3 flex justify-between gap-3">
+      <div>
+        <p className="font-medium">
+          {c.firstName} {c.lastName}
+        </p>
+        <p className="text-sm text-[var(--gc-muted)]">
+          {c.grantsClientId} · {clientSourceLabel(c.identifiers)} · {c.nextAction || "Open Client 360"}
+        </p>
+      </div>
+      <span className="gc-status">{c.stage.replaceAll("_", " ")}</span>
+    </Link>
+  );
+}
 export default async function WorkPage({
   searchParams,
 }: {
@@ -50,15 +78,7 @@ export default async function WorkPage({
             <div className="divide-y divide-[var(--gc-border)] gc-panel px-4">
               {list.length === 0 && <p className="py-4 text-sm text-[var(--gc-muted)]">Clear.</p>}
               {list.map((c) => (
-                <Link key={c.id} href={`/clients/${c.grantsClientId}`} className="py-3 flex justify-between gap-3">
-                  <div>
-                    <p className="font-medium">
-                      {c.firstName} {c.lastName}
-                    </p>
-                    <p className="text-sm text-[var(--gc-muted)]">{c.nextAction}</p>
-                  </div>
-                  <span className="gc-status">{c.stage.replaceAll("_", " ")}</span>
-                </Link>
+                <QueueClientRow key={c.id} c={c} />
               ))}
             </div>
           </section>
@@ -87,15 +107,7 @@ export default async function WorkPage({
             <div className="divide-y divide-[var(--gc-border)] gc-panel px-4">
               {list.length === 0 && <p className="py-4 text-sm text-[var(--gc-muted)]">Clear.</p>}
               {list.map((c) => (
-                <Link key={c.id} href={`/clients/${c.grantsClientId}`} className="py-3 flex justify-between gap-3">
-                  <div>
-                    <p className="font-medium">
-                      {c.firstName} {c.lastName}
-                    </p>
-                    <p className="text-sm text-[var(--gc-muted)]">{c.nextAction}</p>
-                  </div>
-                  <span className="gc-status">{c.stage.replaceAll("_", " ")}</span>
-                </Link>
+                <QueueClientRow key={c.id} c={c} />
               ))}
             </div>
           </section>

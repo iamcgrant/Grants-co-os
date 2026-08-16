@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/rbac/permissions";
 import { getFinanceDashboard, formatUsd } from "@/lib/payments/dashboard";
 import { prisma } from "@/lib/db/prisma";
 import { MetricTile, Panel } from "@/components/ui/density";
+import { getGcEnvironment } from "@/lib/integrations/env";
 
 export default async function GrantsPayPage({
   searchParams,
@@ -25,6 +26,8 @@ export default async function GrantsPayPage({
   const { filter, tab: tabRaw } = await searchParams;
   const tab = tabRaw === "payouts" || tabRaw === "disputes" ? tabRaw : "payments";
   const finance = await getFinanceDashboard();
+  const dataPlane = getGcEnvironment();
+  const paymentProvider = process.env.PAYMENT_PROVIDER || "mock";
 
   const transactions = await prisma.paymentTransaction.findMany({
     where: filter === "failed" ? { status: "FAILED" } : undefined,
@@ -65,6 +68,12 @@ export default async function GrantsPayPage({
           <h1 className="text-3xl md:text-4xl mb-1">Grants Pay</h1>
           <p className="text-sm text-[var(--gc-muted)] max-w-2xl">
             Authorization, settlement, and payout stay distinct. Success ≠ deposited.
+            {" · "}
+            {dataPlane} data plane
+            {" · "}
+            {paymentProvider === "mock"
+              ? "Mock processor · Awaiting Integration for live Authorize.Net/Commas"
+              : `Provider ${paymentProvider}`}
           </p>
         </div>
         <Link href="/home" className="gc-btn gc-btn-outline">
