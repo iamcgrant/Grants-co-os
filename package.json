@@ -15,6 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "agent-mesh": "tsx agent-mesh/server.ts",
+    "ghl:inbound-sync": "tsx scripts/ghl-inbound-sync.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
