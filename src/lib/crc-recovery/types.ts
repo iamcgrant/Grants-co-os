@@ -44,6 +44,15 @@ export type CrcExportClient = {
   lastWorkedAt?: string | null;
   lastReportAt?: string | null;
   lastDisputeAt?: string | null;
+  lastNoteAt?: string | null;
+  lastDocumentAt?: string | null;
+  lastCommsAt?: string | null;
+  lastPaymentAt?: string | null;
+  /** Start date is never enough to mark Active. */
+  startedAt?: string | null;
+  cluster?: string | null;
+  crcClientStar?: boolean;
+  testJunk?: boolean;
   documents?: CrcDocumentRef[];
 };
 

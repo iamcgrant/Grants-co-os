@@ -33,6 +33,8 @@ import {
   type CrcApiClient,
 } from "./http";
 import { CRC_API_KEY_ENV, CRC_RECOVERY_WRITES_ENV, isCrcRecoveryWritesEnabled } from "./secrets";
+import { buildPhase2Plan, type Phase2Plan } from "./phase2";
+import { describeCrcWriteFlags } from "./write-flags";
 import {
   CRC_LOCAL_ROSTER_TAG,
   defaultSyntheticCrcRosterPath,
@@ -281,6 +283,8 @@ export async function compareLocalCrcRoster(input?: {
   applyRefused: true;
   enroll: typeof CRC_DO_NOT_ENROLL;
   locks: typeof CRC_RECOVERY_LOCKS;
+  phase2: Phase2Plan;
+  writeFlags: ReturnType<typeof describeCrcWriteFlags>;
   message: string;
 }> {
   const csvPath = input?.csvPath || defaultSyntheticCrcRosterPath();
@@ -343,6 +347,13 @@ export async function compareLocalCrcRoster(input?: {
 
   const matched = results.filter((r) => r.action === "MATCHED").length;
   const skipped = results.length - matched;
+  const nowMs = input?.nowMs ?? SYNTHETIC_NOW_MS;
+  const phase2 = buildPhase2Plan({
+    clients: withDocs,
+    catalog,
+    decisions,
+    nowMs,
+  });
 
   return {
     ready: true,
@@ -359,7 +370,9 @@ export async function compareLocalCrcRoster(input?: {
     applyRefused: apply.refused,
     enroll: CRC_DO_NOT_ENROLL,
     locks: CRC_RECOVERY_LOCKS,
-    message: `${CRC_LOCAL_ROSTER_TAG}. Dry-run existing-only compare. No CRC/GHL/DF/OS creates. ${CRC_RECOVERY_WRITES_ENV} stays false. Zap 374413762 stays OFF.`,
+    phase2,
+    writeFlags: describeCrcWriteFlags(),
+    message: `${CRC_LOCAL_ROSTER_TAG}. Dry-run existing-only compare. Phase 2 class-gated flags default off. No CRC/GHL/DF/OS creates. ${CRC_RECOVERY_WRITES_ENV} ignored. Zap 374413762 stays OFF.`,
   };
 }
 

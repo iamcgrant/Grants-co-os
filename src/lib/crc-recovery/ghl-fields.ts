@@ -3,6 +3,7 @@
  * Document + schema only. Do not live-write GHL. Do not apply tags live.
  */
 
+import { GHL_SERVICE_STATUS_VALUES } from "@/lib/integrations/crc/service-status";
 import { CrcClientClassification } from "./classification";
 import { CRC_MIGRATION_SOURCE } from "./locks";
 
@@ -10,7 +11,12 @@ export const GHL_CRC_CUSTOM_FIELDS = [
   { key: "grants_client_id", label: "Grants Client ID", type: "text" },
   { key: "crc_client_id", label: "CRC Client ID", type: "text" },
   { key: "disputefox_client_id", label: "DisputeFox Client ID", type: "text" },
-  { key: "service_status", label: "Service Status", type: "text" },
+  {
+    key: "service_status",
+    label: "Service Status",
+    type: "enum",
+    values: GHL_SERVICE_STATUS_VALUES,
+  },
   { key: "last_worked_date", label: "Last Worked Date", type: "date" },
   { key: "last_report_date", label: "Last Report Date", type: "date" },
   { key: "last_dispute_date", label: "Last Dispute Date", type: "date" },

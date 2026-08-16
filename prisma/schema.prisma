@@ -848,6 +848,17 @@ enum AttributionShowStatus {
   unknown
 }
 
+/// GHL organization Service Status for CRC recovery (document + schema).
+/// Do not live-write GHL. Phase 2 scaffolding only.
+enum GhlServiceStatus {
+  ACTIVE_CREDIT_CLIENT
+  RECENTLY_WORKED_REVIEW
+  DORMANT_REACTIVATION
+  CLOSED_DO_NOT_REACTIVATE
+  AMBIGUOUS_IDENTITY
+  TEST_JUNK
+}
+
 model LeadAttribution {
   id              String                 @id @default(cuid())
   clientId        String
