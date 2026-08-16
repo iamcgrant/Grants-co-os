@@ -4,14 +4,31 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { canAccessFinancialData, hasPermission } from "@/lib/rbac/permissions";
 import { prisma } from "@/lib/db/prisma";
 import { getClientTimeline } from "@/lib/clients/timeline";
+import {
+  buildClientDossierIntegrations,
+  formatIntegrationField,
+  type IntegrationFieldState,
+} from "@/lib/clients/dossier";
 import { formatUsd } from "@/lib/payments/dashboard";
 import { ClientActions } from "@/components/clients/ClientActions";
 import { ClientHandoffActions } from "@/components/clients/ClientHandoffActions";
+import { SyncGhlContactButton } from "@/components/integrations/SyncGhlContactButton";
 import { ScoreIntelligencePanel } from "@/components/credit/ScoreIntelligencePanel";
 import { buildScoreIntelligence } from "@/lib/credit/score-intelligence";
 import { Tabs } from "@/components/ui/Tabs";
 import { Panel, ProgressSteps } from "@/components/ui/density";
 import { LineChart } from "@/components/ui/charts";
+
+function IntegrationValue({ field }: { field: IntegrationFieldState }) {
+  const label = formatIntegrationField(field);
+  const warn = field.state === "AWAITING_INTEGRATION" || field.state === "UNMATCHED";
+  const sample = field.state === "DEV_SAMPLE";
+  return (
+    <span className={warn ? "text-[var(--gc-gold)]" : sample ? "text-[var(--gc-muted)]" : undefined}>
+      {label}
+    </span>
+  );
+}
 
 export default async function Client360Page({
   params,
@@ -78,6 +95,21 @@ export default async function Client360Page({
         orderBy: { createdAt: "desc" },
       })
     : [];
+
+  const integrations = buildClientDossierIntegrations({
+    grantsClientId: client.grantsClientId,
+    identifiers: client.identifiers,
+    stage: client.stage,
+    hasCreditScores: client.creditScores.length > 0,
+    hasPaymentRecords: invoices.length > 0 || transactions.length > 0,
+    creditConnectionStatuses: client.creditConnections,
+  });
+
+  const liveGhlId =
+    integrations.ghlContactId.state === "LIVE" ? integrations.ghlContactId.value : null;
+  const refreshGhlId =
+    liveGhlId ||
+    (integrations.ghlContactId.state === "DEV_SAMPLE" ? integrations.ghlContactId.value : null);
 
   const clientConv = client.conversations.find((c) => c.kind === "CLIENT");
   const internalConv = client.conversations.find((c) => c.kind === "CLIENT_INTERNAL");
@@ -177,6 +209,10 @@ export default async function Client360Page({
             canManage={hasPermission(user.role, "MANAGE_OPERATIONS")}
             role={user.role}
           />
+          <SyncGhlContactButton
+            ghlContactId={refreshGhlId}
+            canSync={hasPermission(user.role, "MANAGE_OPERATIONS") && integrations.ghlApiReady}
+          />
         </div>
       </div>
 
@@ -185,11 +221,62 @@ export default async function Client360Page({
       {tab === "overview" && (
         <div className="space-y-4">
           <div className="gc-dash-grid gc-dash-grid-12">
-            <Panel title="Client information" className="gc-span-4">
+            <Panel title="Identity & integrations" className="gc-span-4" eyebrow={`${integrations.dataPlane} data plane`}>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between gap-2"><span className="text-[var(--gc-muted)]">Email</span><span>{client.email}</span></div>
-                <div className="flex justify-between gap-2"><span className="text-[var(--gc-muted)]">Phone</span><span>{client.phone || "—"}</span></div>
-                <div className="flex justify-between gap-2"><span className="text-[var(--gc-muted)]">Stage</span><span>{client.stage.replaceAll("_", " ")}</span></div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--gc-muted)]">Grants Client ID</span>
+                  <span className="font-medium">{client.grantsClientId}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--gc-muted)]">GHL Contact ID</span>
+                  <IntegrationValue field={integrations.ghlContactId} />
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--gc-muted)]">DisputeFox Client ID</span>
+                  <IntegrationValue field={integrations.disputeFoxClientId} />
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--gc-muted)]">Intake Status</span>
+                  <IntegrationValue field={integrations.intakeStatus} />
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--gc-muted)]">Email</span>
+                  <span>{client.email}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--gc-muted)]">Phone</span>
+                  <span>{client.phone || "—"}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--gc-muted)]">Status / stage</span>
+                  <span>
+                    {client.status} · {client.stage.replaceAll("_", " ")}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--gc-muted)]">Assigned staff</span>
+                  <span>
+                    {client.assignments.length
+                      ? client.assignments.map((a) => a.staff.firstName).join(", ")
+                      : "Unassigned"}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--gc-muted)]">Next action</span>
+                  <span>{client.nextAction || "—"}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--gc-muted)]">Credit data</span>
+                  <IntegrationValue field={integrations.credit} />
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--gc-muted)]">Payment data</span>
+                  <IntegrationValue field={integrations.payments} />
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--gc-muted)]">GHL messages</span>
+                  <IntegrationValue field={integrations.ghlMessages} />
+                </div>
                 {client.clientServices.map((cs) => (
                   <div key={cs.id} className="flex justify-between gap-2">
                     <span className="text-[var(--gc-muted)]">Service</span>
@@ -198,7 +285,7 @@ export default async function Client360Page({
                 ))}
                 {showFinance && invoices[0] && (
                   <div className="flex justify-between gap-2">
-                    <span className="text-[var(--gc-muted)]">Payment</span>
+                    <span className="text-[var(--gc-muted)]">Invoice</span>
                     <span className="gc-status">{invoices[0].status}</span>
                   </div>
                 )}
@@ -262,22 +349,38 @@ export default async function Client360Page({
 
       {tab === "credit" && (
         <div className="space-y-4">
-          <Panel title="Score Intelligence" eyebrow="Models never mixed">
-            <ScoreIntelligencePanel groups={scoreIntel} />
-          </Panel>
-          {chartSeries.length > 0 && (
-            <Panel title="Score history" eyebrow="Trend by bureau/source">
-              <LineChart series={chartSeries} height={200} />
+          {integrations.credit.state === "AWAITING_INTEGRATION" ? (
+            <Panel title="Score Intelligence" eyebrow="Credit">
+              <p className="text-sm text-[var(--gc-gold)]">Awaiting Integration</p>
+              <p className="text-xs text-[var(--gc-muted)] mt-1">
+                Live credit providers are not connected for this data plane yet.
+              </p>
             </Panel>
+          ) : (
+            <>
+              {integrations.credit.state === "DEV_SAMPLE" && (
+                <p className="text-xs text-[var(--gc-muted)]">
+                  Development sample scores — not live bureau data.
+                </p>
+              )}
+              <Panel title="Score Intelligence" eyebrow="Models never mixed">
+                <ScoreIntelligencePanel groups={scoreIntel} />
+              </Panel>
+              {chartSeries.length > 0 && (
+                <Panel title="Score history" eyebrow="Trend by bureau/source">
+                  <LineChart series={chartSeries} height={200} />
+                </Panel>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {client.creditConnections.map((c) => (
+                  <span key={c.provider} className="gc-status">
+                    {c.provider}: {c.status}
+                    {c.needsReauth ? " · reconnect" : ""}
+                  </span>
+                ))}
+              </div>
+            </>
           )}
-          <div className="flex flex-wrap gap-2">
-            {client.creditConnections.map((c) => (
-              <span key={c.provider} className="gc-status">
-                {c.provider}: {c.status}
-                {c.needsReauth ? " · reconnect" : ""}
-              </span>
-            ))}
-          </div>
         </div>
       )}
 
@@ -287,6 +390,10 @@ export default async function Client360Page({
             Open dispute workspace
           </a>
         }>
+          <div className="mb-3 text-sm">
+            <span className="text-[var(--gc-muted)]">DisputeFox Client ID · </span>
+            <IntegrationValue field={integrations.disputeFoxClientId} />
+          </div>
           <div className="space-y-3">
             {client.disputeRounds.map((r) => (
               <div key={r.id} className="gc-card">
@@ -306,7 +413,11 @@ export default async function Client360Page({
               </div>
             ))}
             {client.disputeRounds.length === 0 && (
-              <p className="text-sm text-[var(--gc-muted)]">No dispute rounds tracked yet.</p>
+              <p className="text-sm text-[var(--gc-muted)]">
+                {integrations.disputeFoxClientId.state === "AWAITING_INTEGRATION"
+                  ? "Awaiting Integration — DisputeFox not connected."
+                  : "No dispute rounds tracked yet."}
+              </p>
             )}
           </div>
         </Panel>
@@ -355,7 +466,13 @@ export default async function Client360Page({
       )}
 
       {tab === "comms" && (
-        <div className="gc-dash-grid gc-dash-grid-2">
+        <div className="space-y-4">
+          {integrations.ghlMessages.state === "AWAITING_INTEGRATION" && (
+            <p className="text-sm text-[var(--gc-gold)]">
+              GHL communication history · Awaiting Integration
+            </p>
+          )}
+          <div className="gc-dash-grid gc-dash-grid-2">
           <Panel title="Client channel" eyebrow="Leaves the company" action={clientConv && <Link href={`/inbox?tab=client&c=${clientConv.id}`} className="text-[0.65rem] uppercase tracking-wider text-[var(--gc-gold)]">Open inbox</Link>}>
             {(clientConv?.messages || []).map((m) => (
               <div key={m.id} className="gc-bubble-client mb-2">
@@ -374,6 +491,7 @@ export default async function Client360Page({
             ))}
             {!internalConv?.messages?.length && <p className="text-sm text-[var(--gc-muted)]">No internal notes.</p>}
           </Panel>
+          </div>
         </div>
       )}
 
@@ -395,6 +513,14 @@ export default async function Client360Page({
 
       {tab === "pay" && showFinance && (
         <div className="space-y-4">
+          {integrations.payments.state === "AWAITING_INTEGRATION" && invoices.length === 0 && (
+            <p className="text-sm text-[var(--gc-gold)]">Payment data · Awaiting Integration</p>
+          )}
+          {integrations.payments.state === "DEV_SAMPLE" && (
+            <p className="text-xs text-[var(--gc-muted)]">
+              Development sample ledger — live processors not charging.
+            </p>
+          )}
           <Panel title="Invoices">
             <table className="gc-table">
               <thead>

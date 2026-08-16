@@ -26,6 +26,7 @@ export function getStaffNav(role: StaffRole): NavItem[] {
         { href: "/work", label: "Work", short: "Work" },
         { href: "/credit-pulse", label: "Credit", short: "Credit" },
         { href: "/pay", label: "Pay", short: "Pay" },
+        { href: "/agents", label: "Agents", short: "Agents" },
         { href: "/more", label: "More", short: "More" },
       ];
     case "CUSTOMER_SERVICE":
@@ -69,6 +70,7 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/pay", label: "Grants Pay", group: "finance" },
       { href: "/intelligence", label: "Reports", group: "finance" },
       { href: "/team-chat", label: "Team Chat", group: "system" },
+      { href: "/agents", label: "Agent Hub", group: "system" },
       { href: "/more", label: "Settings", group: "system" },
     ];
   }
