@@ -40,7 +40,7 @@ export async function GET() {
         locationId: flags.ghlLocation,
         live: flags.ghlLive,
       },
-      secretNames: flags.secretNames,
+      envNames: flags.envNames,
       defaultLocationId: flags.defaultLocationId,
       inbound: {
         existingMasterRecordsOnly: true,

@@ -46,7 +46,7 @@ describe("integration credentials status", () => {
     process.env.GHL_API_KEY = "pk_test";
     expect(integrationCredentialStatus().ghlLive).toBe(true);
     expect(getGhlApiConfig()?.locationId).toBe(GHL_PRODUCTION_LOCATION_ID);
-    expect(integrationCredentialStatus().secretNames).toEqual({
+    expect(integrationCredentialStatus().envNames).toEqual({
       ghlApiKey: "GHL_API_KEY",
       ghlLocationId: "GHL_LOCATION_ID",
     });

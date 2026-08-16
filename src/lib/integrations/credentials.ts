@@ -70,7 +70,7 @@ export function integrationCredentialStatus() {
         ? null
         : requiredHint("DISPUTEFOX_LOGIN_EMAIL/PASSWORD"),
     },
-    secretNames: {
+    envNames: {
       ghlApiKey: GHL_API_KEY_ENV,
       ghlLocationId: GHL_LOCATION_ID_ENV,
     },

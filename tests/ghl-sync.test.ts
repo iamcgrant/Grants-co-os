@@ -1,8 +1,18 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import path from "node:path";
 import fs from "node:fs";
-import { execSync } from "node:child_process";
-import { normalizeEmail, normalizePhone } from "../src/lib/clients/identity";
+import { resetSqliteFromSchema } from "./helpers/sqlite-schema";
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function normalizePhone(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 10) return null;
+  return digits.slice(-10);
+}
 
 const testDb = path.join(process.cwd(), "prisma", "test-ghl-sync.db");
 
@@ -14,17 +24,11 @@ describe("GHL → Grants Client inbound sync (existing master records only)", ()
   let attachExternalIdentifier: typeof import("../src/lib/clients/service").attachExternalIdentifier;
 
   beforeAll(async () => {
-    for (const f of [testDb, `${testDb}-journal`, `${testDb}-wal`, `${testDb}-shm`]) {
-      if (fs.existsSync(f)) fs.unlinkSync(f);
-    }
     process.env.DATABASE_URL = `file:${testDb}`;
     process.env.GC_ENV = "development";
     delete process.env.GHL_API_KEY;
     delete process.env.GHL_LOCATION_ID;
-    execSync("npx prisma db push", {
-      env: { ...process.env, DATABASE_URL: `file:${testDb}` },
-      stdio: "pipe",
-    });
+    resetSqliteFromSchema(testDb);
 
     const g = globalThis as unknown as { prisma?: unknown };
     delete g.prisma;
