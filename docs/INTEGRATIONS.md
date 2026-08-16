@@ -1,0 +1,39 @@
+# Integrations
+
+All integrations are adapters beneath Grants & Co OS.
+
+| Provider | Module | Status |
+|----------|--------|--------|
+| GoHighLevel | `MockGoHighLevelProvider` | Mock — CRM/comms only |
+| DisputeFox | `MockDisputeFoxProvider` | Mock — dispute processing |
+| SmartCredit | `MockSmartCreditProvider` | Mock — sponsored enrollment + scores |
+| Credit Karma | `MockCreditKarmaConnector` | Mock — **read only** |
+| Experian | `MockExperianConnector` | Mock — weekly score |
+| Payments | Mock / Authorize.Net stub / Commas stub | Mock active |
+
+## Credentials needed later
+
+Do **not** paste passwords into chat, GitHub, or source files. Store them in Cursor Secrets / host environment variables.
+
+### GoHighLevel
+- Login email / password (staff portal) → `GHL_LOGIN_EMAIL`, `GHL_LOGIN_PASSWORD` (local/secrets only)
+- Preferred for automation: **API Key** + **Location ID** → Settings → Integrations → API Keys → `GHL_API_KEY`, `GHL_LOCATION_ID`
+
+Portal passwords enable staff-browser / connector scaffolding. Production sync should prefer API keys when available.
+
+### DisputeFox
+- Login email / password → `DISPUTEFOX_LOGIN_EMAIL`, `DISPUTEFOX_LOGIN_PASSWORD` (local/secrets only)
+- Preferred for automation: API key from DisputeFox admin when available → `DISPUTEFOX_API_KEY`
+- Intake URL template → `DISPUTEFOX_INTAKE_URL_TEMPLATE`
+
+### SmartCredit (affiliate payouts)
+**Yes — your personal sponsor/partner signup link is required** so Grants & Co is credited every time a client enrolls.
+
+Provide either:
+1. Full sponsor URL → `SMARTCREDIT_SPONSOR_URL` (best)  
+   Example shape: `https://www.smartcredit.com/join/?pid=YOUR_PID`
+2. And/or sponsor code → `SMARTCREDIT_SPONSOR_CODE`
+
+Where: SmartCredit partner/affiliate dashboard → copy your sponsored enrollment link.
+
+The OS keeps your `pid` (or other affiliate params) intact and appends `gc_ref=<GrantsClientId>` for internal tracking.

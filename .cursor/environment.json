@@ -1,0 +1,4 @@
+{
+  "install": "npm install\nnpx prisma generate\nnpx prisma migrate deploy\nnpm run db:seed",
+  "start": "npm run dev"
+}
