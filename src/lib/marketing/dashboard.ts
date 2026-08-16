@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { getRevenueByContent } from "@/lib/marketing/lead-attribution";
 
 export async function getMarketingDashboard() {
   const [leads, consultations, clients, payments, sources, campaigns] =
@@ -32,6 +33,8 @@ export async function getMarketingDashboard() {
     };
   });
 
+  const revenueByContent = await getRevenueByContent();
+
   return {
     leads,
     qualifiedLeads: consultations,
@@ -41,6 +44,7 @@ export async function getMarketingDashboard() {
     revenueCents,
     collectedRevenueCents: revenueCents,
     revenueBySource,
+    revenueByContent,
     campaigns: campaigns.map((c) => ({
       id: c.id,
       name: c.name,
