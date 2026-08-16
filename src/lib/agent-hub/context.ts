@@ -101,6 +101,23 @@ export const CORE_BUSINESS_FACTS: {
   },
   {
     category: "RULE",
+    key: "disputefox.inbound.existing_only",
+    title: "DisputeFox inbound attach — existing master records only",
+    value: {
+      matchOrder: ["email", "normalized_phone"],
+      createGrantsClient: false,
+      createUpdateDeleteDisputeFoxRecord: false,
+      sendMessages: false,
+      failClosedWithoutKey: true,
+      requiredEnvName: "DISPUTEFOX_API_KEY",
+      doNotRegenerateApiKey: true,
+      zapId: "374413762",
+      zapEnabled: false,
+      localRoster: "26 Charles-confirmed masters · email + DF stage/started · no invented DF ids",
+    },
+  },
+  {
+    category: "RULE",
     key: "rule.resolve_before_escalate",
     title: "Resolve before escalate",
     value: {

@@ -11,6 +11,7 @@ describe("integration credentials status", () => {
     "SMARTCREDIT_SPONSOR_URL",
     "GHL_API_KEY",
     "GHL_LOCATION_ID",
+    "DISPUTEFOX_API_KEY",
   ] as const;
   const prev: Record<string, string | undefined> = {};
 
@@ -49,10 +50,20 @@ describe("integration credentials status", () => {
     expect(integrationCredentialStatus().envNames).toEqual({
       ghlApiKey: "GHL_API_KEY",
       ghlLocationId: "GHL_LOCATION_ID",
+      disputeFoxApiKey: "DISPUTEFOX_API_KEY",
     });
 
     process.env.GHL_LOCATION_ID = "loc_override";
     expect(getGhlApiConfig()?.locationId).toBe("loc_override");
     expect(JSON.stringify(integrationCredentialStatus())).not.toContain("pk_test");
+  });
+
+  it("reports DisputeFox API readiness as a boolean and documents the secret name only", () => {
+    expect(integrationCredentialStatus().disputeFoxApi).toBe(false);
+    process.env.DISPUTEFOX_API_KEY = "df_test_value_do_not_log";
+    const status = integrationCredentialStatus();
+    expect(status.disputeFoxApi).toBe(true);
+    expect(status.envNames.disputeFoxApiKey).toBe("DISPUTEFOX_API_KEY");
+    expect(JSON.stringify(status)).not.toContain("df_test_value_do_not_log");
   });
 });

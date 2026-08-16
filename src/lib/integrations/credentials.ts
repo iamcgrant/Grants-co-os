@@ -8,6 +8,7 @@ import {
   GHL_LOCATION_ID_ENV,
   resolveGhlLocationId,
 } from "@/lib/integrations/ghl/location";
+import { DISPUTEFOX_API_KEY_ENV } from "@/lib/integrations/disputefox/secrets";
 
 function requiredHint(name: string): string {
   return `${name} is not set. Add it to server environment / Cursor Secrets (never commit).`;
@@ -51,6 +52,17 @@ export function isGhlLiveConfigured(): boolean {
   return Boolean(config?.apiKey && config.locationId);
 }
 
+export function getDisputeFoxApiConfig(): { apiKey: string } | null {
+  const apiKey = process.env[DISPUTEFOX_API_KEY_ENV]?.trim();
+  if (!apiKey) return null;
+  return { apiKey };
+}
+
+/** Live DisputeFox inbound requires DISPUTEFOX_API_KEY. Never log the value. */
+export function isDisputeFoxLiveConfigured(): boolean {
+  return Boolean(getDisputeFoxApiConfig()?.apiKey);
+}
+
 export function integrationCredentialStatus() {
   const ghlConfig = getGhlApiConfig();
   const locationId = resolveGhlLocationId();
@@ -60,7 +72,7 @@ export function integrationCredentialStatus() {
     ghlLocation: Boolean(locationId),
     ghlLive: isGhlLiveConfigured(),
     disputeFoxPortal: Boolean(getDisputeFoxPortalCredentials()),
-    disputeFoxApi: Boolean(process.env.DISPUTEFOX_API_KEY?.trim()),
+    disputeFoxApi: isDisputeFoxLiveConfigured(),
     smartCreditSponsor: Boolean(process.env.SMARTCREDIT_SPONSOR_URL?.trim()),
     hints: {
       ghlPortal: getGhlPortalCredentials() ? null : requiredHint("GHL_LOGIN_EMAIL/PASSWORD"),
@@ -69,10 +81,12 @@ export function integrationCredentialStatus() {
       disputeFoxPortal: getDisputeFoxPortalCredentials()
         ? null
         : requiredHint("DISPUTEFOX_LOGIN_EMAIL/PASSWORD"),
+      disputeFoxApi: isDisputeFoxLiveConfigured() ? null : requiredHint(DISPUTEFOX_API_KEY_ENV),
     },
     envNames: {
       ghlApiKey: GHL_API_KEY_ENV,
       ghlLocationId: GHL_LOCATION_ID_ENV,
+      disputeFoxApiKey: DISPUTEFOX_API_KEY_ENV,
     },
     defaultLocationId: locationId,
   };
