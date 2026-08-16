@@ -39,15 +39,26 @@ export function getGhlApiConfig(): {
   };
 }
 
+/** Live GHL sync requires both API key and location id. */
+export function isGhlLiveConfigured(): boolean {
+  const config = getGhlApiConfig();
+  return Boolean(config?.apiKey && config.locationId);
+}
+
 export function integrationCredentialStatus() {
+  const ghlConfig = getGhlApiConfig();
   return {
     ghlPortal: Boolean(getGhlPortalCredentials()),
-    ghlApi: Boolean(getGhlApiConfig()),
+    ghlApi: Boolean(ghlConfig?.apiKey),
+    ghlLocation: Boolean(ghlConfig?.locationId),
+    ghlLive: isGhlLiveConfigured(),
     disputeFoxPortal: Boolean(getDisputeFoxPortalCredentials()),
     disputeFoxApi: Boolean(process.env.DISPUTEFOX_API_KEY?.trim()),
     smartCreditSponsor: Boolean(process.env.SMARTCREDIT_SPONSOR_URL?.trim()),
     hints: {
       ghlPortal: getGhlPortalCredentials() ? null : requiredHint("GHL_LOGIN_EMAIL/PASSWORD"),
+      ghlApi: ghlConfig?.apiKey ? null : requiredHint("GHL_API_KEY"),
+      ghlLocation: ghlConfig?.locationId ? null : requiredHint("GHL_LOCATION_ID"),
       disputeFoxPortal: getDisputeFoxPortalCredentials()
         ? null
         : requiredHint("DISPUTEFOX_LOGIN_EMAIL/PASSWORD"),

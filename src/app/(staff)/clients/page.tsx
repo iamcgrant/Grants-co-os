@@ -4,6 +4,9 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { prisma } from "@/lib/db/prisma";
 import { CreateClientForm } from "@/components/clients/CreateClientForm";
+import { GhlSyncPanel } from "@/components/integrations/GhlSyncPanel";
+import { getGcEnvironment } from "@/lib/integrations/env";
+import { isGhlApiReady } from "@/lib/integrations/ghl/http";
 
 export default async function ClientsPage({
   searchParams,
@@ -44,8 +47,12 @@ export default async function ClientsPage({
       nextAction: true,
       urgency: true,
       nextActionOwner: true,
+      identifiers: { select: { provider: true, metadataJson: true } },
     },
   });
+
+  const dataPlane = getGcEnvironment();
+  const ghlReady = isGhlApiReady();
 
   return (
     <div>
@@ -55,10 +62,20 @@ export default async function ClientsPage({
           <h1 className="text-3xl md:text-4xl mb-2">Clients</h1>
           <p className="text-sm text-[var(--gc-muted)]">
             One human. One Grants Client ID. {query ? `Results for “${query}”` : "Open Client 360 for the full dossier."}
+            {" · "}
+            {dataPlane} data plane
+            {" · "}
+            GHL {ghlReady ? "API ready" : "Awaiting Integration"}
           </p>
         </div>
         <p className="text-sm text-[var(--gc-muted)]">{clients.length} shown</p>
       </div>
+
+      {hasPermission(user.role, "MANAGE_OPERATIONS") && (
+        <div className="mb-8 gc-fade-up">
+          <GhlSyncPanel canSync />
+        </div>
+      )}
 
       {hasPermission(user.role, "CREATE_CLIENT") && (
         <div className="mb-8 gc-fade-up-delay">
@@ -72,13 +89,18 @@ export default async function ClientsPage({
             <tr>
               <th>Client</th>
               <th>Stage</th>
+              <th>Source</th>
               <th>Next action</th>
               <th>Owner</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {clients.map((c) => (
+            {clients.map((c) => {
+              const ghl = c.identifiers.find((i) => i.provider === "GHL");
+              const live =
+                ghl?.metadataJson?.includes('"source":"ghl_api"') ?? false;
+              return (
               <tr key={c.id}>
                 <td>
                   <Link href={`/clients/${c.grantsClientId}`} className="font-medium hover:underline">
@@ -89,6 +111,11 @@ export default async function ClientsPage({
                 <td>
                   <span className="gc-status gc-status-ice">{c.stage.replaceAll("_", " ")}</span>
                 </td>
+                <td>
+                  <span className="gc-status">
+                    {live ? "GHL live" : ghl ? "Dev sample" : "Grants"}
+                  </span>
+                </td>
                 <td className="text-sm text-[var(--gc-muted)] max-w-[240px] truncate">{c.nextAction || "—"}</td>
                 <td className="text-sm">{c.nextActionOwner || "—"}</td>
                 <td>
@@ -97,10 +124,13 @@ export default async function ClientsPage({
                   </Link>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
-        {clients.length === 0 && <p className="p-4 text-sm text-[var(--gc-muted)]">No clients found.</p>}
+        {clients.length === 0 && (
+          <p className="p-6 text-sm text-[var(--gc-muted)]">No clients yet.</p>
+        )}
       </div>
     </div>
   );

@@ -380,10 +380,30 @@ async function main() {
 
   await prisma.clientIdentifier.createMany({
     data: [
-      { clientId: donna.id, provider: "GHL", externalId: "ghl_contact_donna_001" },
-      { clientId: donna.id, provider: "DISPUTEFOX", externalId: "df_donna_001" },
-      { clientId: antionette.id, provider: "GHL", externalId: "ghl_contact_antionette_001" },
-      { clientId: marcus.id, provider: "PAYMENT", externalId: "mock_cus_marcus" },
+      {
+        clientId: donna.id,
+        provider: "GHL",
+        externalId: "ghl_contact_donna_001",
+        metadataJson: JSON.stringify({ source: "seed", dataPlane: "development" }),
+      },
+      {
+        clientId: donna.id,
+        provider: "DISPUTEFOX",
+        externalId: "df_donna_001",
+        metadataJson: JSON.stringify({ source: "seed", dataPlane: "development" }),
+      },
+      {
+        clientId: antionette.id,
+        provider: "GHL",
+        externalId: "ghl_contact_antionette_001",
+        metadataJson: JSON.stringify({ source: "seed", dataPlane: "development" }),
+      },
+      {
+        clientId: marcus.id,
+        provider: "PAYMENT",
+        externalId: "mock_cus_marcus",
+        metadataJson: JSON.stringify({ source: "seed", dataPlane: "development" }),
+      },
     ],
   });
 
@@ -809,8 +829,8 @@ async function main() {
 
   await prisma.integrationConnection.createMany({
     data: [
-      { provider: "gohighlevel", status: "MOCK", lastSyncAt: new Date() },
-      { provider: "disputefox", status: "MOCK", lastSyncAt: new Date() },
+      { provider: "gohighlevel", status: "AWAITING_CREDENTIALS" },
+      { provider: "disputefox", status: "AWAITING_CREDENTIALS" },
       { provider: "smartcredit", status: "MOCK" },
       { provider: "credit_karma", status: "MOCK" },
       { provider: "experian", status: "MOCK" },

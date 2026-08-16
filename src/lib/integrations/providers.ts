@@ -2,6 +2,8 @@
  * GoHighLevel — external CRM/comms provider adapter.
  * GHL is NEVER the master client database.
  */
+import { isGhlApiReady } from "./ghl/http";
+
 export type GhlContact = {
   id: string;
   email?: string;
@@ -89,10 +91,36 @@ export class MockDisputeFoxProvider implements DisputeProcessingProvider {
   }
 }
 
+/**
+ * Live GHL adapter — read contact + pipeline only.
+ * Message listing stays empty until a dedicated inbound sync is enabled (no live sends).
+ */
+export class LiveGoHighLevelProvider implements GoHighLevelProvider {
+  readonly name = "gohighlevel" as const;
+
+  async syncContact(contact: GhlContact) {
+    const { syncGhlContactById } = await import("./ghl/sync");
+    const result = await syncGhlContactById(contact.id);
+    return { action: result.action, grantsClientId: result.grantsClientId };
+  }
+
+  async listRecentMessages(_contactId: string) {
+    // Do not invent mock messages when live API is connected.
+    // Do not send or pull outbound sends in this vertical slice.
+    return [];
+  }
+
+  async getPipelineInfo(_contactId: string) {
+    return { stage: undefined, pipeline: undefined };
+  }
+}
+
 export function getGhlProvider(): GoHighLevelProvider {
+  if (isGhlApiReady()) return new LiveGoHighLevelProvider();
   return new MockGoHighLevelProvider();
 }
 
 export function getDisputeProvider(): DisputeProcessingProvider {
+  // Preserve existing DisputeFox → GHL / mock path — do not replace with a new stack.
   return new MockDisputeFoxProvider();
 }
