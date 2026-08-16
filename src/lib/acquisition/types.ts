@@ -88,6 +88,23 @@ export const PARTNER_PROSPECT_STAGES = [
   "NURTURE",
 ] as const;
 
+export const PARTNER_REPLIED_STAGES = [
+  "REPLIED",
+  "INTRO_CALL",
+  "PARTNER_INTERESTED",
+  "ACTIVE_REFERRAL_PARTNER",
+  "REFERRED_FIRST_CLIENT",
+  "ACTIVE_PRODUCING_PARTNER",
+] as const;
+
+export const PARTNER_MEETING_STAGES = [
+  "INTRO_CALL",
+  "PARTNER_INTERESTED",
+  "ACTIVE_REFERRAL_PARTNER",
+  "REFERRED_FIRST_CLIENT",
+  "ACTIVE_PRODUCING_PARTNER",
+] as const;
+
 export class AcquisitionError extends Error {
   constructor(
     public code:
@@ -95,6 +112,8 @@ export class AcquisitionError extends Error {
       | "INVALID_SOURCE"
       | "INVALID_STAGE"
       | "INVALID_PARTNER_TYPE"
+      | "INVALID_MARKET"
+      | "MARKET_REQUIRED"
       | "PARTNER_IS_NOT_A_CLIENT"
       | "CLIENT_REQUIRED"
       | "CLIENT_NOT_FOUND"

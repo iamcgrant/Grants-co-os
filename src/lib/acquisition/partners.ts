@@ -13,6 +13,7 @@ import {
   type AcquisitionSideEffects,
 } from "./locks";
 import { parseAcquisitionSource } from "./source";
+import { requireAcquisitionMarket } from "./markets";
 import { scoreGrantsLead, serializeScoreReasons } from "./score";
 import {
   AcquisitionError,
@@ -33,6 +34,8 @@ export type CreatePartnerInput = {
   partnerType?: string | null;
   pipelineStage?: string | null;
   acquisitionSource?: string | null;
+  /** Required locked city/market. Estill is refused. */
+  market?: string | null;
   notes?: string | null;
   doNotContact?: boolean;
   unsubscribed?: boolean;
@@ -113,6 +116,7 @@ export async function createPartner(
   });
 
   const source = parseAcquisitionSource(input.acquisitionSource);
+  const market = requireAcquisitionMarket(input.market);
   const stage = parsePartnerStage(input.pipelineStage);
   const partnerType = parsePartnerType(input.partnerType);
   const scored = scoreGrantsLead({
@@ -134,6 +138,7 @@ export async function createPartner(
       partnerType,
       pipelineStage: stage,
       acquisitionSource: source,
+      market,
       grantsLeadScore: scored.score,
       grantsLeadScoreReasonsJson: serializeScoreReasons(scored.reasons),
       doNotContact: Boolean(input.doNotContact),
@@ -147,7 +152,7 @@ export async function createPartner(
     action: "PARTNER_CREATED",
     entityType: "Partner",
     entityId: partner.id,
-    metadata: { businessName, pipelineStage: stage },
+    metadata: { businessName, pipelineStage: stage, market },
   });
 
   return { partner, sideEffects: emptyAcquisitionSideEffects() };

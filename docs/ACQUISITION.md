@@ -64,6 +64,20 @@ Paid / converted consumers stay on that master and receive the **existing** onbo
 
 `Client.stage` remains the operations/intake stage (`ONBOARDING`, `WAITING_ON_CLIENT`, …). Do not reuse it as the acquisition pipeline.
 
+## City / market (`AcquisitionMarket`)
+
+Charles-locked vocabulary. Estill, SC is **not** a member and is **never** a default.
+
+**PRIMARY** (default prospecting start set): Hilton Head Island, SC · Bluffton, SC · Savannah, GA · Atlanta, GA · Washington, DC · Arlington, VA
+
+**SECONDARY** (supported, not in the default start set): Charlotte, NC · Columbia, SC · Charleston, SC · Augusta, GA · Alexandria, VA · Fairfax, VA · Richmond, VA
+
+`UNKNOWN` and `OTHER` are allowed explicit stamps only. Missing market is not coerced to a primary city or to Estill.
+
+Every `Partner` and every `PartnerReferral` must carry `market`. A consumer lead attributed to a partner inherits that market onto `Client.acquisitionMarket` and, when a `LeadAttribution` child is written, onto `LeadAttribution.market`.
+
+Dashboard `byMarket` groups prospects found, replies, meetings, referrals, clients converted, and revenue. A market row appears only from a real stamped Partner / PartnerReferral / LeadAttribution. Unstamped metrics stay **DATA UNAVAILABLE**. Revenue-by-market additionally requires the existing intake stamp + verified payment fact. Do not pre-fill primary cities with invented zeros.
+
 ## Source attribution (`AcquisitionSource`)
 
 Command-center source taxonomy (explicit stamp only):
@@ -107,8 +121,9 @@ Passing a protected attribute does not change the score. Reasons may list ignore
 | Conversion Rate | Converted ÷ leads in window — not invented when leads = 0 |
 | Revenue by Source | Reuses fail-closed `LeadAttribution` / `getRevenueByContent` |
 | Leads Needing Follow-Up | Open consumer stages, excluding `DND` / `LOST` / converted |
+| By market | Per-city rows from stamped Partner / PartnerReferral / LeadAttribution only |
 
-No acquisition-stamped rows → **DATA UNAVAILABLE**, not a made-up zero funnel. Revenue-by-source stays DATA UNAVAILABLE until intake stamp + verified payment fact.
+No acquisition-stamped rows → **DATA UNAVAILABLE**, not a made-up zero funnel. Revenue-by-source and revenue-by-market stay DATA UNAVAILABLE until intake stamp + verified payment fact. Empty primary cities are not invented as zero rows.
 
 ## QA locks
 
@@ -128,8 +143,9 @@ Encoded in `src/lib/acquisition/locks.ts` and asserted by tests:
 
 `src/lib/acquisition/`
 
-- `createPartner` / `updatePartnerStage` — business row only
-- `openConsumerLead` — existing master or first master; never a second Client
-- `convertConsumerLead` — same `clientId`; PartnerReferral only after conversion; existing onboarding keys
+- `createPartner` / `updatePartnerStage` — business row only; `market` required
+- `openConsumerLead` — existing master or first master; never a second Client; partner-attributed leads inherit market
+- `convertConsumerLead` — same `clientId`; PartnerReferral only after conversion (with market); existing onboarding keys
+- `parseAcquisitionMarket` / `DEFAULT_PROSPECTING_MARKETS` — locked vocabulary; Estill refused
 - `scoreGrantsLead` — protected attributes ignored
-- `getAcquisitionDashboard` — fail-closed stubs
+- `getAcquisitionDashboard` — fail-closed stubs, including `byMarket`
