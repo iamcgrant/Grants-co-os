@@ -978,3 +978,153 @@ model IdSequence {
   name  String @id
   value Int    @default(0)
 }
+
+// ─── Grants Agent Hub ─────────────────────────────────────────────────────────
+
+model AgentDefinition {
+  id              String   @id // e.g. x1-operations
+  displayName     String
+  role            String
+  mode            String   // EXTERNAL_AGENT | GRANTS_NATIVE_AGENT
+  instructions    String
+  allowedToolsJson String  // JSON string[]
+  deniedToolsJson  String  // JSON string[]
+  permissionsJson String   // JSON string[]
+  maxAutonomyLevel Int     @default(1) // 0..3
+  scopesJson      String   // JSON string[]
+  status          String   @default("IDLE") // IDLE WORKING WAITING BLOCKED ERROR
+  currentTaskId   String?
+  metadataJson    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  memories    AgentMemory[]
+  tasksOwned  AgentTask[]   @relation("TaskOwner")
+  tasksAssigned AgentTask[] @relation("TaskAssignee")
+  events      AgentEvent[]
+  messages    AgentMessage[]
+  approvals   OwnerApproval[]
+}
+
+model AgentMemory {
+  id        String   @id @default(cuid())
+  agentId   String
+  kind      String   // FACT | PREFERENCE | WORKING | EPISODE
+  key       String
+  valueJson String
+  durable   Boolean  @default(true)
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agent AgentDefinition @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, key])
+  @@index([agentId, kind])
+}
+
+model BusinessFact {
+  id          String   @id @default(cuid())
+  category    String   // ARCHITECTURE | MAPPING | WORKFLOW | RULE | DECISION | QA
+  key         String   @unique
+  title       String
+  valueJson   String
+  sourceAgent String?
+  durable     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+}
+
+model AgentTask {
+  id              String   @id @default(cuid())
+  idempotencyKey  String?  @unique
+  type            String   // ASK | CODE_CHANGE_REQUIRED | SYNC | QA | APPROVAL | GENERIC
+  eventKind       String?  // CLIENT_SYNC_REQUIRED | PAYMENT_EXCEPTION | ...
+  title           String
+  prompt          String
+  status          String   @default("QUEUED")
+  // QUEUED | ROUTING | IN_PROGRESS | WAITING_AGENT | WAITING_CURSOR | AWAITING_CURSOR_API_KEY
+  // AWAITING_APPROVAL | COMPLETED | FAILED | CANCELLED | DENIED
+  autonomyLevel   Int      @default(0)
+  priority        String   @default("NORMAL")
+  ownerAgentId    String?
+  assigneeAgentId String?
+  parentTaskId    String?
+  resultJson      String?
+  errorMessage    String?
+  cursorAgentId   String?
+  cursorRunId     String?
+  cursorUrl       String?
+  grantsClientId  String?
+  metadataJson    String?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  ownerAgent    AgentDefinition? @relation("TaskOwner", fields: [ownerAgentId], references: [id])
+  assigneeAgent AgentDefinition? @relation("TaskAssignee", fields: [assigneeAgentId], references: [id])
+  parentTask    AgentTask?       @relation("TaskTree", fields: [parentTaskId], references: [id])
+  childTasks    AgentTask[]      @relation("TaskTree")
+  events        AgentEvent[]
+  messages      AgentMessage[]
+  approvals     OwnerApproval[]
+
+  @@index([status])
+  @@index([assigneeAgentId, status])
+  @@index([type, status])
+  @@index([createdAt])
+}
+
+model AgentEvent {
+  id           String   @id @default(cuid())
+  kind         String
+  taskId       String?
+  agentId      String?
+  payloadJson  String?
+  createdAt    DateTime @default(now())
+
+  task  AgentTask?       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  agent AgentDefinition? @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@index([kind, createdAt])
+  @@index([taskId])
+}
+
+model AgentMessage {
+  id         String   @id @default(cuid())
+  taskId     String?
+  agentId    String?
+  role       String   // CURSOR | AGENT | SYSTEM | OWNER
+  body       String
+  metadataJson String?
+  createdAt  DateTime @default(now())
+
+  task  AgentTask?       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  agent AgentDefinition? @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, createdAt])
+}
+
+model OwnerApproval {
+  id            String   @id @default(cuid())
+  taskId        String?
+  agentId       String?
+  title         String
+  what          String
+  why           String
+  risk          String
+  status        String   @default("PENDING") // PENDING APPROVED DENIED EXPIRED
+  decidedById   String?
+  decidedAt     DateTime?
+  decisionNote  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  task  AgentTask?       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  agent AgentDefinition? @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+}

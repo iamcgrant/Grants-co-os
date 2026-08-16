@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "grants-agent-mesh": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["tsx", "agent-mesh/server.ts"],
+      "env": {
+        "GC_ENV": "development",
+        "AGENT_HUB_ALLOW_UNAUTH": "true"
+      },
+      "envFile": ".env"
+    }
+  }
+}

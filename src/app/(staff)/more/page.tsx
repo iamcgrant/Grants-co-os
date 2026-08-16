@@ -44,6 +44,13 @@ export default async function MorePage() {
       </p>
 
       <div className="gc-grid-dense gc-grid-dense-3 mb-10">
+        <Link href="/agents" className="gc-card hover:bg-white/[0.06] transition-colors">
+          <p className="gc-eyebrow mb-2">Workforce</p>
+          <p className="text-xl display">Agent Hub</p>
+          <p className="text-sm text-[var(--gc-muted)] mt-2">
+            X1, Payment, Cursor — approvals only when Level 3.
+          </p>
+        </Link>
         <Link href="/intelligence" className="gc-card hover:bg-white/[0.06] transition-colors">
           <p className="gc-eyebrow mb-2">Intel</p>
           <p className="text-xl display">Intelligence</p>
