@@ -6,7 +6,7 @@ All integrations are adapters beneath Grants & Co OS.
 |----------|--------|--------|
 | GoHighLevel | `LiveGoHighLevelProvider` when `GHL_API_KEY` is set (`GHL_LOCATION_ID` defaults to `[REDACTED]`); else mock | **Live inbound onto existing master records only** |
 | DisputeFox | `MockDisputeFoxProvider` + inbound attach onto existing masters | **Local roster attach** (26 Charles-confirmed clients). Live path **fails closed** without `DISPUTEFOX_API_KEY`. Zap `374413762` stays **OFF**. |
-| Credit Repair Cloud | `MockCreditRepairCloudProvider` + inbound compare (`npm run crc:inbound-compare`) | **Not connected.** Local CSV dry-run only. Live path **fails closed** without `CRC_API_KEY`. `CRC_RECOVERY_WRITES_ENABLED` stays **false**. |
+| Credit Repair Cloud | `MockCreditRepairCloudProvider` + inbound compare (`npm run crc:inbound-compare`) | **Not connected.** Local CSV dry-run + Phase 2 class-gated write **plans**. Live path **fails closed** without `CRC_API_KEY`. Five write flags default **false**. `CRC_RECOVERY_WRITES_ENABLED` is **ignored**. |
 | SmartCredit | `MockSmartCreditProvider` | Mock — sponsored enrollment + scores |
 | Credit Karma | `MockCreditKarmaConnector` | Mock — **read only** |
 | Experian | `MockExperianConnector` | Mock — weekly score |
@@ -70,7 +70,7 @@ CRC was the primary system for ~5 years. The 26-master inbound GHL/DF path is **
 2. Match order: **CRC id → exact email → normalized phone → name + corroborating address**. Unmatched rows are skipped — this path never creates a Grants Client.
 3. ONE HUMAN = ONE MASTER. Future create (not executed) is one Grants master + one GHL contact when truly missing from both. Do **not** auto-create DisputeFox.
 4. Backfill only when the new-system field is blank and CRC has a verified value. Conflicts go to the review queue.
-5. Live pull (`--live`) without `CRC_API_KEY` **fails closed**. `CRC_RECOVERY_WRITES_ENABLED` stays **false**. No messages. Zap `374413762` stays OFF. Friday Update Router stays unpublished.
+5. Live pull (`--live`) without `CRC_API_KEY` **fails closed**. Phase 2 class-gated flags (`CRC_WRITE_*_ENABLED`) default **false**. `CRC_RECOVERY_WRITES_ENABLED` is **ignored** (never a write-everything switch). No messages. Zap `374413762` stays OFF. Friday Update Router stays unpublished. No live GHL/DF/OS clients.
 
 ### SmartCredit (affiliate payouts)
 **Yes — your personal sponsor/partner signup link is required** so Grants & Co is credited every time a client enrolls.

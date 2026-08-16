@@ -257,6 +257,15 @@ describe("CRC inbound compare — existing master records only", () => {
     expect(local.enroll.welcome).toBe(false);
     expect(local.enroll.fridayPulse).toBe(false);
     expect(local.locks.zapEnabled).toBe(false);
+    expect(local.writeFlags.flags.dfCreate).toBe(false);
+    expect(local.writeFlags.globalWritesHonored).toBe(false);
+    expect(local.phase2.sequencer.sequence).toEqual([
+      "backup",
+      "write",
+      "verify",
+      "reconcile",
+      "continue",
+    ]);
     const blob = JSON.stringify(local.report);
     expect(blob).not.toMatch(/@example\.test/);
     expect(blob).not.toMatch(/555010/);

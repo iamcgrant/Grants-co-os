@@ -198,6 +198,10 @@ Synthetic fixtures only. Cover match order, no duplicate create, no DF auto-crea
 - Downloading real credit reports
 - Any client communication
 
+## Phase 2
+
+See [`docs/CRC-MIGRATION.md`](./CRC-MIGRATION.md) **Phase 2**. Class-gated flags default off. `CRC_RECOVERY_WRITES_ENABLED` is ignored. No live GHL/DF/OS clients.
+
 ### Local real exports (later)
 
 Place real files in `local/crc-exports/` (gitignored). Never commit them. Never paste PII into chat or GitHub.
