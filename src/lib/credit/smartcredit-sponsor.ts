@@ -9,6 +9,7 @@
  *   https://www.smartcredit.com/join/?pid=YOUR_PID
  *
  * Important: never strip or overwrite `pid` / affiliate params — that is the payout attribution.
+ */
 
 export function getSmartCreditSponsorConfig() {
   const sponsorUrl = process.env.SMARTCREDIT_SPONSOR_URL?.trim() || null;
