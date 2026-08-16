@@ -198,7 +198,7 @@ model Client {
 model ClientIdentifier {
   id           String   @id @default(cuid())
   clientId     String
-  provider     String // GHL, DISPUTEFOX, SMARTCREDIT, PAYMENT, etc.
+  provider     String // GHL, DISPUTEFOX, CREDIT_REPAIR_CLOUD, SMARTCREDIT, PAYMENT, etc.
   externalId   String
   metadataJson String?
   createdAt    DateTime @default(now())
@@ -553,19 +553,24 @@ model IntegrationSyncEvent {
 }
 
 model Document {
-  id           String   @id @default(cuid())
-  clientId     String
-  name         String
-  mimeType     String
-  storageKey   String
-  category     String?
-  uploadedById String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String    @id @default(cuid())
+  clientId       String
+  name           String
+  mimeType       String
+  storageKey     String
+  category       String?
+  uploadedById   String?
+  sourceSystem   String? // CREDIT_REPAIR_CLOUD when recovered from CRC
+  originalDate   DateTime?
+  sourceClientId String? // CRC client ID when sourceSystem=CREDIT_REPAIR_CLOUD
+  documentType   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([clientId])
+  @@index([sourceSystem])
 }
 
 model Task {

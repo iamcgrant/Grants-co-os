@@ -6,6 +6,7 @@ All integrations are adapters beneath Grants & Co OS.
 |----------|--------|--------|
 | GoHighLevel | `LiveGoHighLevelProvider` when `GHL_API_KEY` is set (`GHL_LOCATION_ID` defaults to `[REDACTED]`); else mock | **Live inbound onto existing master records only** |
 | DisputeFox | `MockDisputeFoxProvider` + inbound attach onto existing masters | **Local roster attach** (26 Charles-confirmed clients). Live path **fails closed** without `DISPUTEFOX_API_KEY`. Zap `374413762` stays **OFF**. |
+| Credit Repair Cloud | `MockCreditRepairCloudProvider` + inbound compare (`npm run crc:inbound-compare`) | **Not connected.** Local CSV dry-run only. Live path **fails closed** without `CRC_API_KEY`. `CRC_RECOVERY_WRITES_ENABLED` stays **false**. |
 | SmartCredit | `MockSmartCreditProvider` | Mock — sponsored enrollment + scores |
 | Credit Karma | `MockCreditKarmaConnector` | Mock — **read only** |
 | Experian | `MockExperianConnector` | Mock — weekly score |
@@ -60,6 +61,16 @@ Portal passwords enable staff-browser / connector scaffolding. Production sync p
 3. Writes only existing Client fields (`stage`, `nextAction`, `nextActionOwner`) and `DisputeRound`. Does **not** create a second client table.
 4. **Does not** create/update/delete DisputeFox records. **Does not** send messages. **Does not** write GHL. **Does not** enable Zap `374413762` (stays OFF).
 5. Live pull (`mode: pull`) without `DISPUTEFOX_API_KEY` fails closed. Live list/get stays disabled so the Zap is never used as a sync bus.
+
+## Credit Repair Cloud → Grants Client (not connected · inbound compare)
+
+CRC was the primary system for ~5 years. The 26-master inbound GHL/DF path is **not** a CRC contact recovery. See `docs/CRC-MIGRATION.md`.
+
+1. **Local compare** (no API key): `npm run crc:inbound-compare -- --local --dry-run`. Reads the checked-in synthetic CSV roster. Existing-only. Does **not** create contacts.
+2. Match order: **CRC id → exact email → normalized phone → name + corroborating address**. Unmatched rows are skipped — this path never creates a Grants Client.
+3. ONE HUMAN = ONE MASTER. Future create (not executed) is one Grants master + one GHL contact when truly missing from both. Do **not** auto-create DisputeFox.
+4. Backfill only when the new-system field is blank and CRC has a verified value. Conflicts go to the review queue.
+5. Live pull (`--live`) without `CRC_API_KEY` **fails closed**. `CRC_RECOVERY_WRITES_ENABLED` stays **false**. No messages. Zap `374413762` stays OFF. Friday Update Router stays unpublished.
 
 ### SmartCredit (affiliate payouts)
 **Yes — your personal sponsor/partner signup link is required** so Grants & Co is credited every time a client enrolls.

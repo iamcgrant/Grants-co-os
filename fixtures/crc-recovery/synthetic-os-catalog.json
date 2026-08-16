@@ -1,0 +1,135 @@
+{
+  "masters": [
+    {
+      "grantsClientId": "GC-SYN-000001",
+      "firstName": "Alex",
+      "lastName": "Rivera",
+      "email": "alex.rivera@example.test",
+      "emailVerified": true,
+      "emailVerifiedAt": "2026-07-01T00:00:00.000Z",
+      "phone": "5550101001",
+      "phoneVerified": true,
+      "crcClientId": "CRC-SYN-1001",
+      "ghlContactId": "ghl_syn_1001",
+      "disputeFoxClientId": "df_syn_1001",
+      "smartCreditId": "sc_syn_1001"
+    },
+    {
+      "grantsClientId": "GC-SYN-000002",
+      "firstName": "Blair",
+      "lastName": "Chen",
+      "email": "blair.chen@example.test",
+      "emailVerified": true,
+      "phone": "5550101002",
+      "phoneVerified": true
+    },
+    {
+      "grantsClientId": "GC-SYN-000003",
+      "firstName": "Casey",
+      "lastName": "Ortiz",
+      "email": "casey.ortiz@example.test",
+      "emailVerified": true,
+      "phone": "5550101003",
+      "phoneVerified": true,
+      "ghlContactId": "ghl_syn_1003"
+    },
+    {
+      "grantsClientId": "GC-SYN-000005",
+      "firstName": "Ellis",
+      "lastName": "Stone",
+      "email": "ellis.stone.os@example.test",
+      "emailVerified": true,
+      "address": {
+        "line1": "100 Example Ave",
+        "city": "Springfield",
+        "state": "IL",
+        "postalCode": "62701"
+      },
+      "addressVerified": true
+    },
+    {
+      "grantsClientId": "GC-SYN-000006A",
+      "firstName": "Jordan",
+      "lastName": "Wells",
+      "email": "jordan.wells@example.test",
+      "emailVerified": true,
+      "phone": "5550101999",
+      "phoneVerified": true
+    },
+    {
+      "grantsClientId": "GC-SYN-000006B",
+      "firstName": "Morgan",
+      "lastName": "Wells",
+      "email": "morgan.wells@example.test",
+      "emailVerified": true,
+      "phone": "5550101999",
+      "phoneVerified": true
+    },
+    {
+      "grantsClientId": "GC-SYN-000008",
+      "firstName": "Gray",
+      "lastName": "Holt",
+      "email": "gray.holt@example.test",
+      "emailVerified": true,
+      "ghlContactId": "ghl_syn_1008"
+    },
+    {
+      "grantsClientId": "GC-SYN-000009",
+      "firstName": "Harper",
+      "lastName": "Ives",
+      "email": "harper.ives@example.test",
+      "emailVerified": true,
+      "emailVerifiedAt": "2026-01-15T00:00:00.000Z",
+      "phone": null,
+      "ghlContactId": "ghl_syn_1009",
+      "disputeFoxClientId": "df_syn_1009"
+    },
+    {
+      "grantsClientId": "GC-SYN-000010",
+      "firstName": "Indigo",
+      "lastName": "Jones",
+      "email": "indigo.jones@example.test",
+      "emailVerified": true,
+      "emailVerifiedAt": "2026-06-01T00:00:00.000Z",
+      "phone": "5550101010",
+      "phoneVerified": true
+    },
+    {
+      "grantsClientId": "GC-SYN-000011",
+      "firstName": "Jules",
+      "lastName": "Park",
+      "email": "jules.park.os@example.test",
+      "emailVerified": true,
+      "smartCreditId": "sc_syn_1011"
+    },
+    {
+      "grantsClientId": "GC-SYN-000012",
+      "firstName": "Kai",
+      "lastName": "Quinn",
+      "email": "kai.quinn@example.test",
+      "emailVerified": true
+    },
+    {
+      "grantsClientId": "GC-SYN-000013",
+      "firstName": "Lane",
+      "lastName": "Reed",
+      "email": "lane.reed.os@example.test",
+      "emailVerified": true,
+      "address": {
+        "line1": "77 Other Street",
+        "city": "Peoria",
+        "state": "IL",
+        "postalCode": "61602"
+      },
+      "addressVerified": true
+    },
+    {
+      "grantsClientId": "GC-SYN-000014",
+      "firstName": "Mina",
+      "lastName": "Shaw",
+      "email": "mina.shaw.os@example.test",
+      "emailVerified": true,
+      "crcClientId": "CRC-SYN-1014"
+    }
+  ]
+}

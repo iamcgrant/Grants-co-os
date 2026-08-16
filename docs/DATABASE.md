@@ -14,6 +14,10 @@ users, staff_profiles, clients, client_identifiers, addresses, services, client_
 
 Unique `emailNormalized`. Phone normalized for matching. Create API returns `POSSIBLE_DUPLICATE` before insert unless `forceCreate`.
 
+`ClientIdentifier.provider` values used on the same master: `GHL`, `DISPUTEFOX`, `CREDIT_REPAIR_CLOUD`, `SMARTCREDIT`, `PAYMENT`. Provider IDs are never separate clients.
+
+`Document.sourceSystem` is optional provenance (`CREDIT_REPAIR_CLOUD` for CRC recoveries) with `originalDate`, `sourceClientId`, and `documentType`. Raw files stay in secure storage.
+
 ## Local vs production
 
 - Local: SQLite `file:./dev.db`

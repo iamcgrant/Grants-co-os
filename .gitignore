@@ -60,3 +60,7 @@ next-env.d.ts
 AGENTS.md
 CLAUDE.md
 200/
+
+# Local CRC exports and recovery reports (real client PII — never commit)
+/local/crc-exports/
+/tmp/crc-*-report.json

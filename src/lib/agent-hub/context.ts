@@ -37,6 +37,38 @@ export const CORE_BUSINESS_FACTS: {
   },
   {
     category: "MAPPING",
+    key: "ghl.field.crc_client_id",
+    title: "GHL field — CRC Client ID",
+    value: {
+      provider: "GHL",
+      fieldKey: "crc_client_id",
+      fieldLabel: "CRC Client ID",
+      mapsTo: "ClientIdentifier.provider=CREDIT_REPAIR_CLOUD.externalId",
+      overwritePolicy: "Do not invent IDs. Attach only when matched. Do not live-write GHL in this PR.",
+      notes: "Credit Repair Cloud identifier on the one Grants master.",
+    },
+  },
+  {
+    category: "RULE",
+    key: "crc.inbound.existing_only",
+    title: "CRC inbound compare — existing master records only",
+    value: {
+      matchOrder: ["crc_id", "email", "normalized_phone", "name_and_address"],
+      createGrantsClient: false,
+      createUpdateDeleteCrcRecord: false,
+      createUpdateDeleteGhlContact: false,
+      createUpdateDeleteDisputeFoxRecord: false,
+      sendMessages: false,
+      failClosedWithoutKey: true,
+      requiredSecret: "CRC_API_KEY",
+      writesEnv: "CRC_RECOVERY_WRITES_ENABLED",
+      writesEnabled: false,
+      localRoster: "synthetic CSV · npm run crc:inbound-compare -- --local --dry-run",
+      reportName: "CRC → DISPUTEFOX TRANSITION RECOVERY REPORT",
+    },
+  },
+  {
+    category: "MAPPING",
     key: "ghl.field.grants_client_id",
     title: "GHL field — Grants Client ID",
     value: {
