@@ -2,7 +2,7 @@
  * Post-payment continuation — PAYMENT SUCCESS → DisputeFox intake.
  *
  * Processor-agnostic: triggered after Grants Pay records a SUCCEEDED transaction.
- * Does NOT depend on Ecrypt/NMI. Works with mock now; Authorize.Net / Commas later.
+ * Does NOT depend on Ecrypt/NMI. Works with mock; Authorize.Net sandbox Accept.js when configured.
  */
 
 export type PostPaymentContinuation = {

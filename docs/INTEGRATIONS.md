@@ -9,7 +9,7 @@ All integrations are adapters beneath Grants & Co OS.
 | SmartCredit | `MockSmartCreditProvider` | Mock — sponsored enrollment + scores |
 | Credit Karma | `MockCreditKarmaConnector` | Mock — **read only** |
 | Experian | `MockExperianConnector` | Mock — weekly score |
-| Payments | Mock / Authorize.Net stub / Commas stub | Mock active |
+| Payments | Mock default; Authorize.Net sandbox Accept.js fail-closed without credentials; Commas stub | Mock active · live charges locked |
 
 ## GHL → Grants Client → Client 360
 

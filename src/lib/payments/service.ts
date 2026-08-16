@@ -77,7 +77,7 @@ export async function chargeInvoice(input: ChargeInvoiceInput) {
     data: { status: "PROCESSING" },
   });
 
-  const result = await provider.createPayment({
+  const charged = await provider.createPayment({
     amountCents: remaining,
     providerCustomerId: customer.providerCustomerId,
     providerPaymentMethodId: tokenized.providerPaymentMethodId,
@@ -90,6 +90,17 @@ export async function chargeInvoice(input: ChargeInvoiceInput) {
       grantsClientId: invoice.client.grantsClientId,
     },
   });
+
+  // Confirm processor response before recording financial success.
+  const result =
+    charged.status === "SUCCEEDED" && !charged.providerTransactionId?.trim()
+      ? {
+          ...charged,
+          status: "FAILED" as const,
+          failureCode: "missing_processor_transaction_id",
+          failureMessage: "Processor did not confirm a transaction id.",
+        }
+      : charged;
 
   const settlementStatus =
     result.status === "SUCCEEDED"

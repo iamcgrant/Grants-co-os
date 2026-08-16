@@ -19,7 +19,7 @@ Adapters:
 | Adapter | Status | Role |
 |---------|--------|------|
 | MockPaymentProvider | **Active (default)** | Safe simulation |
-| AuthorizeNetPaymentProvider | Scaffolded | **Preferred primary** for proprietary Grants Pay |
+| AuthorizeNetPaymentProvider | **Sandbox Accept.js wired** (fail-closed without credentials) | **Preferred primary** for proprietary Grants Pay |
 | CommasPaymentProvider | Scaffolded | Secondary / MoR / payment_link option |
 
 Set `PAYMENT_PROVIDER=mock|authorize_net|commas`.
@@ -41,7 +41,7 @@ Commas is excellent as MoR/hosted `payment_link`, but that flow leaves Grants Pa
 
 Flow:
 
-1. Payment SUCCEEDED (mock now; Authorize.Net Accept.js later)
+1. Payment SUCCEEDED (mock default; Authorize.Net Accept.js sandbox when configured)
 2. API returns `continuation.nextUrl` → `/pay/continue/[invoiceNumber]`
 3. Bridge page confirms transaction, then opens DisputeFox intake when `DISPUTEFOX_INTAKE_URL_TEMPLATE` is configured
 
@@ -68,14 +68,17 @@ Both processors can support this:
 
 | Env var | Where to get it |
 |---------|-----------------|
-| `AUTHORIZE_NET_API_LOGIN_ID` | Merchant Interface → Account → Settings → Security Settings → **API Credentials & Keys** |
-| `AUTHORIZE_NET_TRANSACTION_KEY` | Same page → New Transaction Key |
-| `AUTHORIZE_NET_PUBLIC_CLIENT_KEY` | Account → Settings → Security Settings → **Manage Public Client Key** (browser Accept.js only) |
+| `AUTHORIZE_NET_SANDBOX_API_LOGIN_ID` | Sandbox Merchant Interface → Account → Settings → Security Settings → **API Credentials & Keys** |
+| `AUTHORIZE_NET_SANDBOX_TRANSACTION_KEY` | Same page → New Transaction Key |
+| `AUTHORIZE_NET_SANDBOX_CLIENT_KEY` | Account → Settings → Security Settings → **Manage Public Client Key** (browser Accept.js only) |
 | `AUTHORIZE_NET_SIGNATURE_KEY` | API Credentials & Keys → New Signature Key (webhooks) |
 | `AUTHORIZE_NET_ENVIRONMENT` | `sandbox` (default) or `production` |
 
+Legacy aliases (`AUTHORIZE_NET_API_LOGIN_ID`, `AUTHORIZE_NET_TRANSACTION_KEY`, `AUTHORIZE_NET_PUBLIC_CLIENT_KEY`) still resolve; sandbox-prefixed names win.
+
+Missing sandbox login + transaction key **fails closed** (no processor HTTP, no invented success).  
 Then set `PAYMENT_PROVIDER=authorize_net` only when ready to test sandbox.  
-Live: also require `AUTHORIZE_NET_LIVE_CHARGES=true` after explicit approval.
+Live: also require `AUTHORIZE_NET_LIVE_CHARGES=true` after explicit approval. Do not set that flag until approved.
 
 ### Commas
 

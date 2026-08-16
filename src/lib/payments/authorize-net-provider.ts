@@ -12,18 +12,27 @@ import type {
   WebhookVerificationInput,
   ParsedWebhookEvent,
 } from "./types";
+import { requireAuthorizeNetSandboxConfig } from "./authorize-net-config";
+import {
+  buildCreateTransactionRequest,
+  parseAcceptJsOpaqueData,
+  parseCreateTransactionResponse,
+  postAuthorizeNetSandbox,
+  type AuthorizeNetHttp,
+} from "./authorize-net-api";
 
 /**
  * Authorize.Net adapter — preferred primary for proprietary Grants Pay checkout.
  *
  * Uses Accept.js opaqueData tokens (never raw PAN/CVV on our servers).
+ * Sandbox createTransactionRequest is wired. Fail-closed without sandbox credentials.
  * Live charges remain DISABLED until PAYMENT_PROVIDER=authorize_net AND
  * AUTHORIZE_NET_LIVE_CHARGES=true are both set after explicit approval.
  *
  * Credentials (server env only — never commit / never expose to browser except public client key):
- * - AUTHORIZE_NET_API_LOGIN_ID
- * - AUTHORIZE_NET_TRANSACTION_KEY
- * - AUTHORIZE_NET_PUBLIC_CLIENT_KEY (browser Accept.js only)
+ * - AUTHORIZE_NET_SANDBOX_API_LOGIN_ID (alias: AUTHORIZE_NET_API_LOGIN_ID)
+ * - AUTHORIZE_NET_SANDBOX_TRANSACTION_KEY (alias: AUTHORIZE_NET_TRANSACTION_KEY)
+ * - AUTHORIZE_NET_SANDBOX_CLIENT_KEY (alias: AUTHORIZE_NET_PUBLIC_CLIENT_KEY; browser Accept.js only)
  * - AUTHORIZE_NET_SIGNATURE_KEY (webhook verification)
  * - AUTHORIZE_NET_ENVIRONMENT=sandbox|production
  */
@@ -40,50 +49,16 @@ export class AuthorizeNetPaymentProvider implements PaymentProvider {
     supports_partial_refunds: true,
   };
 
-  private requireConfig(): {
-    apiLoginId: string;
-    transactionKey: string;
-    environment: "sandbox" | "production";
-  } {
-    const apiLoginId = process.env.AUTHORIZE_NET_API_LOGIN_ID;
-    const transactionKey = process.env.AUTHORIZE_NET_TRANSACTION_KEY;
-    const environment =
-      (process.env.AUTHORIZE_NET_ENVIRONMENT || "sandbox").toLowerCase() ===
-      "production"
-        ? "production"
-        : "sandbox";
+  constructor(private readonly http: AuthorizeNetHttp = fetch) {}
 
-    if (!apiLoginId || !transactionKey) {
-      throw new Error(
-        "Authorize.Net is not configured. Set AUTHORIZE_NET_API_LOGIN_ID and AUTHORIZE_NET_TRANSACTION_KEY (sandbox first).",
-      );
-    }
-
-    if (
-      environment === "production" &&
-      process.env.AUTHORIZE_NET_LIVE_CHARGES !== "true"
-    ) {
-      throw new Error(
-        "Authorize.Net live charges are locked. Set AUTHORIZE_NET_LIVE_CHARGES=true only after explicit production approval.",
-      );
-    }
-
-    return { apiLoginId, transactionKey, environment };
-  }
-
-  private endpoint(environment: "sandbox" | "production") {
-    return environment === "production"
-      ? "https://api.authorize.net/xml/v1/request.api"
-      : "https://apitest.authorize.net/xml/v1/request.api";
+  private requireSandbox() {
+    return requireAuthorizeNetSandboxConfig();
   }
 
   async createCustomer(input: CreateCustomerInput): Promise<CreateCustomerResult> {
-    this.requireConfig();
-    // Stub until credentials + approval: CIM createCustomerProfileRequest
-    void input;
-    throw new Error(
-      "Authorize.Net createCustomer is scaffolded. Provide sandbox credentials to enable CIM profiles.",
-    );
+    this.requireSandbox();
+    // Bookkeeping handle only — CIM createCustomerProfileRequest is not claimed.
+    return { providerCustomerId: `anet_cus_${input.clientId}` };
   }
 
   async createCheckoutSession(input: {
@@ -93,32 +68,43 @@ export class AuthorizeNetPaymentProvider implements PaymentProvider {
     cancelUrl: string;
     metadata?: Record<string, string>;
   }): Promise<{ sessionId: string; url: string }> {
-    this.requireConfig();
-    // Accept Hosted getHostedPaymentPageRequest → form token
+    this.requireSandbox();
     void input;
     throw new Error(
-      "Authorize.Net Accept Hosted checkout is scaffolded. Provide sandbox credentials to enable hosted sessions.",
+      "Authorize.Net Accept Hosted checkout is not this path. Use Accept.js opaqueData on /pay/[invoice].",
     );
   }
 
   async tokenizePaymentMethod(
     input: TokenizePaymentMethodInput,
   ): Promise<TokenizePaymentMethodResult> {
-    this.requireConfig();
-    // Accept.js already tokenized — opaqueData descriptor/value arrive as paymentToken
-    void input;
-    throw new Error(
-      "Authorize.Net tokenizePaymentMethod expects Accept.js opaqueData. Provide sandbox credentials to enable.",
-    );
+    this.requireSandbox();
+    const opaque = parseAcceptJsOpaqueData(input.paymentToken);
+    const handle = opaque.dataValue.replace(/[^A-Za-z0-9]/g, "").slice(-12) || "opaque";
+    return {
+      providerPaymentMethodId: `anet_pm_${handle}`,
+      type: input.type || "card",
+    };
   }
 
   async createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult> {
-    this.requireConfig();
-    // createTransactionRequest with opaqueData
-    void input;
-    throw new Error(
-      "Authorize.Net createPayment is scaffolded. Live/sandbox charges stay off until credentials + approval.",
-    );
+    const config = this.requireSandbox();
+    if (!input.paymentToken) {
+      throw new Error("Accept.js opaqueData paymentToken is required for Authorize.Net charges.");
+    }
+    const opaque = parseAcceptJsOpaqueData(input.paymentToken);
+    const requestBody = buildCreateTransactionRequest(config, input, opaque);
+    const raw = await postAuthorizeNetSandbox(this.http, config, requestBody);
+    const result = parseCreateTransactionResponse(raw);
+    if (result.status === "SUCCEEDED" && !result.providerTransactionId) {
+      return {
+        providerTransactionId: "",
+        status: "FAILED",
+        failureCode: "missing_processor_transaction_id",
+        failureMessage: "Processor did not confirm a transaction id.",
+      };
+    }
+    return result;
   }
 
   async chargePaymentMethod(input: CreatePaymentInput): Promise<CreatePaymentResult> {
@@ -126,35 +112,39 @@ export class AuthorizeNetPaymentProvider implements PaymentProvider {
   }
 
   async retrievePayment(providerTransactionId: string): Promise<CreatePaymentResult> {
-    this.requireConfig();
+    this.requireSandbox();
     void providerTransactionId;
-    throw new Error("Authorize.Net retrievePayment is scaffolded (getTransactionDetailsRequest).");
+    throw new Error(
+      "Authorize.Net retrievePayment is not wired. Confirm charges from createTransactionRequest only.",
+    );
   }
 
   async refundPayment(input: RefundPaymentInput): Promise<RefundPaymentResult> {
-    this.requireConfig();
+    this.requireSandbox();
     void input;
-    throw new Error("Authorize.Net refundPayment is scaffolded (refundTransaction).");
+    throw new Error(
+      "Authorize.Net refunds are not wired. Refund status is not invented.",
+    );
   }
 
   async retrieveRefund(providerRefundId: string): Promise<RefundPaymentResult> {
-    this.requireConfig();
+    this.requireSandbox();
     void providerRefundId;
-    throw new Error("Authorize.Net retrieveRefund is scaffolded.");
+    throw new Error("Authorize.Net retrieveRefund is not wired. Refund status is not invented.");
   }
 
   async retrieveSettlementStatus(
     providerTransactionId: string,
   ): Promise<"UNSETTLED" | "PENDING" | "SETTLED" | "FAILED"> {
-    this.requireConfig();
+    this.requireSandbox();
     void providerTransactionId;
-    throw new Error("Authorize.Net settlement status is scaffolded.");
+    // Auth/capture confirmation ≠ settlement. Do not invent SETTLED/payout.
+    return "UNSETTLED";
   }
 
   async verifyWebhook(input: WebhookVerificationInput): Promise<boolean> {
     const signatureKey = process.env.AUTHORIZE_NET_SIGNATURE_KEY;
     if (!signatureKey) return false;
-    // SHA512(signatureKey + rawBody) compared to X-ANET-Signature
     void input;
     return false;
   }
