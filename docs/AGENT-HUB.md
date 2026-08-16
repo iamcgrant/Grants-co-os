@@ -10,6 +10,10 @@ Intelligence / coordination layer under Grants & Co OS.
 1. **Cursor → MCP (`grants-agent-mesh`) → X1 → GHL read-only fact → answer**
 2. **X1 → `CODE_CHANGE_REQUIRED` → Cursor Cloud Agents API (or queue for `CURSOR_API_KEY`) → result callback**
 
+## Live bridge verified
+
+2026-08-16 — An X1 `CODE_CHANGE_REQUIRED` task launched this Cursor Cloud Agent as the live bots→Cursor proof.
+
 ## Bot connection modes
 
 | Agent | Mode | Why |
