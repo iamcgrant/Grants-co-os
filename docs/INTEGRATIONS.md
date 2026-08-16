@@ -9,7 +9,7 @@ All integrations are adapters beneath Grants & Co OS.
 | SmartCredit | `MockSmartCreditProvider` | Mock — sponsored enrollment + scores |
 | Credit Karma | `MockCreditKarmaConnector` | Mock — **read only** |
 | Experian | `MockExperianConnector` | Mock — weekly score |
-| Payments | Mock / Ecrypt stub / NMI stub | Mock active |
+| Payments | Mock / Authorize.Net stub / Commas stub | Mock active |
 
 ## Credentials needed later
 

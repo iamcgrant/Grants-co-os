@@ -36,6 +36,7 @@ export default function GrantsPayPage() {
     paidAt: string;
     clientName: string;
   } | null>(null);
+  const [continueUrl, setContinueUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const idempotencyKey = useMemo(
@@ -79,6 +80,7 @@ export default function GrantsPayPage() {
       if (!res.ok) throw new Error(data.error || "Payment failed");
       if (data.receipt) {
         setReceipt(data.receipt);
+        setContinueUrl(data.continuation?.nextUrl || null);
         setInvoice({ ...invoice, status: data.invoice.status, amountPaidCents: data.invoice.amountPaidCents });
       } else if (data.transaction?.status === "FAILED") {
         setError(data.transaction.failureMessage || "Payment failed");
@@ -127,9 +129,15 @@ export default function GrantsPayPage() {
               <br />
               Receipt {receipt.receiptNumber}
             </p>
-            <a href="/dashboard" className="gc-btn gc-btn-primary inline-flex mt-4">
-              Return to OS
-            </a>
+            {continueUrl ? (
+              <a href={continueUrl} className="gc-btn gc-btn-gold inline-flex mt-4">
+                Continue to Intake
+              </a>
+            ) : (
+              <a href="/dashboard" className="gc-btn gc-btn-primary inline-flex mt-4">
+                Return to OS
+              </a>
+            )}
           </div>
         ) : invoice && (invoice.status === "SUCCEEDED" || invoice.status === "REFUNDED" || invoice.status === "PARTIALLY_REFUNDED") ? (
           <div className="gc-fade-up text-center space-y-4">

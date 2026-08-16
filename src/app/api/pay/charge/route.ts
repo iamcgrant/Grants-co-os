@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { chargeInvoice } from "@/lib/payments/service";
+import { buildPostPaymentContinuation } from "@/lib/payments/post-payment";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentUser } from "@/lib/auth/session";
 
@@ -46,9 +47,21 @@ export async function POST(req: Request) {
       where: { id: body.invoiceId },
     });
 
+    const continuation =
+      result.transaction.status === "SUCCEEDED"
+        ? buildPostPaymentContinuation({
+            clientId: invoice.clientId,
+            grantsClientId: invoice.client.grantsClientId,
+            invoiceId: invoice.id,
+            invoiceNumber: invoice.invoiceNumber,
+            transactionId: result.transaction.id,
+          })
+        : null;
+
     return NextResponse.json({
       ...result,
       invoice: updatedInvoice,
+      continuation,
       receipt:
         result.transaction.status === "SUCCEEDED"
           ? {

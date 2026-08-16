@@ -37,7 +37,7 @@ Invoice **GC-1048** (Donna James) is due — open `/pay/GC-1048`.
 
 - Next.js (App Router) + React + TypeScript
 - Prisma + SQLite (local) → PostgreSQL/Supabase (production)
-- Adapter-based payment providers (Mock / Ecrypt / NMI stubs)
+- Adapter-based payment providers (Mock / Authorize.Net / Commas stubs)
 - PWA (manifest + service worker)
 - Vitest for critical financial/identity tests
 
