@@ -13,9 +13,24 @@ All integrations are adapters beneath Grants & Co OS.
 
 ## Credentials needed later
 
-- **GHL**: Agency API key + Location ID — Settings → Integrations → API Keys
-- **DisputeFox**: API credentials from DisputeFox admin
-- **SmartCredit**: Sponsor/partner code + enrollment attribution details
-- **Credit Karma / Experian**: Approved connector credentials (temporary; replaceable by bureau APIs)
+Do **not** paste passwords into chat, GitHub, or source files. Store them in Cursor Secrets / host environment variables.
 
-Missing credentials must not freeze development — mocks remain active.
+### GoHighLevel
+- Login email / password (staff portal) → `GHL_LOGIN_EMAIL`, `GHL_LOGIN_PASSWORD`
+- Preferred for automation: **API Key** + **Location ID** → Settings → Integrations → API Keys
+
+### DisputeFox
+- Login email / password → `DISPUTEFOX_LOGIN_EMAIL`, `DISPUTEFOX_LOGIN_PASSWORD`
+- Preferred for automation: API key from DisputeFox admin when available
+- Intake URL template → `DISPUTEFOX_INTAKE_URL_TEMPLATE`
+
+### SmartCredit (affiliate payouts)
+**Yes — your personal sponsor/partner signup link is required** so Grants & Co is credited every time a client enrolls.
+
+Provide either:
+1. Full sponsor URL → `SMARTCREDIT_SPONSOR_URL` (best)
+2. And/or sponsor code → `SMARTCREDIT_SPONSOR_CODE`
+
+Where: SmartCredit partner/affiliate dashboard → copy your sponsored enrollment link.
+
+The OS appends `gc_ref=<GrantsClientId>` for internal tracking while preserving your affiliate attribution.

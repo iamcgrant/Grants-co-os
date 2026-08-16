@@ -1,10 +1,14 @@
 import { CreditBureau } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { addTimelineEvent } from "@/lib/clients/timeline";
+import {
+  buildSponsoredEnrollmentUrl,
+  getSmartCreditSponsorConfig,
+} from "@/lib/credit/smartcredit-sponsor";
 
 export interface SmartCreditProvider {
   readonly name: "smartcredit";
-  enrollSponsored(clientId: string, sponsorCode?: string): Promise<{ externalId: string; enrollmentUrl: string }>;
+  enrollSponsored(clientId: string, grantsClientId?: string, sponsorCode?: string): Promise<{ externalId: string; enrollmentUrl: string }>;
   fetchScores(externalId: string): Promise<
     { bureau: CreditBureau; score: number; scoringModel: string }[]
   >;
@@ -13,10 +17,20 @@ export interface SmartCreditProvider {
 export class MockSmartCreditProvider implements SmartCreditProvider {
   readonly name = "smartcredit" as const;
 
-  async enrollSponsored(clientId: string, sponsorCode = "GRANTSCO") {
+  async enrollSponsored(clientId: string, grantsClientId?: string, sponsorCode?: string) {
+    const config = getSmartCreditSponsorConfig();
+    const code = sponsorCode || config.sponsorCode || undefined;
+    const enrollmentUrl =
+      buildSponsoredEnrollmentUrl({
+        grantsClientId: grantsClientId || clientId,
+        sponsorUrl: config.sponsorUrl,
+        sponsorCode: code,
+      }) ||
+      `https://smartcredit.example/enroll?sponsor=${encodeURIComponent(code || "PENDING_SPONSOR")}&ref=${encodeURIComponent(grantsClientId || clientId)}`;
+
     return {
       externalId: `sc_${clientId.slice(0, 8)}`,
-      enrollmentUrl: `https://smartcredit.example/enroll?sponsor=${sponsorCode}&ref=${clientId}`,
+      enrollmentUrl,
     };
   }
 
