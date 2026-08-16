@@ -14,7 +14,7 @@ export default async function PortalLayout({
   return (
     <div className="min-h-dvh pb-24">
       <header className="px-5 py-5 border-b border-[var(--gc-border)]">
-        <p className="text-[0.7rem] tracking-[0.35em] uppercase text-[var(--gc-champagne-dim)]">
+        <p className="text-[0.7rem] tracking-[0.35em] uppercase text-[var(--gc-gold)]">
           Grants &amp; Co
         </p>
         <p className="text-sm text-[var(--gc-muted)] mt-1">

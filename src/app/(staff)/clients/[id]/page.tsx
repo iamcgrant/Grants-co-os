@@ -51,7 +51,7 @@ export default async function ClientDetailPage({
   return (
     <div>
       <div className="gc-fade-up mb-8">
-        <p className="text-[0.7rem] tracking-[0.3em] uppercase text-[var(--gc-champagne-dim)] mb-2">
+        <p className="text-[0.7rem] tracking-[0.3em] uppercase text-[var(--gc-gold)] mb-2">
           {client.grantsClientId}
         </p>
         <h1 className="text-4xl md:text-5xl mb-2">
@@ -93,7 +93,7 @@ export default async function ClientDetailPage({
                 <div className="text-right">
                   <p>{formatUsd(inv.amountCents)}</p>
                   {(inv.status === "DUE" || inv.status === "FAILED") && (
-                    <Link href={`/pay/${inv.invoiceNumber}`} className="text-[0.65rem] tracking-[0.12em] uppercase text-[var(--gc-champagne-dim)]">
+                    <Link href={`/pay/${inv.invoiceNumber}`} className="text-[0.65rem] tracking-[0.12em] uppercase text-[var(--gc-gold)]">
                       Pay Securely
                     </Link>
                   )}
@@ -142,7 +142,7 @@ export default async function ClientDetailPage({
         <h2 className="text-2xl mb-4">Timeline</h2>
         <div className="space-y-4">
           {timeline.map((e) => (
-            <div key={e.id} className="border-l border-[var(--gc-champagne)] pl-4">
+            <div key={e.id} className="border-l border-[var(--gc-gold)] pl-4">
               <p className="font-medium">{e.title}</p>
               {e.description && (
                 <p className="text-sm text-[var(--gc-muted)]">{e.description}</p>

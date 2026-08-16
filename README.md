@@ -38,6 +38,7 @@ Invoice **GC-1048** (Donna James) is due — open `/pay/GC-1048`.
 - Next.js (App Router) + React + TypeScript
 - Prisma + SQLite (local) → PostgreSQL/Supabase (production)
 - Adapter-based payment providers (Mock / Authorize.Net / Commas stubs)
+- Brand system inspired by grantandconsultants.com (Fraunces + Manrope, charcoal/gold) — see `docs/BRAND.md`
 - PWA (manifest + service worker)
 - Vitest for critical financial/identity tests
 

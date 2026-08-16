@@ -56,7 +56,7 @@ export default async function PortalCreditPage() {
               {scores.map((s) => (
                 <div
                   key={s.id}
-                  className="flex-1 bg-[var(--gc-champagne)] opacity-80 rounded-sm"
+                  className="flex-1 bg-[var(--gc-gold)] opacity-80 rounded-sm"
                   style={{ height: `${Math.max(8, ((s.score - 500) / 350) * 100)}%` }}
                   title={`${s.score}`}
                 />

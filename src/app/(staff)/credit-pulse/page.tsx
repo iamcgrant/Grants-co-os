@@ -25,7 +25,7 @@ export default async function CreditPulsePage() {
   return (
     <div>
       <div className="gc-fade-up mb-10">
-        <p className="text-[0.7rem] tracking-[0.3em] uppercase text-[var(--gc-champagne-dim)] mb-2">
+        <p className="text-[0.7rem] tracking-[0.3em] uppercase text-[var(--gc-gold)] mb-2">
           Grants Credit Pulse
         </p>
         <h1 className="text-4xl md:text-5xl mb-2">Score Intelligence</h1>

@@ -36,7 +36,7 @@ export default async function PortalPaymentsPage() {
             <div className="text-right">
               <p>{formatUsd(inv.amountCents - inv.amountPaidCents)}</p>
               {(inv.status === "DUE" || inv.status === "FAILED") && (
-                <Link href={`/pay/${inv.invoiceNumber}`} className="text-[0.65rem] tracking-[0.12em] uppercase text-[var(--gc-champagne-dim)]">
+                <Link href={`/pay/${inv.invoiceNumber}`} className="text-[0.65rem] tracking-[0.12em] uppercase text-[var(--gc-gold)]">
                   Pay Securely
                 </Link>
               )}

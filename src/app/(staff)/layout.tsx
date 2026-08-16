@@ -21,14 +21,14 @@ export default async function StaffLayout({
 
   return (
     <div className="min-h-dvh pb-24 md:pb-8">
-      <header className="sticky top-0 z-40 border-b border-[var(--gc-border)] bg-[rgba(247,243,238,0.85)] backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-[var(--gc-border)] bg-[rgba(22,22,26,0.88)] backdrop-blur-xl">
         <div className="mx-auto max-w-6xl px-5 py-4 flex items-center justify-between gap-4">
           <Link href="/dashboard" className="display text-2xl tracking-tight">
-            Grants <span className="text-[var(--gc-champagne-dim)]">&amp;</span> Co
+            Grants <span className="text-[var(--gc-gold)]">&amp;</span> Co
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-[0.75rem] tracking-[0.14em] uppercase text-[var(--gc-muted)]">
             {NAV.map((item) => (
-              <Link key={item.href} href={item.href} className="hover:text-[var(--gc-black)] transition-colors">
+              <Link key={item.href} href={item.href} className="hover:text-white transition-colors">
                 {item.label}
               </Link>
             ))}

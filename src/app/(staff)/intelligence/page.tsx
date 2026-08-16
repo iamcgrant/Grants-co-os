@@ -16,7 +16,7 @@ export default async function IntelligencePage() {
   return (
     <div>
       <div className="gc-fade-up mb-10">
-        <p className="text-[0.7rem] tracking-[0.3em] uppercase text-[var(--gc-champagne-dim)] mb-2">
+        <p className="text-[0.7rem] tracking-[0.3em] uppercase text-[var(--gc-gold)] mb-2">
           Grants Intelligence
         </p>
         <h1 className="text-4xl md:text-5xl mb-2">Attribution</h1>

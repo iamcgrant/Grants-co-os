@@ -40,11 +40,9 @@ export default async function DashboardPage() {
   return (
     <div>
       <div className="gc-fade-up mb-10">
-        <p className="text-[0.7rem] tracking-[0.3em] uppercase text-[var(--gc-champagne-dim)] mb-2">
-          Grants Pay
-        </p>
+        <p className="gc-eyebrow mb-2">Grants Pay</p>
         <h1 className="text-4xl md:text-5xl mb-2">Financial Health</h1>
-        <p className="text-[var(--gc-muted)] text-sm max-w-xl">
+        <p className="text-[var(--gc-muted)] text-sm max-w-xl leading-relaxed">
           Payment success, settlement, and payouts are tracked separately. Bank deposits require processor reconciliation.
         </p>
       </div>
@@ -77,7 +75,7 @@ export default async function DashboardPage() {
           <section className="mt-12">
             <div className="flex items-end justify-between mb-4">
               <h2 className="text-2xl">Recent Invoices</h2>
-              <Link href="/clients" className="text-[0.7rem] tracking-[0.16em] uppercase text-[var(--gc-champagne-dim)]">
+              <Link href="/clients" className="text-[0.7rem] tracking-[0.16em] uppercase text-[var(--gc-gold)]">
                 View clients
               </Link>
             </div>
@@ -97,7 +95,7 @@ export default async function DashboardPage() {
                     {inv.status === "DUE" || inv.status === "FAILED" ? (
                       <Link
                         href={`/pay/${inv.invoiceNumber}`}
-                        className="text-[0.65rem] tracking-[0.14em] uppercase text-[var(--gc-champagne-dim)]"
+                        className="text-[0.65rem] tracking-[0.14em] uppercase text-[var(--gc-gold)]"
                       >
                         Open Grants Pay
                       </Link>

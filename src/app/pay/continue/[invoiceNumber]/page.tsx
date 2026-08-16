@@ -67,7 +67,7 @@ export default async function PayContinuePage({
   return (
     <main className="min-h-dvh flex items-center justify-center px-5 py-12">
       <div className="w-full max-w-md text-center gc-fade-up">
-        <p className="text-[0.7rem] tracking-[0.35em] uppercase text-[var(--gc-champagne-dim)] mb-3">
+        <p className="text-[0.7rem] tracking-[0.35em] uppercase text-[var(--gc-gold)] mb-3">
           Grants &amp; Co
         </p>
         <h1 className="text-4xl mb-3">Payment received</h1>

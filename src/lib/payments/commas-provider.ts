@@ -85,7 +85,7 @@ export class CommasPaymentProvider implements PaymentProvider {
     successUrl: string;
     cancelUrl: string;
     metadata?: Record<string, string>;
-  }) {
+  }): Promise<{ sessionId: string; url: string }> {
     this.requireConfig();
     // POST /public-api/checkout-sessions with success_url → payment_link
     void input;

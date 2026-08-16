@@ -14,21 +14,23 @@ export function getPaymentProvider(): PaymentProvider {
   if (cached) return cached;
 
   const name = (process.env.PAYMENT_PROVIDER || "mock").toLowerCase();
+  let provider: PaymentProvider;
   switch (name) {
     case "authorize_net":
     case "authorizenet":
     case "authorize.net":
-      cached = new AuthorizeNetPaymentProvider();
+      provider = new AuthorizeNetPaymentProvider();
       break;
     case "commas":
-      cached = new CommasPaymentProvider();
+      provider = new CommasPaymentProvider();
       break;
     case "mock":
     default:
-      cached = new MockPaymentProvider();
+      provider = new MockPaymentProvider();
       break;
   }
-  return cached;
+  cached = provider;
+  return provider;
 }
 
 export function resetPaymentProviderCache() {

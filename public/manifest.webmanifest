@@ -4,8 +4,8 @@
   "description": "Grants & Co operating system",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f7f3ee",
-  "theme_color": "#f7f3ee",
+  "background_color": "#16161a",
+  "theme_color": "#16161a",
   "orientation": "portrait-primary",
   "icons": [
     {

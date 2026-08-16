@@ -21,7 +21,7 @@ export default async function ClientsPage() {
     <div>
       <div className="gc-fade-up mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
         <div>
-          <p className="text-[0.7rem] tracking-[0.3em] uppercase text-[var(--gc-champagne-dim)] mb-2">
+          <p className="text-[0.7rem] tracking-[0.3em] uppercase text-[var(--gc-gold)] mb-2">
             Master Identity
           </p>
           <h1 className="text-4xl md:text-5xl mb-2">Clients</h1>
@@ -52,7 +52,7 @@ export default async function ClientsPage() {
                 {c.grantsClientId} · {c.email}
               </p>
             </div>
-            <span className="text-[0.65rem] tracking-[0.16em] uppercase text-[var(--gc-champagne-dim)]">
+            <span className="text-[0.65rem] tracking-[0.16em] uppercase text-[var(--gc-gold)]">
               View
             </span>
           </Link>

@@ -111,7 +111,7 @@ export default function GrantsPayPage() {
     <main className="min-h-dvh flex items-center justify-center px-5 py-12">
       <div className="w-full max-w-md">
         <div className="gc-fade-up text-center mb-10">
-          <p className="text-[0.75rem] tracking-[0.4em] uppercase text-[var(--gc-champagne-dim)] mb-3">
+          <p className="text-[0.75rem] tracking-[0.4em] uppercase text-[var(--gc-gold)] mb-3">
             Grants &amp; Co
           </p>
           <h1 className="text-4xl mb-2">Secure Payment</h1>

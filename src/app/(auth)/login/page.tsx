@@ -35,10 +35,10 @@ export default function LoginPage() {
   return (
     <main className="min-h-dvh flex flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-md gc-fade-up">
-        <p className="text-[0.7rem] tracking-[0.35em] uppercase text-[var(--gc-champagne-dim)] mb-4">
+        <p className="gc-eyebrow mb-4">
           Grants &amp; Co
         </p>
-        <h1 className="text-5xl md:text-6xl leading-none mb-3 text-[var(--gc-black)]">
+        <h1 className="text-5xl md:text-6xl leading-none mb-3 text-white">
           OS
         </h1>
         <p className="text-[var(--gc-muted)] mb-10 text-sm leading-relaxed max-w-sm">
@@ -77,7 +77,7 @@ export default function LoginPage() {
           )}
           <button
             type="submit"
-            className="gc-btn gc-btn-primary w-full mt-2"
+            className="gc-btn gc-btn-gold w-full mt-2"
             disabled={loading}
           >
             {loading ? "Signing in…" : "Enter"}

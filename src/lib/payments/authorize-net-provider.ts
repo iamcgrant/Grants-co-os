@@ -92,7 +92,7 @@ export class AuthorizeNetPaymentProvider implements PaymentProvider {
     successUrl: string;
     cancelUrl: string;
     metadata?: Record<string, string>;
-  }) {
+  }): Promise<{ sessionId: string; url: string }> {
     this.requireConfig();
     // Accept Hosted getHostedPaymentPageRequest → form token
     void input;

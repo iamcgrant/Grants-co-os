@@ -66,7 +66,7 @@ export default async function PortalHomePage() {
             </div>
           ))}
         </div>
-        <Link href="/portal/credit" className="text-[0.7rem] tracking-[0.14em] uppercase text-[var(--gc-champagne-dim)] mt-3 inline-block">
+        <Link href="/portal/credit" className="text-[0.7rem] tracking-[0.14em] uppercase text-[var(--gc-gold)] mt-3 inline-block">
           View My Credit
         </Link>
       </section>

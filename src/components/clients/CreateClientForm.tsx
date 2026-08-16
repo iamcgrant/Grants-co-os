@@ -85,7 +85,7 @@ export function CreateClientForm() {
         <ul className="mt-3 text-sm space-y-1">
           {duplicates.map((d) => (
             <li key={d.grantsClientId}>
-              <a className="text-[var(--gc-champagne-dim)]" href={`/clients/${d.grantsClientId}`}>
+              <a className="text-[var(--gc-gold)]" href={`/clients/${d.grantsClientId}`}>
                 {d.grantsClientId} — {d.firstName} {d.lastName} ({d.email})
               </a>
             </li>
