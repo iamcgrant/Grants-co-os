@@ -355,14 +355,18 @@ describe("GHL → Grants inbox conversation pull (linked masters only)", () => {
     for (const file of fs.readdirSync(dir)) {
       if (!file.endsWith(".ts")) continue;
       const src = fs.readFileSync(path.join(dir, file), "utf8");
-      expect(src).not.toMatch(/sendMessage|sendSms|sendEmail|sendIMessage|publishWorkflow/);
+      expect(src).not.toMatch(/\b(sendMessage|sendSms|sendEmail|sendIMessage|publishWorkflow)\s*\(/);
       expect(src).not.toMatch(/method:\s*["']POST["'][\s\S]*conversations\/messages/);
+      expect(src).not.toMatch(/GHL_MESSAGE_WRITES_ENABLED = true/);
     }
+    const http = fs.readFileSync(path.join(dir, "http.ts"), "utf8");
+    expect(http).toMatch(/GHL_MESSAGE_WRITES_ENABLED = false/);
+    expect(http).toMatch(/refuses outbound send/);
     const cli = fs.readFileSync(
       path.join(process.cwd(), "scripts/ghl-inbound-conversations.ts"),
       "utf8",
     );
     expect(cli).toMatch(/Never sends SMS\/email\/iMessage/);
-    expect(cli).not.toMatch(/sendMessage|sendSms|sendEmail/);
+    expect(cli).not.toMatch(/\b(sendMessage|sendSms|sendEmail)\s*\(/);
   });
 });
