@@ -1,13 +1,23 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, beforeEach } from "vitest";
 import {
   buildSponsoredEnrollmentUrl,
   getSmartCreditSponsorConfig,
 } from "../src/lib/credit/smartcredit-sponsor";
 
 describe("SmartCredit sponsor attribution", () => {
-  afterEach(() => {
+  const prevUrl = process.env.SMARTCREDIT_SPONSOR_URL;
+  const prevCode = process.env.SMARTCREDIT_SPONSOR_CODE;
+
+  beforeEach(() => {
     delete process.env.SMARTCREDIT_SPONSOR_URL;
     delete process.env.SMARTCREDIT_SPONSOR_CODE;
+  });
+
+  afterEach(() => {
+    if (prevUrl === undefined) delete process.env.SMARTCREDIT_SPONSOR_URL;
+    else process.env.SMARTCREDIT_SPONSOR_URL = prevUrl;
+    if (prevCode === undefined) delete process.env.SMARTCREDIT_SPONSOR_CODE;
+    else process.env.SMARTCREDIT_SPONSOR_CODE = prevCode;
   });
 
   it("returns null when sponsor is not configured", () => {
