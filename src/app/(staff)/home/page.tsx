@@ -25,36 +25,36 @@ export default async function HomePage() {
     const monthLabel = formatUsd(data.finance.collectedMonthCents);
 
     return (
-      <div className="gc-fade-up space-y-4">
-        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-2">
+      <div className="gc-fade-up space-y-3">
+        <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-3 mb-1">
           <div>
-            <p className="gc-eyebrow mb-2">Grants &amp; Co OS</p>
-            <h1 className="text-3xl md:text-4xl mb-1">{roleHomeLabel(user.role as StaffRole)}</h1>
-            <p className="text-[var(--gc-muted)] text-sm max-w-2xl">
-              What happened · what needs you · money movement · team load · system health
+            <p className="gc-eyebrow mb-1">Owner command</p>
+            <h1 className="text-3xl md:text-[2.35rem] mb-1 leading-none">{roleHomeLabel(user.role as StaffRole)}</h1>
+            <p className="text-[var(--gc-muted)] text-sm">
+              Live operations · money · team · exceptions · systems — multiple panels at once
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/pay" className="gc-btn gc-btn-primary">
+          <div className="hidden xl:flex flex-wrap gap-2">
+            <Link href="/pay" className="gc-btn gc-btn-primary text-xs">
               Grants Pay
             </Link>
-            <Link href="/inbox" className="gc-btn gc-btn-outline">
-              Inbox
-            </Link>
-            <Link href="/work" className="gc-btn gc-btn-ice">
+            <Link href="/work" className="gc-btn gc-btn-outline text-xs">
               Work board
+            </Link>
+            <Link href="/team-chat" className="gc-btn gc-btn-ice text-xs">
+              Team chat
             </Link>
           </div>
         </div>
 
-        {/* KPI strip */}
+        {/* KPI strip — always 4 across on desktop */}
         <div className="gc-dash-grid gc-dash-grid-4">
           <MetricTile
             label="Collected today"
             value={formatUsd(data.finance.collectedTodayCents)}
             href="/pay"
             spark={sparkCollect.slice(-7)}
-            trend="vs prior days"
+            trend="↑ activity"
             tone="ice"
           />
           <MetricTile
@@ -75,7 +75,7 @@ export default async function HomePage() {
             label="Outstanding"
             value={formatUsd(data.finance.outstandingCents)}
             href="/pay?filter=failed"
-            trend={data.finance.failedPaymentsCents ? `Failed ${formatUsd(data.finance.failedPaymentsCents)}` : undefined}
+            trend={data.finance.failedPaymentsCents ? `Failed ${formatUsd(data.finance.failedPaymentsCents)}` : "Clear"}
             tone={data.finance.failedPaymentsCents ? "danger" : "default"}
           />
         </div>

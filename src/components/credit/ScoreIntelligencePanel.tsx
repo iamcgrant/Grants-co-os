@@ -1,3 +1,4 @@
+import { Sparkline } from "@/components/ui/charts";
 import type { ScoreGroup } from "@/lib/credit/score-intelligence";
 
 export function ScoreIntelligencePanel({ groups }: { groups: ScoreGroup[] }) {
@@ -6,44 +7,49 @@ export function ScoreIntelligencePanel({ groups }: { groups: ScoreGroup[] }) {
   }
 
   return (
-    <div className="gc-grid-dense gc-grid-dense-3">
+    <div className="gc-dash-grid gc-dash-grid-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
       {groups.map((g) => {
-        const max = Math.max(...g.history.map((h) => h.score), 1);
-        const min = Math.min(...g.history.map((h) => h.score), 0);
-        const span = Math.max(max - min, 20);
+        const spark = g.history.map((h) => h.score);
+        const up = (g.periodChange ?? 0) >= 0;
         return (
-          <div key={g.key} className="gc-card">
-            <p className="text-[0.62rem] tracking-[0.16em] uppercase text-[var(--gc-ice)] mb-1">
-              {g.bureau}
-            </p>
-            <p className="text-xs text-[var(--gc-muted)] mb-3">
-              {g.source} · {g.scoringModel}
-            </p>
-            <p className="display text-4xl mb-2">{g.current?.score ?? "—"}</p>
-            <p className="text-sm text-[var(--gc-muted)] mb-3">
-              {g.baseline?.score ?? "—"} → {g.previous?.score ?? "—"} → {g.current?.score ?? "—"}
-            </p>
-            <div className="flex gap-3 text-xs mb-4">
-              <span className={g.periodChange != null && g.periodChange >= 0 ? "text-[var(--gc-success)]" : "text-[var(--gc-danger)]"}>
-                {g.periodChange != null ? `${g.periodChange >= 0 ? "+" : ""}${g.periodChange} period` : "—"}
-              </span>
-              <span className={g.overallChange != null && g.overallChange >= 0 ? "text-[var(--gc-success)]" : "text-[var(--gc-danger)]"}>
-                {g.overallChange != null ? `${g.overallChange >= 0 ? "+" : ""}${g.overallChange} overall` : "—"}
-              </span>
+          <div key={g.key} className="gc-score-card">
+            <div className="gc-score-card-top">
+              <div>
+                <p className="text-[0.62rem] tracking-[0.16em] uppercase text-[var(--gc-ice)] mb-1">
+                  {g.bureau}
+                </p>
+                <p className="text-[0.68rem] text-[var(--gc-muted)]">
+                  {g.source} · {g.scoringModel}
+                </p>
+              </div>
+              {spark.length > 1 && <Sparkline values={spark} width={72} height={28} />}
             </div>
-            <div className="flex items-end gap-1 h-16">
-              {g.history.map((h, idx) => {
-                const height = 18 + ((h.score - min) / span) * 46;
-                return (
-                  <div
-                    key={`${h.capturedAt.toISOString()}-${idx}`}
-                    title={`${h.score} · ${h.capturedAt.toLocaleDateString()}`}
-                    className="flex-1 rounded-t bg-[var(--gc-ice)]/70"
-                    style={{ height }}
-                  />
-                );
-              })}
+
+            <div className="flex items-end justify-between gap-3 mt-2 mb-1">
+              <p className="display text-4xl md:text-5xl leading-none">{g.current?.score ?? "—"}</p>
+              <p className={`text-sm font-medium mb-1 ${up ? "text-[var(--gc-success)]" : "text-[var(--gc-danger)]"}`}>
+                {g.periodChange != null
+                  ? `${g.periodChange >= 0 ? "↑" : "↓"} ${Math.abs(g.periodChange)} pts`
+                  : "—"}
+              </p>
             </div>
+
+            <div className="gc-score-meta">
+              <div>
+                <p>Previous</p>
+                <p className="display text-xl">{g.previous?.score ?? "—"}</p>
+              </div>
+              <div>
+                <p>Baseline</p>
+                <p className="display text-xl">{g.baseline?.score ?? "—"}</p>
+              </div>
+            </div>
+            {g.overallChange != null && (
+              <p className={`text-xs mt-2 ${g.overallChange >= 0 ? "text-[var(--gc-success)]" : "text-[var(--gc-danger)]"}`}>
+                {g.overallChange >= 0 ? "+" : ""}
+                {g.overallChange} overall from baseline
+              </p>
+            )}
           </div>
         );
       })}

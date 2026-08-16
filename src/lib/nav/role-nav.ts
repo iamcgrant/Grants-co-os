@@ -58,21 +58,18 @@ export function getStaffNav(role: StaffRole): NavItem[] {
 
 /** Desktop sidebar — denser enterprise module map */
 export function getDesktopNav(role: StaffRole): NavItem[] {
-  const commonPrimary: NavItem[] = [
-    { href: "/home", label: "Command", group: "primary" },
-    { href: "/clients", label: "Clients", group: "primary" },
-    { href: "/inbox", label: "Inbox", group: "primary" },
-    { href: "/work", label: "Work", group: "ops" },
-    { href: "/credit-pulse", label: "Credit Intel", group: "ops" },
-  ];
-
   if (role === "OWNER" || role === "ADMIN") {
     return [
-      ...commonPrimary,
+      { href: "/home", label: "Dashboard", group: "primary" },
+      { href: "/clients", label: "Clients", group: "primary" },
+      { href: "/inbox", label: "Inbox", group: "primary" },
+      { href: "/work", label: "Tasks", group: "ops" },
+      { href: "/credit-pulse", label: "Credit Intelligence", group: "ops" },
+      { href: "/work?view=jona", label: "Disputes", group: "ops" },
       { href: "/pay", label: "Grants Pay", group: "finance" },
       { href: "/intelligence", label: "Reports", group: "finance" },
-      { href: "/inbox?tab=team", label: "Team Chat", group: "system" },
-      { href: "/more", label: "Systems", group: "system" },
+      { href: "/team-chat", label: "Team Chat", group: "system" },
+      { href: "/more", label: "Settings", group: "system" },
     ];
   }
 
@@ -81,10 +78,10 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/home", label: "Client Care", group: "primary" },
       { href: "/clients", label: "Clients", group: "primary" },
       { href: "/inbox", label: "Inbox", group: "primary" },
-      { href: "/work", label: "Queues", group: "ops" },
-      { href: "/credit-pulse", label: "Credit Intel", group: "ops" },
-      { href: "/inbox?tab=team", label: "Team Chat", group: "system" },
-      { href: "/more", label: "More", group: "system" },
+      { href: "/work", label: "Tasks", group: "ops" },
+      { href: "/credit-pulse", label: "Credit Intelligence", group: "ops" },
+      { href: "/team-chat", label: "Team Chat", group: "system" },
+      { href: "/more", label: "Settings", group: "system" },
     ];
   }
 
@@ -94,9 +91,10 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/clients", label: "Clients", group: "primary" },
       { href: "/inbox", label: "Inbox", group: "primary" },
       { href: "/work", label: "File Queues", group: "ops" },
-      { href: "/credit-pulse", label: "Credit Intel", group: "ops" },
-      { href: "/inbox?tab=team", label: "Team Chat", group: "system" },
-      { href: "/more", label: "More", group: "system" },
+      { href: "/work?view=jona", label: "Disputes", group: "ops" },
+      { href: "/credit-pulse", label: "Credit Intelligence", group: "ops" },
+      { href: "/team-chat", label: "Team Chat", group: "system" },
+      { href: "/more", label: "Settings", group: "system" },
     ];
   }
 
