@@ -68,27 +68,26 @@ async function main() {
   const probe = await probeCursorApiKey();
   console.log("cursor probe", probe);
 
+  const live = await createCodeChangeAndLaunch({
+    title: "Agent Hub live bridge proof",
+    prompt:
+      "Confirm Agent Hub bots→Cursor path. Add a one-line note to docs/AGENT-HUB.md under a 'Live bridge verified' section with today's date. No other changes. Open PR if configured.",
+    ownerAgentId: "x1-operations",
+    idempotencyKey: `live-bridge-proof:${new Date().toISOString().slice(0, 10)}`,
+  });
+  console.log("live launch", {
+    mode: live.launch.mode,
+    taskId: live.launch.taskId,
+    cursorUrl: live.launch.cursorUrl,
+    cursorAgentId: live.launch.cursorAgentId,
+  });
+
   if (probe.present && probe.valid) {
     const drained = await drainAwaitingCursorLaunches(10);
     console.log("drained", JSON.stringify(drained).slice(0, 800));
-
-    // Launch a small live proof task
-    const live = await createCodeChangeAndLaunch({
-      title: "Agent Hub live bridge proof",
-      prompt:
-        "Confirm Agent Hub bots→Cursor path. Add a one-line note to docs/AGENT-HUB.md under a 'Live bridge verified' section with today's date. No other changes. Open PR if configured.",
-      ownerAgentId: "x1-operations",
-      idempotencyKey: `live-bridge-proof:${new Date().toISOString().slice(0, 10)}`,
-    });
-    console.log("live launch", {
-      mode: live.launch.mode,
-      taskId: live.launch.taskId,
-      cursorUrl: live.launch.cursorUrl,
-      cursorAgentId: live.launch.cursorAgentId,
-    });
   } else {
     console.log(
-      "Skipping live launch — AGENT_HUB_CURSOR_API_KEY / CURSOR_API_KEY not visible to this process yet",
+      "Live proof queued — AGENT_HUB_CURSOR_API_KEY / CURSOR_API_KEY not visible to this process yet",
     );
   }
 }
