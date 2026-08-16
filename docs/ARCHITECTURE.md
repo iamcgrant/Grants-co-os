@@ -14,7 +14,7 @@ GRANTS & CO OS (source of truth)
 
 ## Identity
 
-Every person receives one permanent **Grants Client ID** (`GC-000001`). External IDs attach via `client_identifiers`.
+Every person receives one permanent **Grants Client ID** (`GC-000001`). External IDs (GHL, DisputeFox, Credit Repair Cloud, SmartCredit) attach via `client_identifiers` on that one master.
 
 ## Auth & RBAC
 

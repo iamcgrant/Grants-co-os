@@ -1,0 +1,23 @@
+{
+  "clients": [
+    {
+      "disputeFoxClientId": "df_syn_1001",
+      "firstName": "Alex",
+      "lastName": "Rivera",
+      "email": "alex.rivera@example.test",
+      "grantsClientId": "GC-SYN-000001",
+      "crcClientId": "CRC-SYN-1001",
+      "started": true,
+      "stage": "Round 1 Sent"
+    },
+    {
+      "disputeFoxClientId": "df_syn_1009",
+      "firstName": "Harper",
+      "lastName": "Ives",
+      "email": "harper.ives@example.test",
+      "grantsClientId": "GC-SYN-000009",
+      "started": true,
+      "stage": "Round 2 Ready"
+    }
+  ]
+}

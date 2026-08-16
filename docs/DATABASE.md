@@ -14,6 +14,8 @@ users, staff_profiles, clients, client_identifiers, addresses, services, client_
 
 Unique `emailNormalized`. Phone normalized for matching. Create API returns `POSSIBLE_DUPLICATE` before insert unless `forceCreate`.
 
+`ClientIdentifier.provider` values used on the same master: `GHL`, `DISPUTEFOX`, `CREDIT_REPAIR_CLOUD`, `SMARTCREDIT`, `PAYMENT`. Provider IDs are never separate clients.
+
 ## Local vs production
 
 - Local: SQLite `file:./dev.db`

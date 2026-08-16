@@ -50,6 +50,7 @@ Invoice **GC-1051** (Donna James) is due — open `/pay/GC-1051`.
 - `npm run db:seed` — safe dummy data
 - `npm run build` — production build
 - `npm run df:inbound-attach -- --local --dry-run` — DisputeFox local attach preview (existing masters only)
+- `npm run crc:recovery-report` — CRC contact recovery dry-run (synthetic fixture, no live writes)
 
 ## Documentation
 

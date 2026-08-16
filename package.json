@@ -19,6 +19,7 @@
     "ghl:inbound-conversations": "tsx scripts/ghl-inbound-conversations.ts",
     "df:inbound-attach": "tsx scripts/disputefox-inbound-attach.ts",
     "clients:import-confirmed-masters": "tsx scripts/import-confirmed-masters.ts",
+    "crc:recovery-report": "tsx scripts/crc-recovery-report.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

@@ -13,7 +13,13 @@ export function isDevelopmentDataPlane(): boolean {
   return getGcEnvironment() === "development";
 }
 
-export type IdentifierSource = "ghl_api" | "disputefox_api" | "seed" | "manual" | "unknown";
+export type IdentifierSource =
+  | "ghl_api"
+  | "disputefox_api"
+  | "crc_export"
+  | "seed"
+  | "manual"
+  | "unknown";
 
 export type IdentifierMeta = {
   source?: IdentifierSource;

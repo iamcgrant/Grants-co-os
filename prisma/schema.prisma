@@ -198,7 +198,7 @@ model Client {
 model ClientIdentifier {
   id           String   @id @default(cuid())
   clientId     String
-  provider     String // GHL, DISPUTEFOX, SMARTCREDIT, PAYMENT, etc.
+  provider     String // GHL, DISPUTEFOX, CREDIT_REPAIR_CLOUD, SMARTCREDIT, PAYMENT, etc.
   externalId   String
   metadataJson String?
   createdAt    DateTime @default(now())

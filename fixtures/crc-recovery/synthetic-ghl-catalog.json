@@ -1,0 +1,42 @@
+{
+  "contacts": [
+    {
+      "ghlContactId": "ghl_syn_1001",
+      "firstName": "Alex",
+      "lastName": "Rivera",
+      "email": "alex.rivera@example.test",
+      "phone": "5550101001",
+      "grantsClientId": "GC-SYN-000001",
+      "crcClientId": "CRC-SYN-1001",
+      "disputeFoxClientId": "df_syn_1001"
+    },
+    {
+      "ghlContactId": "ghl_syn_1003",
+      "firstName": "Casey",
+      "lastName": "Ortiz",
+      "email": "casey.ortiz@example.test",
+      "phone": "5550101003",
+      "grantsClientId": "GC-SYN-000003"
+    },
+    {
+      "ghlContactId": "ghl_syn_1008",
+      "firstName": "Gray",
+      "lastName": "Holt",
+      "email": "gray.holt@example.test",
+      "grantsClientId": "GC-SYN-000008"
+    },
+    {
+      "ghlContactId": "ghl_syn_1009",
+      "firstName": "Harper",
+      "lastName": "Ives",
+      "email": "harper.ives@example.test",
+      "grantsClientId": "GC-SYN-000009"
+    },
+    {
+      "ghlContactId": "ghl_syn_1015",
+      "firstName": "Nico",
+      "lastName": "Vale",
+      "email": "nico.vale@example.test"
+    }
+  ]
+}
