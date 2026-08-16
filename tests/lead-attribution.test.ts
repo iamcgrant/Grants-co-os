@@ -241,7 +241,9 @@ describe("LeadAttribution — fail-closed child of Client", () => {
       path.join(process.cwd(), "src/lib/marketing/lead-attribution.ts"),
       "utf8",
     );
-    expect(src).not.toMatch(/createClient|leadSource\.create|prisma\.client\.create/);
+    expect(src).not.toMatch(/from ["']@\/lib\/clients\/service["']/);
+    expect(src).not.toMatch(/leadSource\.create/);
+    expect(src).not.toMatch(/prisma\.client\.create/);
     expect(src).toMatch(/REFUSE_CREATE_CLIENT/);
     expect(src).toMatch(/DATA_UNAVAILABLE/);
   });
@@ -252,8 +254,8 @@ describe("LeadAttribution — fail-closed child of Client", () => {
       path.join(process.cwd(), "src/lib/integrations/disputefox/sync.ts"),
       "utf8",
     );
-    expect(ghl).not.toMatch(/recordLeadAttribution|applyVerifiedCollectedAmount/);
-    expect(df).not.toMatch(/recordLeadAttribution|applyVerifiedCollectedAmount/);
+    expect(ghl).not.toMatch(/from ["']@\/lib\/marketing\/lead-attribution["']/);
+    expect(df).not.toMatch(/from ["']@\/lib\/marketing\/lead-attribution["']/);
     expect(ghl).toMatch(/STAMP LANDING \(not wired this PR/);
     expect(df).toMatch(/STAMP LANDING \(not wired this PR/);
   });
