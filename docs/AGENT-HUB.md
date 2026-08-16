@@ -13,6 +13,7 @@ Intelligence / coordination layer under Grants & Co OS.
 ## Live bridge verified
 
 2026-08-16 — An X1 `CODE_CHANGE_REQUIRED` task launched this Cursor Cloud Agent as the live bots→Cursor proof.
+2026-08-16 — Live bots→Cursor path confirmed: Agent Hub task `cmsw2whyf000gnpjsdjg6al0m` launched this Cloud Agent via `POST https://api.cursor.com/v1/agents`.
 
 ## Bot connection modes
 
