@@ -349,10 +349,246 @@ a {
   background: rgba(178, 212, 255, 0.1);
 }
 
-@media (min-width: 960px) {
+@media (min-width: 1100px) {
   .gc-nav-mobile {
     display: none;
   }
+}
+
+/* —— Enterprise density shell —— */
+.gc-app-shell {
+  display: block;
+}
+
+.gc-sidebar {
+  display: none;
+}
+
+.gc-main {
+  min-width: 0;
+}
+
+.gc-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  border-bottom: 1px solid var(--gc-border);
+  background: rgba(22, 22, 26, 0.92);
+  backdrop-filter: blur(18px);
+}
+
+.gc-topbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem 1rem;
+}
+
+.gc-search-wrap {
+  flex: 1;
+  max-width: 42rem;
+}
+
+.gc-search {
+  width: 100%;
+  border: 1px solid var(--gc-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--gc-text);
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.gc-search:focus {
+  border-color: var(--gc-border-ice);
+}
+
+.gc-icon-btn {
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gc-muted);
+  border: 1px solid var(--gc-border);
+  border-radius: 999px;
+  padding: 0.45rem 0.7rem;
+}
+
+.gc-icon-btn:hover {
+  color: #fff;
+  border-color: var(--gc-border-strong);
+}
+
+.gc-content {
+  padding: 1rem 1rem 6rem;
+}
+
+.gc-metric-tile {
+  background: var(--surface-secondary);
+  border: 1px solid var(--gc-border);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.05rem;
+}
+
+.gc-metric-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gc-muted);
+}
+
+.gc-tabs {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--gc-border);
+  margin-bottom: 1.25rem;
+  padding-bottom: 0;
+}
+
+.gc-tab {
+  flex: 0 0 auto;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gc-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.gc-tab-active,
+.gc-tab[data-active="true"] {
+  color: #fff;
+  border-bottom-color: var(--gc-ice);
+}
+
+.gc-tab-count {
+  margin-left: 0.4rem;
+  color: var(--gc-ice);
+}
+
+.gc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.gc-table th {
+  text-align: left;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gc-muted);
+  padding: 0.65rem 0.5rem;
+  border-bottom: 1px solid var(--gc-border);
+  font-weight: 500;
+}
+
+.gc-table td {
+  padding: 0.8rem 0.5rem;
+  border-bottom: 1px solid var(--gc-border);
+  vertical-align: middle;
+}
+
+.gc-dash-grid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+@media (min-width: 760px) {
+  .gc-dash-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .gc-dash-grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .gc-app-shell {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    min-height: 100dvh;
+  }
+
+  .gc-sidebar {
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    border-right: 1px solid var(--gc-border);
+    background: rgba(10, 11, 14, 0.72);
+    padding: 1.1rem 0.85rem;
+  }
+
+  .gc-sidebar-brand {
+    padding: 0.35rem 0.55rem 1.2rem;
+  }
+
+  .gc-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .gc-sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.65rem 0.7rem;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    color: var(--gc-muted);
+  }
+
+  .gc-sidebar-link:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .gc-sidebar-link.is-active {
+    color: #fff;
+    background: rgba(178, 212, 255, 0.1);
+  }
+
+  .gc-sidebar-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .gc-sidebar-link.is-active .gc-sidebar-dot {
+    background: var(--gc-ice);
+  }
+
+  .gc-sidebar-foot {
+    border-top: 1px solid var(--gc-border);
+    padding: 0.9rem 0.55rem 0.3rem;
+    margin-top: 0.75rem;
+  }
+
+  .gc-content {
+    padding: 1.25rem 1.5rem 2rem;
+    max-width: 1400px;
+  }
+
+  .gc-dash-grid-12 {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .gc-span-3 { grid-column: span 3; }
+  .gc-span-4 { grid-column: span 4; }
+  .gc-span-5 { grid-column: span 5; }
+  .gc-span-6 { grid-column: span 6; }
+  .gc-span-7 { grid-column: span 7; }
+  .gc-span-8 { grid-column: span 8; }
+  .gc-span-12 { grid-column: span 12; }
 }
 
 .gc-dev-banner {
@@ -364,6 +600,7 @@ a {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   padding: 0.45rem 1rem;
+  grid-column: 1 / -1;
 }
 
 .gc-bubble-internal {

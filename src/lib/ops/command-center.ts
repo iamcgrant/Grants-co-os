@@ -107,6 +107,45 @@ export async function getOwnerCommandCenter() {
     take: 6,
   });
 
+  // Last 14 days collected for trend chart (real transaction sums)
+  const fourteenDaysAgo = subDays(today, 13);
+  const recentTxns = await prisma.paymentTransaction.findMany({
+    where: { status: "SUCCEEDED", createdAt: { gte: fourteenDaysAgo } },
+    select: { amountCents: true, createdAt: true },
+  });
+  const dayKeys: string[] = [];
+  const dayTotals: number[] = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = subDays(today, i);
+    const key = d.toISOString().slice(0, 10);
+    dayKeys.push(key.slice(5));
+    const sum = recentTxns
+      .filter((t) => t.createdAt.toISOString().slice(0, 10) === key)
+      .reduce((s, t) => s + t.amountCents, 0);
+    dayTotals.push(sum);
+  }
+
+  const stageGroups = await prisma.client.groupBy({
+    by: ["stage"],
+    where: { status: "ACTIVE" },
+    _count: { _all: true },
+  });
+
+  const simonDueToday = await prisma.task.count({
+    where: {
+      status: { in: ["OPEN", "IN_PROGRESS", "BLOCKED"] },
+      assignee: { role: "CUSTOMER_SERVICE" },
+      dueAt: { gte: today, lt: new Date(today.getTime() + 86400000) },
+    },
+  });
+  const jonaDueToday = await prisma.task.count({
+    where: {
+      status: { in: ["OPEN", "IN_PROGRESS", "BLOCKED"] },
+      assignee: { role: "FILE_PREPARER" },
+      dueAt: { gte: today, lt: new Date(today.getTime() + 86400000) },
+    },
+  });
+
   return {
     finance,
     ops: {
@@ -122,6 +161,8 @@ export async function getOwnerCommandCenter() {
       jonaOpen,
       overdueTasks,
       completedToday,
+      simonDueToday,
+      jonaDueToday,
     },
     communication: {
       unreadClientMessages,
@@ -132,6 +173,8 @@ export async function getOwnerCommandCenter() {
     integrations,
     attention,
     recentScores,
+    revenueTrend: { labels: dayKeys, values: dayTotals },
+    stageBreakdown: stageGroups.map((g) => ({ stage: g.stage, count: g._count._all })),
     generatedAt: now.toISOString(),
     window: { today: today.toISOString(), week: week.toISOString(), month: month.toISOString() },
   };
