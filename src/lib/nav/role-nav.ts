@@ -69,6 +69,7 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/work?view=jona", label: "Disputes", group: "ops" },
       { href: "/pay", label: "Grants Pay", group: "finance" },
       { href: "/intelligence", label: "Reports", group: "finance" },
+      { href: "/acquisition", label: "Acquisition", group: "finance" },
       { href: "/team-chat", label: "Team Chat", group: "system" },
       { href: "/agents", label: "Agent Hub", group: "system" },
       { href: "/more", label: "Settings", group: "system" },

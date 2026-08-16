@@ -16,6 +16,8 @@ GRANTS & CO OS (source of truth)
 
 Every person receives one permanent **Grants Client ID** (`GC-000001`). External IDs (GHL, DisputeFox, Credit Repair Cloud, SmartCredit) attach via `client_identifiers` on that one master.
 
+Acquisition is two engines: referral **partners** (`Partner`, never a Client) and direct **consumers** (`Client.acquisitionStage` on that same master). See `docs/ACQUISITION.md`.
+
 ## Auth & RBAC
 
 Cookie session (JWT wrapping hashed session token) + role permissions + financial field restrictions. MFA-capable fields exist on `User` (`mfaEnabled`, `mfaSecret`).

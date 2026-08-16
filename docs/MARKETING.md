@@ -10,6 +10,8 @@ Leads, consultations, clients, conversion rate, revenue, revenue by source, camp
 
 **Revenue-by-content** is fail-closed. Until intake stamps campaign / content / ad / CTA **and** a `LeadAttribution` child exists on the master with a verified payment amount, the answer is **DATA UNAVAILABLE** — not organic. See `docs/LEAD-ATTRIBUTION.md`.
 
+Acquisition command-center scaffolding (partners vs consumers, pipelines, GrantsLeadScore) lives in `docs/ACQUISITION.md`. It reuses `LeadAttribution` and does not create a second human or onboarding path.
+
 ## AI layer
 
 May assist with summaries and prioritization. Must never invent financial transactions, silently alter credit records, execute refunds, or make unsupported legal conclusions.
