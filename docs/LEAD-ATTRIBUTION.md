@@ -47,6 +47,8 @@ Charles’s loop (MARKET → X2 → X4 → X3 → campaign → GHL → leads →
 
 `src/lib/marketing/lead-attribution.ts`
 
-- `recordLeadAttribution` — child row on an existing `clientId` only
+- `recordLeadAttribution` — child row on an existing `clientId` only; optional `market` (AcquisitionMarket)
 - `applyVerifiedCollectedAmount` — payment fact only
 - `getRevenueByContent` — DATA UNAVAILABLE until stamp + verified amount
+
+Acquisition revenue-by-market reuses this table. Missing `LeadAttribution.market` or missing verified `amount_collected` stays **DATA UNAVAILABLE**. See `docs/ACQUISITION.md`.

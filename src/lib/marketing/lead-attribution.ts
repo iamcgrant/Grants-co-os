@@ -16,6 +16,11 @@
 
 import { prisma } from "@/lib/db/prisma";
 import type { AttributionShowStatus, AttributionSource, LeadAttribution } from "@/generated/prisma/client";
+import {
+  parseAcquisitionMarket,
+  type AcquisitionMarketValue,
+} from "@/lib/acquisition/markets";
+import { AcquisitionError } from "@/lib/acquisition/types";
 
 export const DATA_UNAVAILABLE = "DATA_UNAVAILABLE" as const;
 
@@ -46,6 +51,7 @@ export class LeadAttributionError extends Error {
       | "CLIENT_NOT_FOUND"
       | "REFUSE_CREATE_CLIENT"
       | "INVALID_SOURCE"
+      | "INVALID_MARKET"
       | "INVALID_SHOW_STATUS"
       | "PAYMENT_FACT_REQUIRED"
       | "PAYMENT_FACT_MISMATCH"
@@ -77,6 +83,8 @@ export type RecordLeadAttributionInput = {
   showStatus?: string | null;
   converted?: boolean | null;
   service?: string | null;
+  /** Optional locked city/market. Unstamped market keeps revenue-by-market DATA UNAVAILABLE. */
+  market?: string | null;
   /** Ignored unless a verified payment fact is supplied. */
   amountCollected?: number | null;
   paymentTransactionId?: string | null;
@@ -217,6 +225,15 @@ export async function recordLeadAttribution(
 
   const source = parseAttributionSource(input.source);
   const showStatus = parseShowStatus(input.showStatus);
+  let market: AcquisitionMarketValue | null = null;
+  try {
+    market = parseAcquisitionMarket(input.market);
+  } catch (error) {
+    if (error instanceof AcquisitionError) {
+      throw new LeadAttributionError("INVALID_MARKET", error.message);
+    }
+    throw error;
+  }
   const amountCollected = await resolveVerifiedAmountCents({
     clientId: client.id,
     paymentTransactionId: input.paymentTransactionId,
@@ -239,6 +256,7 @@ export async function recordLeadAttribution(
       converted: input.converted ?? null,
       service: input.service?.trim() || null,
       amountCollected,
+      market,
     },
   });
 }

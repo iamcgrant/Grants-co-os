@@ -17,6 +17,7 @@ import {
   type AcquisitionSideEffects,
 } from "./locks";
 import { mapAcquisitionSourceToAttribution, parseAcquisitionSource } from "./source";
+import { parseAcquisitionMarket, requireAcquisitionMarket, type AcquisitionMarketValue } from "./markets";
 import { scoreGrantsLead, serializeScoreReasons } from "./score";
 import {
   AcquisitionError,
@@ -35,6 +36,8 @@ export type OpenConsumerLeadInput = {
   lastName?: string;
   acquisitionStage?: string | null;
   acquisitionSource?: string | null;
+  /** Required when the lead is attributed to a partner. Inherited from the partner if omitted. */
+  market?: string | null;
   referredByPartnerId?: string | null;
   doNotContact?: boolean;
   unsubscribed?: boolean;
@@ -73,6 +76,7 @@ async function applyScoreAndFlags(
   patch: {
     acquisitionStage: ConsumerLeadStageValue;
     acquisitionSource: AcquisitionSourceValue | null;
+    acquisitionMarket?: AcquisitionMarketValue | null;
     doNotContact: boolean;
     unsubscribed: boolean;
     referredByPartnerId?: string | null;
@@ -96,6 +100,7 @@ async function applyScoreAndFlags(
     data: {
       acquisitionStage: patch.acquisitionStage,
       acquisitionSource: patch.acquisitionSource,
+      acquisitionMarket: patch.acquisitionMarket ?? undefined,
       referredByPartnerId: patch.referredByPartnerId ?? undefined,
       doNotContact: patch.doNotContact,
       unsubscribed: patch.unsubscribed,
@@ -109,6 +114,7 @@ async function applyScoreAndFlags(
 async function attachAttributionIfStamped(input: {
   clientId: string;
   source: AcquisitionSourceValue | null;
+  market?: AcquisitionMarketValue | null;
   campaignId?: string | null;
   campaignName?: string | null;
   contentId?: string | null;
@@ -127,6 +133,7 @@ async function attachAttributionIfStamped(input: {
   return recordLeadAttribution({
     clientId: input.clientId,
     source: mapAcquisitionSourceToAttribution(input.source),
+    market: input.market,
     campaignId: input.campaignId,
     campaignName: input.campaignName,
     contentId: input.contentId,
@@ -151,6 +158,7 @@ export async function openConsumerLead(
   const emailNormalized = input.email ? normalizeEmail(input.email) : null;
   const phoneNormalized = normalizePhone(input.phone);
 
+  let partnerMarket: AcquisitionMarketValue | null = null;
   if (input.referredByPartnerId) {
     const partner = await prisma.partner.findUnique({
       where: { id: input.referredByPartnerId },
@@ -162,7 +170,13 @@ export async function openConsumerLead(
     if (asClient) {
       throw new AcquisitionError("PARTNER_IS_NOT_A_CLIENT", "Partner id collided with a Client id.");
     }
+    partnerMarket = requireAcquisitionMarket(partner.market);
   }
+
+  const explicitMarket = parseAcquisitionMarket(input.market, {
+    required: Boolean(input.referredByPartnerId) && !partnerMarket,
+  });
+  const market = explicitMarket ?? partnerMarket;
 
   let client: Client | null = null;
   let createdMaster = false;
@@ -209,6 +223,8 @@ export async function openConsumerLead(
   const updated = await applyScoreAndFlags(client.id, {
     acquisitionStage: input.acquisitionStage ? stage : (client.acquisitionStage ?? stage),
     acquisitionSource: source ?? (client.acquisitionSource as AcquisitionSourceValue | null),
+    acquisitionMarket:
+      market ?? (client.acquisitionMarket as AcquisitionMarketValue | null),
     doNotContact: client.doNotContact || Boolean(input.doNotContact),
     unsubscribed: client.unsubscribed || Boolean(input.unsubscribed),
     referredByPartnerId: input.referredByPartnerId ?? client.referredByPartnerId,
@@ -217,6 +233,7 @@ export async function openConsumerLead(
   await attachAttributionIfStamped({
     clientId: updated.id,
     source: updated.acquisitionSource as AcquisitionSourceValue | null,
+    market: updated.acquisitionMarket as AcquisitionMarketValue | null,
     campaignId: input.campaignId,
     campaignName: input.campaignName,
     contentId: input.contentId,
@@ -291,6 +308,7 @@ export async function convertConsumerLead(
   const updated = await applyScoreAndFlags(client.id, {
     acquisitionStage: nextStage,
     acquisitionSource: client.acquisitionSource as AcquisitionSourceValue | null,
+    acquisitionMarket: client.acquisitionMarket as AcquisitionMarketValue | null,
     doNotContact: client.doNotContact,
     unsubscribed: client.unsubscribed,
     referredByPartnerId: client.referredByPartnerId,
@@ -305,6 +323,14 @@ export async function convertConsumerLead(
 
   let referral: PartnerReferral | null = null;
   if (client.referredByPartnerId && CONVERTED_CONSUMER_STAGES.includes(nextStage)) {
+    const partner = await prisma.partner.findUnique({ where: { id: client.referredByPartnerId } });
+    if (!partner) {
+      throw new AcquisitionError("REFUSE_MIX_PARTNER_CLIENT", "referredByPartnerId is not a Partner.");
+    }
+    const referralMarket = requireAcquisitionMarket(
+      client.acquisitionMarket ?? partner.market,
+    );
+
     referral = await prisma.partnerReferral.upsert({
       where: {
         partnerId_clientId: {
@@ -315,12 +341,12 @@ export async function convertConsumerLead(
       create: {
         partnerId: client.referredByPartnerId,
         clientId: client.id,
+        market: referralMarket,
       },
       update: {},
     });
 
-    const partner = await prisma.partner.findUnique({ where: { id: client.referredByPartnerId } });
-    if (partner && !partner.doNotContact && !partner.unsubscribed) {
+    if (!partner.doNotContact && !partner.unsubscribed) {
       const nextPartnerStage =
         partner.pipelineStage === "ACTIVE_PRODUCING_PARTNER"
           ? partner.pipelineStage

@@ -8,6 +8,12 @@ import {
   CONSUMER_LEAD_STAGES,
   PARTNER_PIPELINE_STAGES,
 } from "../src/lib/acquisition/types";
+import {
+  ACQUISITION_MARKETS,
+  DEFAULT_PROSPECTING_MARKETS,
+  PRIMARY_ACQUISITION_MARKETS,
+  SECONDARY_ACQUISITION_MARKETS,
+} from "../src/lib/acquisition/markets";
 
 const testDb = path.join(process.cwd(), "prisma", "test-acquisition.db");
 
@@ -21,6 +27,8 @@ describe("Acquisition command center — two engines, one master", () => {
   let getAcquisitionDashboard: typeof import("../src/lib/acquisition/dashboard").getAcquisitionDashboard;
   let parseAcquisitionSource: typeof import("../src/lib/acquisition/source").parseAcquisitionSource;
   let mapAcquisitionSourceToAttribution: typeof import("../src/lib/acquisition/source").mapAcquisitionSourceToAttribution;
+  let parseAcquisitionMarket: typeof import("../src/lib/acquisition/markets").parseAcquisitionMarket;
+  let requireAcquisitionMarket: typeof import("../src/lib/acquisition/markets").requireAcquisitionMarket;
   let scoreGrantsLead: typeof import("../src/lib/acquisition/score").scoreGrantsLead;
   let AcquisitionError: typeof import("../src/lib/acquisition/types").AcquisitionError;
   let ACQUISITION_LOCKS: typeof import("../src/lib/acquisition/locks").ACQUISITION_LOCKS;
@@ -53,6 +61,9 @@ describe("Acquisition command center — two engines, one master", () => {
     getAcquisitionDashboard = dashboard.getAcquisitionDashboard;
     parseAcquisitionSource = source.parseAcquisitionSource;
     mapAcquisitionSourceToAttribution = source.mapAcquisitionSourceToAttribution;
+    const markets = await import("../src/lib/acquisition/markets");
+    parseAcquisitionMarket = markets.parseAcquisitionMarket;
+    requireAcquisitionMarket = markets.requireAcquisitionMarket;
     scoreGrantsLead = score.scoreGrantsLead;
     AcquisitionError = types.AcquisitionError;
     ACQUISITION_LOCKS = locks.ACQUISITION_LOCKS;
@@ -63,6 +74,7 @@ describe("Acquisition command center — two engines, one master", () => {
   beforeEach(async () => {
     await prisma.partnerReferral.deleteMany();
     await prisma.leadAttribution.deleteMany();
+    await prisma.paymentTransaction.deleteMany();
     await prisma.onboardingItem.deleteMany();
     await prisma.fridayPulseItem.deleteMany();
     await prisma.fridayPulseRun.deleteMany();
@@ -149,10 +161,12 @@ describe("Acquisition command center — two engines, one master", () => {
       email: "realty@example.com",
       partnerType: "REALTOR",
       acquisitionSource: "REALTOR_PARTNER",
+      market: "HILTON_HEAD_ISLAND_SC",
     });
 
     expect(partner.businessName).toBe("Example Realty");
     expect(partner.pipelineStage).toBe("NEW_PROSPECT");
+    expect(partner.market).toBe("HILTON_HEAD_ISLAND_SC");
     expect(await prisma.client.count()).toBe(0);
     expect(await prisma.client.findUnique({ where: { id: partner.id } })).toBeNull();
     expect(sideEffects).toEqual({
@@ -168,6 +182,7 @@ describe("Acquisition command center — two engines, one master", () => {
         businessName: "Nope LLC",
         createClient: true,
         acquisitionSource: "OTHER",
+        market: "BLUFFTON_SC",
       }),
     ).rejects.toMatchObject({ code: "PARTNER_IS_NOT_A_CLIENT" });
 
@@ -177,6 +192,7 @@ describe("Acquisition command center — two engines, one master", () => {
         businessName: "Mixed",
         email: client.email,
         clientId: client.id,
+        market: "SAVANNAH_GA",
       }),
     ).rejects.toMatchObject({ code: "REFUSE_MIX_PARTNER_CLIENT" });
 
@@ -240,19 +256,22 @@ describe("Acquisition command center — two engines, one master", () => {
       email: "mortgage@example.com",
       partnerType: "MORTGAGE",
       acquisitionSource: "MORTGAGE_PARTNER",
+      market: "ATLANTA_GA",
     });
     const master = await seedMaster();
 
-    await openConsumerLead({
+    const opened = await openConsumerLead({
       clientId: master.id,
       referredByPartnerId: partner.id,
       acquisitionSource: "MORTGAGE_PARTNER",
     });
     expect(await prisma.partnerReferral.count()).toBe(0);
+    expect(opened.client.acquisitionMarket).toBe("ATLANTA_GA");
 
     const converted = await convertConsumerLead({ clientId: master.id });
     expect(converted.referral?.partnerId).toBe(partner.id);
     expect(converted.referral?.clientId).toBe(master.id);
+    expect(converted.referral?.market).toBe("ATLANTA_GA");
     expect(await prisma.partnerReferral.count()).toBe(1);
 
     const updatedPartner = await prisma.partner.findUniqueOrThrow({ where: { id: partner.id } });
@@ -286,6 +305,7 @@ describe("Acquisition command center — two engines, one master", () => {
       doNotContact: true,
       unsubscribed: true,
       acquisitionSource: "BUILDER_PARTNER",
+      market: "WASHINGTON_DC",
     });
     const moved = await updatePartnerStage({
       partnerId: partner.id,
@@ -387,6 +407,11 @@ describe("Acquisition command center — two engines, one master", () => {
     expect(empty.metrics.revenueBySource.status).toBe(DATA_UNAVAILABLE);
     expect(empty.metrics.partnerProspects.value).toBeNull();
     expect(empty.metrics.newLeadsToday.reason).toMatch(/DATA UNAVAILABLE/i);
+    expect(empty.byMarket.status).toBe(DATA_UNAVAILABLE);
+    expect(empty.byMarket.rows).toEqual([]);
+    expect(empty.byMarket.reason).toMatch(/DATA UNAVAILABLE/i);
+    expect(empty.byMarket.defaultStartSet).toEqual([...PRIMARY_ACQUISITION_MARKETS]);
+    expect(empty.byMarket.defaultStartSet).not.toContain("ESTILL_SC");
 
     const master = await seedMaster();
     await openConsumerLead({
@@ -398,6 +423,7 @@ describe("Acquisition command center — two engines, one master", () => {
       businessName: "Prospect Co",
       email: "prospect@example.com",
       acquisitionSource: "GHL_PROSPECTING",
+      market: "ARLINGTON_VA",
     });
 
     const filled = await getAcquisitionDashboard();
@@ -408,5 +434,204 @@ describe("Acquisition command center — two engines, one master", () => {
     expect(filled.metrics.partnerProspects.value).toBe(1);
     expect(filled.metrics.revenueBySource.status).toBe(DATA_UNAVAILABLE);
     expect(filled.engines.mixed).toBe(false);
+    expect(filled.byMarket.status).toBe("AVAILABLE");
+    expect(filled.byMarket.rows.map((row) => row.market)).toEqual(["ARLINGTON_VA"]);
+    expect(filled.byMarket.rows[0]?.prospectsFound.value).toBe(1);
+    expect(filled.byMarket.rows[0]?.revenue.status).toBe(DATA_UNAVAILABLE);
+    expect(filled.byMarket.rows[0]?.revenue.reason).toMatch(/DATA UNAVAILABLE/i);
+  });
+
+  it("market is required and validated — Estill is never a default", async () => {
+    expect([...ACQUISITION_MARKETS]).toEqual([
+      ...PRIMARY_ACQUISITION_MARKETS,
+      ...SECONDARY_ACQUISITION_MARKETS,
+      "UNKNOWN",
+      "OTHER",
+    ]);
+    expect(DEFAULT_PROSPECTING_MARKETS).toEqual([...PRIMARY_ACQUISITION_MARKETS]);
+    expect(DEFAULT_PROSPECTING_MARKETS).toEqual([
+      "HILTON_HEAD_ISLAND_SC",
+      "BLUFFTON_SC",
+      "SAVANNAH_GA",
+      "ATLANTA_GA",
+      "WASHINGTON_DC",
+      "ARLINGTON_VA",
+    ]);
+    expect(SECONDARY_ACQUISITION_MARKETS).toEqual([
+      "CHARLOTTE_NC",
+      "COLUMBIA_SC",
+      "CHARLESTON_SC",
+      "AUGUSTA_GA",
+      "ALEXANDRIA_VA",
+      "FAIRFAX_VA",
+      "RICHMOND_VA",
+    ]);
+    expect(ACQUISITION_MARKETS).not.toContain("ESTILL_SC");
+    expect(DEFAULT_PROSPECTING_MARKETS).not.toContain("ESTILL_SC");
+
+    expect(parseAcquisitionMarket("Hilton Head Island, SC")).toBe("HILTON_HEAD_ISLAND_SC");
+    expect(parseAcquisitionMarket("UNKNOWN")).toBe("UNKNOWN");
+    expect(parseAcquisitionMarket("OTHER")).toBe("OTHER");
+    expect(parseAcquisitionMarket(undefined)).toBeNull();
+    expect(parseAcquisitionMarket("")).toBeNull();
+    expect(() => requireAcquisitionMarket(undefined)).toThrow(AcquisitionError);
+    expect(() => requireAcquisitionMarket("")).toThrow(/required/i);
+    expect(() => parseAcquisitionMarket("Estill, SC")).toThrow(/Estill/i);
+    expect(() => parseAcquisitionMarket("ESTILL_SC")).toThrow(AcquisitionError);
+    expect(() => parseAcquisitionMarket("Not A City")).toThrow(/allow-list/i);
+
+    await expect(
+      createPartner({
+        businessName: "No Market Realty",
+        acquisitionSource: "REALTOR_PARTNER",
+      }),
+    ).rejects.toMatchObject({ code: "MARKET_REQUIRED" });
+
+    await expect(
+      createPartner({
+        businessName: "Estill Default",
+        acquisitionSource: "GHL_PROSPECTING",
+        market: "Estill, SC",
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_MARKET" });
+
+    const { partner } = await createPartner({
+      businessName: "Explicit Unknown",
+      email: "unknown-market@example.com",
+      acquisitionSource: "OTHER",
+      market: "UNKNOWN",
+    });
+    expect(partner.market).toBe("UNKNOWN");
+    expect(partner.market).not.toBe("ESTILL_SC");
+    expect(await prisma.client.count()).toBe(0);
+
+    const srcDir = path.join(process.cwd(), "src/lib/acquisition");
+    for (const file of fs.readdirSync(srcDir)) {
+      const src = fs.readFileSync(path.join(srcDir, file), "utf8");
+      expect(src).not.toMatch(/market:\s*["']ESTILL/i);
+      expect(src).not.toMatch(/@default\(ESTILL/i);
+      expect(src).not.toMatch(/DEFAULT_PROSPECTING_MARKETS\s*=\s*\[[^\]]*ESTILL/s);
+    }
+    const marketsSrc = fs.readFileSync(path.join(srcDir, "markets.ts"), "utf8");
+    expect(marketsSrc).toMatch(/FORBIDDEN_ESTILL_KEYS/);
+    expect(marketsSrc).toMatch(/never a default/);
+  });
+
+  it("dashboard groups stamped partner metrics by market without inventing rows", async () => {
+    const hilton = await createPartner({
+      businessName: "Hilton Realty",
+      email: "hilton@example.com",
+      partnerType: "REALTOR",
+      acquisitionSource: "REALTOR_PARTNER",
+      market: "Hilton Head Island, SC",
+      pipelineStage: "REPLIED",
+    });
+    await createPartner({
+      businessName: "Bluffton Mortgage",
+      email: "bluffton@example.com",
+      partnerType: "MORTGAGE",
+      acquisitionSource: "MORTGAGE_PARTNER",
+      market: "BLUFFTON_SC",
+    });
+    await createPartner({
+      businessName: "Savannah Builders",
+      email: "savannah@example.com",
+      partnerType: "BUILDER",
+      acquisitionSource: "BUILDER_PARTNER",
+      market: "SAVANNAH_GA",
+      pipelineStage: "INTRO_CALL",
+    });
+
+    const master = await seedMaster("GC-000501");
+    const opened = await openConsumerLead({
+      clientId: master.id,
+      referredByPartnerId: hilton.partner.id,
+      acquisitionSource: "REALTOR_PARTNER",
+      campaignId: "camp_mkt",
+      contentId: "vid_mkt",
+      adId: "ad_mkt",
+      cta: "book_consult",
+    });
+    expect(opened.client.acquisitionMarket).toBe("HILTON_HEAD_ISLAND_SC");
+    const converted = await convertConsumerLead({ clientId: master.id, paid: true });
+    expect(converted.referral?.market).toBe("HILTON_HEAD_ISLAND_SC");
+    expect(await prisma.client.count()).toBe(1);
+
+    const dash = await getAcquisitionDashboard();
+    expect(dash.byMarket.status).toBe("AVAILABLE");
+    expect(dash.byMarket.defaultStartSet).toEqual([...PRIMARY_ACQUISITION_MARKETS]);
+    expect(dash.byMarket.rows.map((row) => row.market).sort()).toEqual([
+      "BLUFFTON_SC",
+      "HILTON_HEAD_ISLAND_SC",
+      "SAVANNAH_GA",
+    ]);
+    expect(dash.byMarket.rows.some((row) => row.market === "ESTILL_SC")).toBe(false);
+    expect(dash.byMarket.rows.some((row) => row.market === "CHARLOTTE_NC")).toBe(false);
+
+    const hiltonRow = dash.byMarket.rows.find((row) => row.market === "HILTON_HEAD_ISLAND_SC");
+    const blufftonRow = dash.byMarket.rows.find((row) => row.market === "BLUFFTON_SC");
+    const savannahRow = dash.byMarket.rows.find((row) => row.market === "SAVANNAH_GA");
+
+    expect(hiltonRow?.prospectsFound.value).toBe(0);
+    expect(hiltonRow?.replies.value).toBe(1);
+    expect(hiltonRow?.meetings.value).toBe(1);
+    expect(hiltonRow?.referrals.value).toBe(1);
+    expect(hiltonRow?.clientsConverted.value).toBe(1);
+    expect(hiltonRow?.revenue.status).toBe(DATA_UNAVAILABLE);
+
+    expect(blufftonRow?.prospectsFound.value).toBe(1);
+    expect(blufftonRow?.replies.value).toBe(0);
+    expect(blufftonRow?.referrals.status).toBe(DATA_UNAVAILABLE);
+    expect(blufftonRow?.revenue.status).toBe(DATA_UNAVAILABLE);
+
+    expect(savannahRow?.meetings.value).toBe(1);
+    expect(savannahRow?.replies.value).toBe(1);
+    expect(savannahRow?.referrals.status).toBe(DATA_UNAVAILABLE);
+
+    const payment = await prisma.paymentTransaction.create({
+      data: {
+        id: "pay_mkt_1",
+        clientId: master.id,
+        provider: "AUTHORIZE_NET",
+        providerTransactionId: "txn_mkt_1",
+        idempotencyKey: "idem_mkt_1",
+        amountCents: 19900,
+        status: "SUCCEEDED",
+      },
+    });
+    const attr = await import("../src/lib/marketing/lead-attribution");
+    const stamped = await prisma.leadAttribution.findFirst({ where: { clientId: master.id } });
+    expect(stamped?.market).toBe("HILTON_HEAD_ISLAND_SC");
+    await attr.applyVerifiedCollectedAmount({
+      attributionId: stamped!.id,
+      paymentTransactionId: payment.id,
+    });
+
+    const withRevenue = await getAcquisitionDashboard();
+    const hiltonAfter = withRevenue.byMarket.rows.find((row) => row.market === "HILTON_HEAD_ISLAND_SC");
+    expect(hiltonAfter?.revenue.status).toBe("AVAILABLE");
+    expect(hiltonAfter?.revenue.value).toBe(19900);
+    const blufftonAfter = withRevenue.byMarket.rows.find((row) => row.market === "BLUFFTON_SC");
+    expect(blufftonAfter?.revenue.status).toBe(DATA_UNAVAILABLE);
+  });
+
+  it("convertConsumerLead still refuses to mint a second master", async () => {
+    const master = await seedMaster("GC-000601");
+    await openConsumerLead({
+      clientId: master.id,
+      acquisitionSource: "WEBSITE",
+    });
+    const before = await prisma.client.count();
+    await expect(
+      convertConsumerLead({
+        clientId: master.id,
+        createClient: true,
+        email: "second.market@example.com",
+        firstName: "Second",
+        lastName: "Human",
+      }),
+    ).rejects.toMatchObject({ code: "REFUSE_CREATE_CLIENT" });
+    expect(await prisma.client.count()).toBe(before);
+    expect(await prisma.partner.count()).toBe(0);
   });
 });

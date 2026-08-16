@@ -5,11 +5,23 @@
 
 import { startOfDay, startOfWeek } from "date-fns";
 import { prisma } from "@/lib/db/prisma";
-import { DATA_UNAVAILABLE, getRevenueByContent } from "@/lib/marketing/lead-attribution";
+import {
+  DATA_UNAVAILABLE,
+  getRevenueByContent,
+  hasCompleteIntakeStamp,
+} from "@/lib/marketing/lead-attribution";
+import {
+  DEFAULT_PROSPECTING_MARKETS,
+  marketLabel,
+  type AcquisitionMarketValue,
+} from "./markets";
 import {
   ACTIVE_PARTNER_STAGES,
+  CONVERTED_CONSUMER_STAGES,
   OPEN_FOLLOW_UP_STAGES,
+  PARTNER_MEETING_STAGES,
   PARTNER_PROSPECT_STAGES,
+  PARTNER_REPLIED_STAGES,
 } from "./types";
 
 export type AcquisitionMetric<T = number> = {
@@ -25,6 +37,141 @@ function available<T>(label: string, value: T): AcquisitionMetric<T> {
 
 function unavailable<T = number>(label: string, reason: string): AcquisitionMetric<T> {
   return { label, status: DATA_UNAVAILABLE, value: null, reason };
+}
+
+export type MarketMetricRow = {
+  market: AcquisitionMarketValue;
+  label: string;
+  prospectsFound: AcquisitionMetric;
+  replies: AcquisitionMetric;
+  meetings: AcquisitionMetric;
+  referrals: AcquisitionMetric;
+  clientsConverted: AcquisitionMetric;
+  revenue: AcquisitionMetric;
+};
+
+const UNSTAMPED_MARKET_REASON =
+  "DATA UNAVAILABLE — no Partner, PartnerReferral, or LeadAttribution row stamped with this market. Counts are not invented.";
+const UNSTAMPED_REVENUE_REASON =
+  "DATA UNAVAILABLE until a LeadAttribution row stamped with this market has a complete intake stamp and a verified payment fact.";
+
+async function getMetricsByMarket(): Promise<{
+  status: typeof DATA_UNAVAILABLE | "AVAILABLE";
+  reason?: string;
+  defaultStartSet: readonly AcquisitionMarketValue[];
+  rows: MarketMetricRow[];
+}> {
+  const [partners, referrals, attributions, convertedClients] = await Promise.all([
+    prisma.partner.findMany({
+      select: { id: true, market: true, pipelineStage: true },
+    }),
+    prisma.partnerReferral.findMany({
+      select: { id: true, market: true, clientId: true },
+    }),
+    prisma.leadAttribution.findMany({
+      select: {
+        market: true,
+        campaignId: true,
+        contentId: true,
+        adId: true,
+        cta: true,
+        amountCollected: true,
+      },
+    }),
+    prisma.client.findMany({
+      where: {
+        acquisitionMarket: { not: null },
+        acquisitionStage: { in: [...CONVERTED_CONSUMER_STAGES] },
+      },
+      select: { id: true, acquisitionMarket: true },
+    }),
+  ]);
+
+  const markets = new Set<AcquisitionMarketValue>();
+  for (const row of partners) markets.add(row.market as AcquisitionMarketValue);
+  for (const row of referrals) markets.add(row.market as AcquisitionMarketValue);
+  for (const row of attributions) {
+    if (row.market) markets.add(row.market as AcquisitionMarketValue);
+  }
+  for (const row of convertedClients) {
+    if (row.acquisitionMarket) markets.add(row.acquisitionMarket as AcquisitionMarketValue);
+  }
+
+  if (markets.size === 0) {
+    return {
+      status: DATA_UNAVAILABLE,
+      reason:
+        "DATA UNAVAILABLE — no market-stamped Partner, PartnerReferral, or LeadAttribution rows. Per-market counts are not invented.",
+      defaultStartSet: DEFAULT_PROSPECTING_MARKETS,
+      rows: [],
+    };
+  }
+
+  const rows: MarketMetricRow[] = [...markets]
+    .sort((a, b) => marketLabel(a).localeCompare(marketLabel(b)))
+    .map((market) => {
+      const marketPartners = partners.filter((row) => row.market === market);
+      const marketReferrals = referrals.filter((row) => row.market === market);
+      const marketConverted = convertedClients.filter((row) => row.acquisitionMarket === market);
+      const marketRevenue = attributions.filter(
+        (row) =>
+          row.market === market &&
+          hasCompleteIntakeStamp(row) &&
+          row.amountCollected != null,
+      );
+
+      const hasPartnerStamp = marketPartners.length > 0;
+      const hasReferralStamp = marketReferrals.length > 0;
+      const hasConvertedStamp = marketConverted.length > 0;
+      const hasRevenueStamp = marketRevenue.length > 0;
+
+      return {
+        market,
+        label: marketLabel(market),
+        prospectsFound: hasPartnerStamp
+          ? available(
+              "Prospects Found",
+              marketPartners.filter((row) =>
+                (PARTNER_PROSPECT_STAGES as readonly string[]).includes(row.pipelineStage),
+              ).length,
+            )
+          : unavailable("Prospects Found", UNSTAMPED_MARKET_REASON),
+        replies: hasPartnerStamp
+          ? available(
+              "Replies",
+              marketPartners.filter((row) =>
+                (PARTNER_REPLIED_STAGES as readonly string[]).includes(row.pipelineStage),
+              ).length,
+            )
+          : unavailable("Replies", UNSTAMPED_MARKET_REASON),
+        meetings: hasPartnerStamp
+          ? available(
+              "Meetings",
+              marketPartners.filter((row) =>
+                (PARTNER_MEETING_STAGES as readonly string[]).includes(row.pipelineStage),
+              ).length,
+            )
+          : unavailable("Meetings", UNSTAMPED_MARKET_REASON),
+        referrals: hasReferralStamp
+          ? available("Referrals", marketReferrals.length)
+          : unavailable("Referrals", UNSTAMPED_MARKET_REASON),
+        clientsConverted: hasConvertedStamp || hasReferralStamp
+          ? available("Clients Converted", hasConvertedStamp ? marketConverted.length : marketReferrals.length)
+          : unavailable("Clients Converted", UNSTAMPED_MARKET_REASON),
+        revenue: hasRevenueStamp
+          ? available(
+              "Revenue",
+              marketRevenue.reduce((sum, row) => sum + (row.amountCollected ?? 0), 0),
+            )
+          : unavailable("Revenue", UNSTAMPED_REVENUE_REASON),
+      };
+    });
+
+  return {
+    status: "AVAILABLE",
+    defaultStartSet: DEFAULT_PROSPECTING_MARKETS,
+    rows,
+  };
 }
 
 export async function getAcquisitionDashboard(now = new Date()) {
@@ -106,7 +253,10 @@ export async function getAcquisitionDashboard(now = new Date()) {
       ])
     : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
-  const revenueByContent = await getRevenueByContent();
+  const [revenueByContent, byMarket] = await Promise.all([
+    getRevenueByContent(),
+    getMetricsByMarket(),
+  ]);
 
   const conversionRate: AcquisitionMetric<number> = !hasConsumerData
     ? unavailable("Conversion Rate", noEngineReason)
@@ -175,6 +325,7 @@ export async function getAcquisitionDashboard(now = new Date()) {
         ? available("Leads Needing Follow-Up", followUps)
         : unavailable("Leads Needing Follow-Up", noEngineReason),
     },
+    byMarket,
   };
 }
 

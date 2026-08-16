@@ -68,6 +68,47 @@ export default async function AcquisitionPage() {
         ))}
       </div>
 
+      <section className="mb-12">
+        <h2 className="text-2xl mb-2">By market</h2>
+        <p className="text-sm text-[var(--gc-muted)] mb-4">
+          Default start set is Charles&apos;s primary cities — never Estill. Rows appear only
+          when a Partner, PartnerReferral, or LeadAttribution is stamped. Missing stamps stay
+          DATA UNAVAILABLE.
+        </p>
+        {dash.byMarket.status === "DATA_UNAVAILABLE" ? (
+          <p className="text-sm text-[var(--gc-muted)]">{dash.byMarket.reason}</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[0.65rem] tracking-[0.18em] uppercase text-[var(--gc-muted)]">
+                  <th className="pb-3 pr-4">Market</th>
+                  <th className="pb-3 pr-4">Prospects</th>
+                  <th className="pb-3 pr-4">Replies</th>
+                  <th className="pb-3 pr-4">Meetings</th>
+                  <th className="pb-3 pr-4">Referrals</th>
+                  <th className="pb-3 pr-4">Converted</th>
+                  <th className="pb-3">Revenue</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dash.byMarket.rows.map((row) => (
+                  <tr key={row.market} className="border-t border-white/10">
+                    <td className="py-3 pr-4">{row.label}</td>
+                    <td className="py-3 pr-4">{metricText(row.prospectsFound)}</td>
+                    <td className="py-3 pr-4">{metricText(row.replies)}</td>
+                    <td className="py-3 pr-4">{metricText(row.meetings)}</td>
+                    <td className="py-3 pr-4">{metricText(row.referrals)}</td>
+                    <td className="py-3 pr-4">{metricText(row.clientsConverted)}</td>
+                    <td className="py-3">{metricText(row.revenue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
       <section>
         <h2 className="text-2xl mb-4">Revenue by Source</h2>
         <p className="text-sm text-[var(--gc-muted)]">

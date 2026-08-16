@@ -164,6 +164,8 @@ model Client {
   acquisitionStage           ConsumerLeadStage?
   /// Command-center source. Null = unknown (never coerced to ORGANIC).
   acquisitionSource          AcquisitionSource?
+  /// Partner-attributed consumer leads must carry a locked AcquisitionMarket.
+  acquisitionMarket          AcquisitionMarket?
   grantsLeadScore            Int?
   grantsLeadScoreReasonsJson String?
   referredByPartnerId        String?
@@ -207,6 +209,7 @@ model Client {
   @@index([lastName, firstName])
   @@index([acquisitionStage])
   @@index([acquisitionSource])
+  @@index([acquisitionMarket])
   @@index([referredByPartnerId])
 }
 
@@ -890,6 +893,8 @@ model LeadAttribution {
   service         String?
   /// Cents. Null until filled from a verified payment fact only.
   amountCollected Int?
+  /// City/market stamp. Null = unstamped (revenue-by-market stays DATA UNAVAILABLE).
+  market          AcquisitionMarket?
   createdAt       DateTime               @default(now())
   updatedAt       DateTime               @updatedAt
 
@@ -899,6 +904,7 @@ model LeadAttribution {
   @@index([source])
   @@index([campaignId])
   @@index([contentId])
+  @@index([market])
 }
 
 /// Engine A — referral partner pipeline. Enum only; not live GHL writes.
@@ -952,6 +958,27 @@ enum AcquisitionSource {
   OTHER
 }
 
+/// Charles-locked city/market vocabulary for partner prospecting.
+/// PRIMARY is the default start set. SECONDARY is supported. UNKNOWN/OTHER allowed.
+/// Estill, SC is not a member and must never be a default.
+enum AcquisitionMarket {
+  HILTON_HEAD_ISLAND_SC
+  BLUFFTON_SC
+  SAVANNAH_GA
+  ATLANTA_GA
+  WASHINGTON_DC
+  ARLINGTON_VA
+  CHARLOTTE_NC
+  COLUMBIA_SC
+  CHARLESTON_SC
+  AUGUSTA_GA
+  ALEXANDRIA_VA
+  FAIRFAX_VA
+  RICHMOND_VA
+  UNKNOWN
+  OTHER
+}
+
 /// Business referral partner — never a Client / credit-repair human.
 model Partner {
   id                         String               @id @default(cuid())
@@ -965,6 +992,8 @@ model Partner {
   partnerType                String?
   pipelineStage              PartnerPipelineStage @default(NEW_PROSPECT)
   acquisitionSource          AcquisitionSource?
+  /// Required city/market. No Estill default — must be an AcquisitionMarket value.
+  market                     AcquisitionMarket
   grantsLeadScore            Int?
   grantsLeadScoreReasonsJson String?
   doNotContact               Boolean              @default(false)
@@ -979,14 +1008,17 @@ model Partner {
   @@index([pipelineStage])
   @@index([emailNormalized])
   @@index([phoneNormalized])
+  @@index([market])
 }
 
 /// Links Partner → Client only after the referred consumer converts on an existing master.
 model PartnerReferral {
-  id        String   @id @default(cuid())
+  id        String            @id @default(cuid())
   partnerId String
   clientId  String
-  createdAt DateTime @default(now())
+  /// Required. Copied from the partner / partner-attributed consumer stamp.
+  market    AcquisitionMarket
+  createdAt DateTime          @default(now())
 
   partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
   client  Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
@@ -994,6 +1026,7 @@ model PartnerReferral {
   @@unique([partnerId, clientId])
   @@index([partnerId])
   @@index([clientId])
+  @@index([market])
 }
 
 enum ConversationKind {
