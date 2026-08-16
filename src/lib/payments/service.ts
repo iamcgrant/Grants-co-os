@@ -308,10 +308,10 @@ export async function processWebhook(rawBody: string, headers: Record<string, st
       });
 
   // Mark processed — money mutations must key off provider transaction IDs + uniqueness
-  await prisma.webhookEvent.update({
+  const processed = await prisma.webhookEvent.update({
     where: { id: webhook.id },
     data: { status: "PROCESSED", processedAt: new Date() },
   });
 
-  return { duplicate: false, event: webhook, parsed: event };
+  return { duplicate: false, event: processed, parsed: event };
 }
