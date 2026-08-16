@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { prisma } from "@/lib/db/prisma";
 import { GhlSyncPanel } from "@/components/integrations/GhlSyncPanel";
+import { GhlConversationPullPanel } from "@/components/integrations/GhlConversationPullPanel";
 import { getGcEnvironment } from "@/lib/integrations/env";
 import { isGhlApiReady } from "@/lib/integrations/ghl/http";
 import { integrationCredentialStatus } from "@/lib/integrations/credentials";
@@ -78,8 +79,9 @@ export default async function MorePage() {
       <section id="systems" className="mb-10">
         <h2 className="text-2xl mb-4">System health</h2>
         {hasPermission(user.role, "MANAGE_OPERATIONS") && (
-          <div className="mb-6">
+          <div className="mb-6 space-y-4">
             <GhlSyncPanel canSync />
+            <GhlConversationPullPanel canSync />
           </div>
         )}
         <div className="gc-grid-dense gc-grid-dense-3">

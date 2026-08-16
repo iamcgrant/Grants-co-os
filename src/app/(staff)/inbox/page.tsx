@@ -7,6 +7,8 @@ import { prisma } from "@/lib/db/prisma";
 import { Panel } from "@/components/ui/density";
 import { isGhlApiReady } from "@/lib/integrations/ghl/http";
 import { getGcEnvironment } from "@/lib/integrations/env";
+import { hasPermission } from "@/lib/rbac/permissions";
+import { GhlConversationPullPanel } from "@/components/integrations/GhlConversationPullPanel";
 
 export default async function InboxPage({
   searchParams,
@@ -57,6 +59,10 @@ export default async function InboxPage({
           <Link href="/inbox?tab=team" className={`gc-btn text-xs ${tab === "team" ? "gc-btn-primary" : "gc-btn-outline"}`}>Team</Link>
         </div>
       </div>
+
+      {hasPermission(user.role, "MANAGE_OPERATIONS") && (
+        <GhlConversationPullPanel canSync />
+      )}
 
       <div className="grid lg:grid-cols-[340px_1fr] gap-4 min-h-[68vh]">
         <Panel className="!p-0 overflow-hidden">

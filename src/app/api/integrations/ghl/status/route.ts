@@ -46,6 +46,12 @@ export async function GET() {
         existingMasterRecordsOnly: true,
         matchOrder: ["ghl_id", "email", "normalized_phone"],
         createGhlContacts: false,
+        conversationPull: {
+          linkedMastersOnly: true,
+          sendMessages: false,
+          requiredScope: "conversations.readonly",
+          additionalScopesNeeded: ["conversations/message.readonly"],
+        },
       },
       // Never expose secret values or hints that embed secrets
     });

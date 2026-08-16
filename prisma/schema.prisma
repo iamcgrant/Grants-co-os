@@ -880,12 +880,15 @@ model Message {
   isInternal     Boolean        @default(true)
   deliveryStatus String         @default("RECORDED") // RECORDED SENT DELIVERED FAILED
   metadataJson   String?
+  provider       String? // GHL when imported from an inbound conversation pull
+  externalId     String? // Provider message id — used to refuse duplicate imports
   createdAt      DateTime       @default(now())
 
   conversation Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender       User?            @relation("MessageSender", fields: [senderId], references: [id])
   mentions     MessageMention[]
 
+  @@unique([provider, externalId])
   @@index([conversationId, createdAt])
   @@index([senderId])
 }

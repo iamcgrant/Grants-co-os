@@ -4,7 +4,7 @@ All integrations are adapters beneath Grants & Co OS.
 
 | Provider | Module | Status |
 |----------|--------|--------|
-| GoHighLevel | `LiveGoHighLevelProvider` when `GHL_API_KEY` is set (`GHL_LOCATION_ID` defaults to `NsmlbLVNr4SBJNC8gnrn`); else mock | **Live inbound onto existing master records only** |
+| GoHighLevel | `LiveGoHighLevelProvider` when `GHL_API_KEY` is set (`GHL_LOCATION_ID` defaults to `[REDACTED]`); else mock | **Live inbound onto existing master records only** |
 | DisputeFox | `MockDisputeFoxProvider` + inbound attach onto existing masters | **Local roster attach** (26 Charles-confirmed clients). Live path **fails closed** without `DISPUTEFOX_API_KEY`. Zap `374413762` stays **OFF**. |
 | SmartCredit | `MockSmartCreditProvider` | Mock — sponsored enrollment + scores |
 | Credit Karma | `MockCreditKarmaConnector` | Mock — **read only** |
@@ -20,8 +20,17 @@ All integrations are adapters beneath Grants & Co OS.
 5. **Does not** send live messages. **Does not** create/update/delete GHL contacts. **Does not** replace DisputeFox → GHL / post-pay intake.
 6. Without `GHL_API_KEY` the live path **fails closed** (no GHL HTTP, no client writes).
 
-Known location: `NsmlbLVNr4SBJNC8gnrn`  
-URL: https://app.gohighlevel.com/v2/location/NsmlbLVNr4SBJNC8gnrn/
+## GHL conversations → Grants OS inbox (linked masters only)
+
+1. Pull via `POST /api/integrations/ghl/conversations/sync` (Owners/managers) or `npm run ghl:inbound-conversations`. `dryRun: true` / `--dry-run` previews without inbox writes.
+2. Only already-linked GHL identifiers are eligible. Unlinked GHL contacts are ignored — this path never creates a Grants Client and never creates a GHL contact.
+3. Messages are recorded on the client's OS `CLIENT` conversation with `deliveryStatus=RECORDED` and unique `(provider=GHL, externalId=GHL message id)`. Re-pulls skip duplicates.
+4. Opt-out / DND flags present on the conversation or message payload are stored on the GHL identifier metadata and on the imported message metadata. They are never used to send.
+5. **Does not** send SMS, email, or iMessage. **Does not** publish workflows. **Does not** change A2P/phone/Sendara.
+6. Without `GHL_API_KEY` the path **fails closed**. If the current PIT cannot list conversations/messages, it **fails closed** and reports the extra scope name: `conversations.readonly` (message bodies also need `conversations/message.readonly`). Do not widen scopes from application code — X1 can add those PIT scopes later.
+
+Known location: `[REDACTED]`  
+URL: https://app.gohighlevel.com/v2/location/[REDACTED]/
 
 Development seed identifiers are tagged `{ source: "seed", dataPlane: "development" }` and labeled as dev samples — never presented as live CRM data.
 
@@ -32,10 +41,11 @@ Do **not** paste passwords into chat, GitHub, or source files. Store them in Cur
 ### GoHighLevel
 - Login email / password (staff portal) → `GHL_LOGIN_EMAIL`, `GHL_LOGIN_PASSWORD` (local/secrets only)
 - **Required for live inbound sync:** `GHL_API_KEY` (Cursor Secrets / host env — never commit)
-- **Optional:** `GHL_LOCATION_ID` — defaults to `NsmlbLVNr4SBJNC8gnrn` when omitted
+- **Also a secret:** `GHL_LOCATION_ID` (Cursor Secrets / host env — never commit or print)
+- Conversation pull needs PIT scopes `conversations.readonly` and `conversations/message.readonly` (X1 later). Do not widen scopes from app code.
 - Source: Settings → Integrations → API Keys / Private Integration
 
-Portal passwords enable staff-browser / connector scaffolding. Production sync prefers API keys. This inbound path never writes GHL contacts.
+Portal passwords enable staff-browser / connector scaffolding. Production sync prefers API keys. This inbound path never writes GHL contacts and never sends messages.
 
 ### DisputeFox
 - Login email / password → `DISPUTEFOX_LOGIN_EMAIL`, `DISPUTEFOX_LOGIN_PASSWORD` (local/secrets only)

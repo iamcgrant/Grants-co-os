@@ -23,6 +23,10 @@ export type IdentifierMeta = {
   tags?: string[];
   pipelineStage?: string;
   assignedUserId?: string;
+  dnd?: boolean;
+  optedOut?: boolean;
+  dndSettings?: unknown;
+  commsFlags?: Record<string, unknown>;
   raw?: Record<string, unknown>;
 };
 

@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "agent-mesh": "tsx agent-mesh/server.ts",
     "ghl:inbound-sync": "tsx scripts/ghl-inbound-sync.ts",
+    "ghl:inbound-conversations": "tsx scripts/ghl-inbound-conversations.ts",
     "df:inbound-attach": "tsx scripts/disputefox-inbound-attach.ts",
     "clients:import-confirmed-masters": "tsx scripts/import-confirmed-masters.ts",
     "postinstall": "prisma generate"

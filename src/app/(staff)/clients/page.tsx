@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/rbac/permissions";
 import { prisma } from "@/lib/db/prisma";
 import { CreateClientForm } from "@/components/clients/CreateClientForm";
 import { GhlSyncPanel } from "@/components/integrations/GhlSyncPanel";
+import { GhlConversationPullPanel } from "@/components/integrations/GhlConversationPullPanel";
 import { getGcEnvironment } from "@/lib/integrations/env";
 import { isGhlApiReady } from "@/lib/integrations/ghl/http";
 
@@ -72,8 +73,9 @@ export default async function ClientsPage({
       </div>
 
       {hasPermission(user.role, "MANAGE_OPERATIONS") && (
-        <div className="mb-8 gc-fade-up">
+        <div className="mb-8 gc-fade-up space-y-4">
           <GhlSyncPanel canSync />
+          <GhlConversationPullPanel canSync />
         </div>
       )}
 

@@ -105,8 +105,8 @@ export class LiveGoHighLevelProvider implements GoHighLevelProvider {
   }
 
   async listRecentMessages(_contactId: string) {
-    // Do not invent mock messages when live API is connected.
-    // Do not send or pull outbound sends in this vertical slice.
+    // Inbox import lives in ghl/conversations.ts (read-only, linked masters).
+    // This adapter does not send and does not create a second pull path.
     return [];
   }
 
