@@ -189,6 +189,7 @@ model Client {
   creditAccounts      CreditAccount[]
   creditMonitoringEvents CreditMonitoringEvent[]
   conversionEvents    ConversionEvent[]
+  leadAttributions    LeadAttribution[]
 
   @@unique([emailNormalized])
   @@index([phoneNormalized])
@@ -821,6 +822,53 @@ model ConversionEvent {
 
   @@index([eventType])
   @@index([clientId])
+}
+
+/// Fail-closed child of Client. ONE HUMAN = ONE MASTER — never a second client.
+/// Missing intake stamp = DATA UNAVAILABLE (not organic). amountCollected stays
+/// null until a verified X5 / Jobber / Authorize.Net payment fact exists.
+enum AttributionSource {
+  facebook
+  instagram
+  youtube
+  email
+  referral
+  direct
+  unknown
+}
+
+enum AttributionShowStatus {
+  showed
+  no_show
+  unknown
+}
+
+model LeadAttribution {
+  id              String                 @id @default(cuid())
+  clientId        String
+  source          AttributionSource      @default(unknown)
+  platform        String?
+  campaignId      String?
+  campaignName    String?
+  contentId       String?
+  adId            String?
+  cta             String?
+  leadAt          DateTime?
+  consultBookedAt DateTime?
+  showStatus      AttributionShowStatus  @default(unknown)
+  converted       Boolean?
+  service         String?
+  /// Cents. Null until filled from a verified payment fact only.
+  amountCollected Int?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([source])
+  @@index([campaignId])
+  @@index([contentId])
 }
 
 

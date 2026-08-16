@@ -317,6 +317,11 @@ async function applyInboundAttach(input: {
     });
   }
 
+  // STAMP LANDING (not wired this PR): when DisputeFox intake later stamps
+  // campaign/content/ad/CTA onto an existing master, call recordLeadAttribution
+  // for that clientId only. Do not create a client or lead. Do not invent source
+  // or amount_collected. Missing stamp = DATA UNAVAILABLE.
+
   await addTimelineEvent({
     clientId: updated.id,
     actorId,

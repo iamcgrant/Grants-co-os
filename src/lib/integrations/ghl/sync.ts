@@ -280,6 +280,11 @@ async function applyInboundUpdate(input: {
     metadata: meta,
   });
 
+  // STAMP LANDING (not wired this PR — production intake is DisputeFox):
+  // When GHL later provides campaign/content/ad/CTA on an existing master,
+  // call recordLeadAttribution({ clientId: updated.id, ...stamped fields }).
+  // Do not invent source. Do not create a client or lead. Missing stamp = DATA UNAVAILABLE.
+
   await addTimelineEvent({
     clientId: updated.id,
     actorId,

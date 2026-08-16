@@ -31,6 +31,8 @@ export type DisputeFoxApiClient = {
   lastName?: string | null;
   stage?: string | null;
   started?: boolean | null;
+  // Future intake stamp fields (not wired this PR): campaignId, contentId, adId, cta.
+  // Do not invent them. Missing stamp = DATA UNAVAILABLE, not organic.
 };
 
 export class DisputeFoxApiError extends Error {
