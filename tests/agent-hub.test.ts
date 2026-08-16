@@ -12,6 +12,10 @@ describe("Grants Agent Hub — bidirectional bridge", () => {
   let getTask: typeof import("../src/lib/agent-hub").getTask;
   let getGhlSchema: typeof import("../src/lib/agent-hub").getGhlSchema;
   let getAgentCapabilities: typeof import("../src/lib/agent-hub").getAgentCapabilities;
+  let syncWaitingCursorTasks: typeof import("../src/lib/agent-hub").syncWaitingCursorTasks;
+  let classifyCursorRunStatus: typeof import("../src/lib/agent-hub").classifyCursorRunStatus;
+  let extractCursorGit: typeof import("../src/lib/agent-hub").extractCursorGit;
+  let bootstrapAgentHub: typeof import("../src/lib/agent-hub").bootstrapAgentHub;
   let prisma: import("../src/generated/prisma/client").PrismaClient;
 
   beforeAll(async () => {
@@ -38,6 +42,10 @@ describe("Grants Agent Hub — bidirectional bridge", () => {
     getTask = hub.getTask;
     getGhlSchema = hub.getGhlSchema;
     getAgentCapabilities = hub.getAgentCapabilities;
+    syncWaitingCursorTasks = hub.syncWaitingCursorTasks;
+    classifyCursorRunStatus = hub.classifyCursorRunStatus;
+    extractCursorGit = hub.extractCursorGit;
+    bootstrapAgentHub = hub.bootstrapAgentHub;
   });
 
   afterAll(async () => {
@@ -118,6 +126,90 @@ describe("Grants Agent Hub — bidirectional bridge", () => {
     expect(getCursorApiKeySource()).toEqual({ name: "AGENT_HUB_CURSOR_API_KEY", present: true });
     delete process.env.AGENT_HUB_CURSOR_API_KEY;
     expect(isCursorLaunchReady()).toBe(false);
+  });
+
+  it("classifies Cursor v1 run statuses for the Hub return path", () => {
+    expect(classifyCursorRunStatus("FINISHED")).toBe("COMPLETED");
+    expect(classifyCursorRunStatus("ERROR")).toBe("FAILED");
+    expect(classifyCursorRunStatus("CANCELLED")).toBe("FAILED");
+    expect(classifyCursorRunStatus("RUNNING")).toBe("RUNNING");
+    expect(classifyCursorRunStatus("CREATING")).toBe("RUNNING");
+    expect(
+      extractCursorGit({
+        git: {
+          branches: [
+            { branch: "cursor/agent-hub-live-bridge-proof-7eaf", prUrl: "https://github.com/iamcgrant/Grants-co-os/pull/4" },
+          ],
+        },
+      }).prUrl,
+    ).toBe("https://github.com/iamcgrant/Grants-co-os/pull/4");
+  });
+
+  it("polls Cursor run FINISHED and records PR URL on the Hub task", async () => {
+    await bootstrapAgentHub();
+    process.env.AGENT_HUB_CURSOR_API_KEY = "test-key-not-for-launch";
+    const task = await prisma.agentTask.create({
+      data: {
+        type: "CODE_CHANGE_REQUIRED",
+        title: "Return-path unit task",
+        prompt: "Record Cursor completion",
+        status: "WAITING_CURSOR",
+        ownerAgentId: "x1-operations",
+        assigneeAgentId: "cursor-engineering",
+        cursorAgentId: "bc-f5d398c9-5cb7-45e3-99ea-6dd1ead13bcd",
+        cursorRunId: "run-04ba96bf-63c3-4a8b-99ec-75acbe1edcc6",
+        cursorUrl: "https://cursor.com/agents/bc-f5d398c9-5cb7-45e3-99ea-6dd1ead13bcd",
+      },
+    });
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/runs/")) {
+        return new Response(
+          JSON.stringify({
+            id: "run-04ba96bf-63c3-4a8b-99ec-75acbe1edcc6",
+            status: "FINISHED",
+            result: "Added live-bridge note and opened draft PR #4.",
+            git: {
+              branches: [
+                {
+                  repoUrl: "github.com/iamcgrant/Grants-co-os",
+                  branch: "cursor/agent-hub-live-bridge-proof-7eaf",
+                  prUrl: "https://github.com/iamcgrant/Grants-co-os/pull/4",
+                },
+              ],
+            },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      if (url.includes("/agents/")) {
+        return new Response(
+          JSON.stringify({
+            id: "bc-f5d398c9-5cb7-45e3-99ea-6dd1ead13bcd",
+            status: "ACTIVE",
+            latestRunId: "run-04ba96bf-63c3-4a8b-99ec-75acbe1edcc6",
+            url: "https://cursor.com/agents/bc-f5d398c9-5cb7-45e3-99ea-6dd1ead13bcd",
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response("{}", { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      const sync = await syncWaitingCursorTasks();
+      expect(sync.ready).toBe(true);
+      expect(sync.updated).toBe(1);
+      const done = await getTask(task.id);
+      expect(done?.status).toBe("COMPLETED");
+      expect(done?.resultJson || "").toMatch(/pull\/4/);
+      expect(done?.resultJson || "").toMatch(/FINISHED|live-bridge|PR #4/i);
+    } finally {
+      globalThis.fetch = originalFetch;
+      delete process.env.AGENT_HUB_CURSOR_API_KEY;
+    }
   });
 
   it("never returns secret-like keys in health payload", async () => {

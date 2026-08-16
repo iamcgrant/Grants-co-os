@@ -6,11 +6,13 @@ import { prisma } from "@/lib/db/prisma";
 import { bootstrapAgentHub } from "./orchestrator";
 import { listPendingApprovals } from "./approvals";
 import { isCursorLaunchReady } from "./cursor-bridge";
+import { startCursorReturnPoller } from "./cursor-poller";
 import { getGcEnvironment } from "@/lib/integrations/env";
 import { isGhlApiReady } from "@/lib/integrations/ghl/http";
 
 export async function getControlCenterSnapshot() {
   await bootstrapAgentHub();
+  startCursorReturnPoller();
 
   const [agents, activeTasks, recentTasks, recentEvents, approvals, recentMessages] =
     await Promise.all([

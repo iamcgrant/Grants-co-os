@@ -216,6 +216,33 @@ server.tool(
   },
 );
 
+server.tool(
+  "sync_cursor_return_path",
+  "Poll Cursor Cloud Agents API for WAITING_CURSOR Hub tasks and record FINISHED/ERROR + PR URL (Cursor → X1 return). Never returns secrets.",
+  { limit: z.number().int().min(1).max(50).optional() },
+  async ({ limit }) => {
+    const api = await hub();
+    return text(await api.syncWaitingCursorTasks(limit));
+  },
+);
+
+server.tool(
+  "ingest_cursor_agent_return",
+  "Attach a known Cursor Cloud Agent id to Agent Hub and record its completion/PR without a human relay.",
+  {
+    cursorAgentId: z.string(),
+    taskId: z.string().optional(),
+    cursorRunId: z.string().optional(),
+    title: z.string().optional(),
+    idempotencyKey: z.string().optional(),
+    forceWaiting: z.boolean().optional(),
+  },
+  async (args) => {
+    const api = await hub();
+    return text(await api.ingestCursorAgentReturn(args));
+  },
+);
+
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);

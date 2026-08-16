@@ -27,10 +27,15 @@ export {
   CURSOR_API_KEY_ENV_NAMES,
   drainAwaitingCursorLaunches,
   syncWaitingCursorTasks,
+  ingestCursorAgentReturn,
+  trackCursorAgent,
+  classifyCursorRunStatus,
+  extractCursorGit,
   getCursorAgentStatus,
   getCursorRunStatus,
   probeCursorApiKey,
 } from "./cursor-bridge";
+export { startCursorReturnPoller } from "./cursor-poller";
 export { getControlCenterSnapshot } from "./control-center";
 export { listPendingApprovals, decideApproval, requestOwnerApproval } from "./approvals";
 export { listAgents } from "./registry";

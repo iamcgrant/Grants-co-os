@@ -9,6 +9,7 @@ Intelligence / coordination layer under Grants & Co OS.
 
 1. **Cursor → MCP (`grants-agent-mesh`) → X1 → GHL read-only fact → answer**
 2. **X1 → `CODE_CHANGE_REQUIRED` → Cursor Cloud Agents API (or queue for `CURSOR_API_KEY`) → result callback**
+3. **Cursor → Hub return:** poll `GET /v1/agents/:id` + `GET /v1/agents/:id/runs/:runId` (v1 has no webhooks). `FINISHED` writes Hub `COMPLETED` + `git.branches[].prUrl`. Auto-poller on the Node process; also `POST /api/agent-hub/cursor` `{ "action": "sync" }` or `{ "action": "ingest", "cursorAgentId": "bc-…" }`.
 
 ## Live bridge verified
 
@@ -38,7 +39,7 @@ When a future external bot exposes a real API/MCP, add an adapter and flip `mode
 npx tsx agent-mesh/server.ts
 ```
 
-Tools: `ask_x1`, `ask_payment_processing`, `route_agent_task`, `get_agent_capabilities`, `get_agent_task_status`, `get_business_configuration`, `get_system_health`, `get_client_mapping`, `get_ghl_schema`, `get_disputefox_mapping`, `get_payment_state`, `create_code_change_task`, `report_cursor_result`.
+Tools: `ask_x1`, `ask_payment_processing`, `route_agent_task`, `get_agent_capabilities`, `get_agent_task_status`, `get_business_configuration`, `get_system_health`, `get_client_mapping`, `get_ghl_schema`, `get_disputefox_mapping`, `get_payment_state`, `create_code_change_task`, `report_cursor_result`, `sync_cursor_return_path`, `ingest_cursor_agent_return`.
 
 **Never returns** passwords, API keys, tokens, cookies.
 

@@ -116,14 +116,30 @@ export default async function AgentControlCenterPage() {
       <div className="gc-dash-grid gc-dash-grid-12">
         <Panel title="Completed / failed" eyebrow="History" className="gc-span-6">
           <div className="divide-y divide-[var(--gc-border)] max-h-[280px] overflow-y-auto">
-            {snap.completedTasks.map((t) => (
-              <div key={t.id} className="py-2.5 flex justify-between gap-3">
-                <p className="text-sm truncate">{t.title}</p>
-                <span className={`gc-status ${t.status === "COMPLETED" ? "gc-status-ok" : "gc-status-danger"}`}>
-                  {t.status}
-                </span>
-              </div>
-            ))}
+            {snap.completedTasks.map((t) => {
+              let prUrl: string | undefined;
+              try {
+                const parsed = t.resultJson ? (JSON.parse(t.resultJson) as { prUrl?: string }) : null;
+                prUrl = parsed?.prUrl;
+              } catch {
+                prUrl = undefined;
+              }
+              return (
+                <div key={t.id} className="py-2.5 flex justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm truncate">{t.title}</p>
+                    {prUrl && (
+                      <a href={prUrl} className="text-xs text-[var(--gc-ice)]" target="_blank" rel="noreferrer">
+                        {prUrl.replace("https://github.com/", "")}
+                      </a>
+                    )}
+                  </div>
+                  <span className={`gc-status ${t.status === "COMPLETED" ? "gc-status-ok" : "gc-status-danger"}`}>
+                    {t.status}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </Panel>
 

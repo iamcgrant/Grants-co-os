@@ -250,6 +250,59 @@ export async function drainAwaitingCursorLaunches(limit = 10) {
   return { ready: true, drained, count: drained.length };
 }
 
+export type CursorAgentSnapshot = {
+  id?: string;
+  name?: string;
+  status?: string;
+  url?: string;
+  latestRunId?: string;
+};
+
+export type CursorRunSnapshot = {
+  id?: string;
+  agentId?: string;
+  status?: string;
+  result?: string;
+  git?: {
+    branches?: Array<{
+      repoUrl?: string;
+      branch?: string;
+      prUrl?: string;
+    }>;
+  };
+};
+
+export function classifyCursorRunStatus(
+  status: string | undefined | null,
+): "COMPLETED" | "FAILED" | "RUNNING" {
+  const s = (status || "").trim().toUpperCase();
+  if (s === "FINISHED" || s === "COMPLETED" || s === "SUCCEEDED") return "COMPLETED";
+  if (s === "ERROR" || s === "FAILED" || s === "CANCELLED" || s === "CANCELED" || s === "EXPIRED") {
+    return "FAILED";
+  }
+  return "RUNNING";
+}
+
+export function extractCursorGit(run: CursorRunSnapshot | null | undefined) {
+  const branches = run?.git?.branches ?? [];
+  const withPr = branches.find((b) => b.prUrl);
+  const chosen = withPr || branches[0];
+  return {
+    prUrl: chosen?.prUrl,
+    branch: chosen?.branch,
+  };
+}
+
+function asAgentSnapshot(value: unknown): CursorAgentSnapshot | null {
+  if (!value || typeof value !== "object") return null;
+  return value as CursorAgentSnapshot;
+}
+
+function asRunSnapshot(value: unknown): CursorRunSnapshot | null {
+  if (!value || typeof value !== "object") return null;
+  return value as CursorRunSnapshot;
+}
+
 export async function getCursorAgentStatus(cursorAgentId: string) {
   const apiKey = getCursorApiKey();
   if (!apiKey) {
@@ -284,12 +337,184 @@ export async function getCursorRunStatus(cursorAgentId: string, runId: string) {
   return scrubSecrets({ ready: true, ok: true, run: JSON.parse(text) });
 }
 
+async function resolveCursorRun(cursorAgentId: string, storedRunId?: string | null) {
+  const agentLookup = await getCursorAgentStatus(cursorAgentId);
+  const agent =
+    agentLookup && typeof agentLookup === "object" && "agent" in agentLookup
+      ? asAgentSnapshot(agentLookup.agent)
+      : null;
+  const candidates = [storedRunId, agent?.latestRunId].filter(
+    (id, index, all): id is string => Boolean(id) && all.indexOf(id) === index,
+  );
+
+  let run: CursorRunSnapshot | null = null;
+  let runId: string | null = null;
+  for (const candidate of candidates) {
+    const lookup = await getCursorRunStatus(cursorAgentId, candidate);
+    if (lookup && typeof lookup === "object" && "run" in lookup && lookup.ok) {
+      run = asRunSnapshot(lookup.run);
+      runId = candidate;
+      if (run?.status) break;
+    }
+  }
+
+  return { agent, run, runId };
+}
+
+export type SyncCursorTaskResult = {
+  taskId: string;
+  cursorAgentId: string;
+  runId: string | null;
+  runStatus: string | null;
+  outcome: "COMPLETED" | "FAILED" | "RUNNING" | "SKIPPED";
+  prUrl?: string;
+  branch?: string;
+};
+
+async function applyCursorRunToTask(task: {
+  id: string;
+  cursorAgentId: string | null;
+  cursorRunId: string | null;
+}): Promise<SyncCursorTaskResult> {
+  const cursorAgentId = task.cursorAgentId!;
+  const resolved = await resolveCursorRun(cursorAgentId, task.cursorRunId);
+  const runStatus = resolved.run?.status || null;
+  const outcome = classifyCursorRunStatus(runStatus);
+  const git = extractCursorGit(resolved.run);
+  const summary =
+    resolved.run?.result?.trim() ||
+    (runStatus
+      ? `Cursor run ${resolved.runId || task.cursorRunId || "unknown"} reported ${runStatus}`
+      : "Cursor run status unavailable");
+
+  if (resolved.runId && resolved.runId !== task.cursorRunId) {
+    await updateTaskStatus(task.id, "WAITING_CURSOR", {
+      cursorRunId: resolved.runId,
+      cursorUrl: resolved.agent?.url || `https://cursor.com/agents/${cursorAgentId}`,
+    });
+  }
+
+  if (outcome === "RUNNING") {
+    return {
+      taskId: task.id,
+      cursorAgentId,
+      runId: resolved.runId,
+      runStatus,
+      outcome,
+      prUrl: git.prUrl,
+      branch: git.branch,
+    };
+  }
+
+  await reportCursorResult({
+    taskId: task.id,
+    status: outcome,
+    summary,
+    prUrl: git.prUrl,
+    branch: git.branch,
+    metadata: {
+      syncedFromApi: true,
+      cursorAgentId,
+      cursorRunId: resolved.runId,
+      cursorRunStatus: runStatus,
+    },
+  });
+
+  return {
+    taskId: task.id,
+    cursorAgentId,
+    runId: resolved.runId,
+    runStatus,
+    outcome,
+    prUrl: git.prUrl,
+    branch: git.branch,
+  };
+}
+
 /**
- * Sync WAITING_CURSOR tasks with Cloud Agents API run status when possible.
+ * Attach a known Cloud Agent to a Hub task so the return poller can record it.
+ * Used to recover a launch that already happened (same Hub, not a second one).
+ */
+export async function trackCursorAgent(input: {
+  cursorAgentId: string;
+  taskId?: string;
+  cursorRunId?: string;
+  title?: string;
+  prompt?: string;
+  idempotencyKey?: string;
+  forceWaiting?: boolean;
+}) {
+  if (input.cursorAgentId.startsWith("sim-")) {
+    throw new Error("Refusing to track a simulated Cursor agent");
+  }
+
+  let task = input.taskId
+    ? await prisma.agentTask.findUnique({ where: { id: input.taskId } })
+    : await prisma.agentTask.findFirst({
+        where: { cursorAgentId: input.cursorAgentId },
+        orderBy: { updatedAt: "desc" },
+      });
+
+  if (!task && input.idempotencyKey) {
+    task = await prisma.agentTask.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
+  }
+
+  const cursorUrl = `https://cursor.com/agents/${input.cursorAgentId}`;
+
+  if (!task) {
+    task = await prisma.agentTask.create({
+      data: {
+        ...(input.taskId ? { id: input.taskId } : {}),
+        type: "CODE_CHANGE_REQUIRED",
+        eventKind: "CODE_CHANGE_REQUIRED",
+        title: input.title || `Cursor return ${input.cursorAgentId}`,
+        prompt:
+          input.prompt ||
+          "Imported existing Cursor Cloud Agent so Agent Hub can record completion without a human relay.",
+        status: "WAITING_CURSOR",
+        ownerAgentId: "x1-operations",
+        assigneeAgentId: "cursor-engineering",
+        cursorAgentId: input.cursorAgentId,
+        cursorRunId: input.cursorRunId,
+        cursorUrl,
+        idempotencyKey: input.idempotencyKey,
+        autonomyLevel: 1,
+        metadataJson: JSON.stringify({ trackedFromReturnPath: true }),
+      },
+    });
+    await emitEvent({
+      kind: "CURSOR_LAUNCHED",
+      taskId: task.id,
+      agentId: "cursor-engineering",
+      payload: { cursorAgentId: input.cursorAgentId, tracked: true },
+    });
+    return task;
+  }
+
+  const shouldReset = input.forceWaiting || !["COMPLETED", "FAILED", "DENIED", "CANCELLED"].includes(task.status);
+  if (shouldReset || !task.cursorAgentId) {
+    task = await prisma.agentTask.update({
+      where: { id: task.id },
+      data: {
+        cursorAgentId: input.cursorAgentId,
+        cursorRunId: input.cursorRunId ?? task.cursorRunId,
+        cursorUrl: task.cursorUrl || cursorUrl,
+        status: shouldReset ? "WAITING_CURSOR" : task.status,
+        assigneeAgentId: task.assigneeAgentId || "cursor-engineering",
+      },
+    });
+  }
+
+  return task;
+}
+
+/**
+ * Poll Cloud Agents API for WAITING_CURSOR tasks and write FINISHED/ERROR
+ * back into Hub (PR URL + run result). v1 has no webhooks — this is the return path.
  */
 export async function syncWaitingCursorTasks(limit = 20) {
   if (!isCursorLaunchReady()) {
-    return { ready: false, updated: 0 };
+    return { ready: false, updated: 0, checked: 0, results: [] as SyncCursorTaskResult[] };
   }
 
   const waiting = await prisma.agentTask.findMany({
@@ -298,38 +523,49 @@ export async function syncWaitingCursorTasks(limit = 20) {
     take: limit,
   });
 
+  const results: SyncCursorTaskResult[] = [];
   let updated = 0;
   for (const task of waiting) {
     if (!task.cursorAgentId) continue;
     if (task.cursorAgentId.startsWith("sim-")) continue;
-
-    if (task.cursorRunId) {
-      const run = await getCursorRunStatus(task.cursorAgentId, task.cursorRunId);
-      const status =
-        run && typeof run === "object" && "run" in run
-          ? String((run.run as { status?: string })?.status || "")
-          : "";
-      if (/COMPLETE|FINISHED|SUCCEEDED/i.test(status)) {
-        await reportCursorResult({
-          taskId: task.id,
-          status: "COMPLETED",
-          summary: `Cursor run ${task.cursorRunId} reported ${status}`,
-          metadata: { syncedFromApi: true },
-        });
-        updated += 1;
-      } else if (/FAIL|ERROR|CANCEL/i.test(status)) {
-        await reportCursorResult({
-          taskId: task.id,
-          status: "FAILED",
-          summary: `Cursor run ${task.cursorRunId} reported ${status}`,
-          metadata: { syncedFromApi: true },
-        });
-        updated += 1;
-      }
-    }
+    const result = await applyCursorRunToTask(task);
+    results.push(result);
+    if (result.outcome === "COMPLETED" || result.outcome === "FAILED") updated += 1;
   }
 
-  return { ready: true, checked: waiting.length, updated };
+  return { ready: true, checked: waiting.length, updated, results };
+}
+
+/** Track one Cloud Agent (if needed) and sync its terminal state into Hub. */
+export async function ingestCursorAgentReturn(input: {
+  cursorAgentId: string;
+  taskId?: string;
+  cursorRunId?: string;
+  title?: string;
+  prompt?: string;
+  idempotencyKey?: string;
+  forceWaiting?: boolean;
+}) {
+  const task = await trackCursorAgent(input);
+  if (["COMPLETED", "FAILED"].includes(task.status) && !input.forceWaiting) {
+    return {
+      ready: true,
+      alreadyTerminal: true,
+      taskId: task.id,
+      status: task.status,
+      result: task.resultJson ? JSON.parse(task.resultJson) : null,
+    };
+  }
+  const sync = await applyCursorRunToTask(task);
+  const refreshed = await prisma.agentTask.findUnique({ where: { id: task.id } });
+  return {
+    ready: true,
+    alreadyTerminal: false,
+    taskId: task.id,
+    status: refreshed?.status,
+    result: refreshed?.resultJson ? JSON.parse(refreshed.resultJson) : null,
+    sync,
+  };
 }
 
 export async function reportCursorResult(input: {

@@ -49,7 +49,7 @@ export function CursorBridgeActions() {
         Drain launch queue
       </button>
       <button type="button" className="gc-btn gc-btn-outline text-xs" disabled={busy} onClick={() => run("sync")}>
-        Sync Cursor runs
+        Sync Cursor → Hub
       </button>
       {msg && <span className="text-xs text-[var(--gc-muted)]">{msg}</span>}
     </div>
