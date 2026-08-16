@@ -1,0 +1,15 @@
+crcClientId,firstName,lastName,email,phone,line1,city,state,postalCode,status,verifiedActive,currentlyProcessing,doNotReactivate,lastWorkedAt,lastReportAt,lastDisputeAt,ghlContactId,disputeFoxClientId,smartCreditId,grantsClientId,emailVerified,phoneVerified,addressVerified,documentTypes
+CRC-SYN-1001,Alex,Rivera,alex.rivera@example.test,5550101001,,,,,verified_active,true,true,,2026-08-10T00:00:00.000Z,2026-08-01T00:00:00.000Z,2026-08-05T00:00:00.000Z,ghl_syn_1001,df_syn_1001,sc_syn_1001,GC-SYN-000001,true,true,,
+CRC-SYN-1002,Blair,Chen,blair.chen@example.test,5550101002,,,,,inactive,,,,2023-02-01T00:00:00.000Z,,,,,,,true,true,,
+CRC-SYN-1003,Casey,Ortiz,casey.ortiz@example.test,5550101003,,,,,active,,true,,2026-08-06T00:00:00.000Z,,,ghl_syn_1003,,,,true,true,,
+CRC-SYN-1004,Dana,Kim,dana.kim@example.test,5550101004,,,,,inactive,,,,2022-11-15T00:00:00.000Z,,,,,,,true,true,,
+CRC-SYN-1005,Ellis,Stone,,,100 Example Ave,Springfield,IL,62701,inactive,,,,2024-01-01T00:00:00.000Z,,,,,,,,,true,
+CRC-SYN-1006,Fran,Wells,,5550101999,,,,,inactive,,,,2023-08-01T00:00:00.000Z,,,,,,,,true,,
+CRC-SYN-1008,Gray,Holt,gray.holt@example.test,,,,,,closed,,,true,2021-05-01T00:00:00.000Z,,,ghl_syn_1008,,,,true,,,
+CRC-SYN-1009,Harper,Ives,harper.ives@example.test,5550101009,9 Test Lane,Atlanta,GA,30301,inactive,,,,2024-06-01T00:00:00.000Z,,,ghl_syn_1009,df_syn_1009,,,true,true,true,
+CRC-SYN-1010,Indigo,Jones,indigo.jones.old@example.test,5550101010,,,,,inactive,,,,2023-01-01T00:00:00.000Z,,,,,,,true,true,,
+CRC-SYN-1011,Jules,Park,jules.park.crc@example.test,,,,,,inactive,,,,2023-09-01T00:00:00.000Z,,,,,sc_syn_1011,,true,,,
+CRC-SYN-1012,Kai,Quinn,kai.quinn@example.test,,,,,,inactive,,,,2024-02-01T00:00:00.000Z,,,,,,,true,,,CREDIT_REPORT|IDENTIFICATION
+CRC-SYN-1013,Lane,Reed,lane.reed.crc@example.test,,,,,,inactive,,,,2022-04-01T00:00:00.000Z,,,,,,,true,,,
+CRC-SYN-1014,Mina,Shaw,mina.shaw.other@example.test,,,,,,inactive,,,,2023-07-01T00:00:00.000Z,,,,,,,true,,,
+CRC-SYN-1015,Nico,Vale,nico.vale@example.test,,,,,,inactive,,,,2023-03-01T00:00:00.000Z,,,ghl_syn_1015,,,,true,,,

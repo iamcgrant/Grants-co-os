@@ -124,3 +124,29 @@ export function getDisputeProvider(): DisputeProcessingProvider {
   // Preserve existing DisputeFox → GHL / mock path — do not replace with a new stack.
   return new MockDisputeFoxProvider();
 }
+
+/**
+ * Credit Repair Cloud — not connected.
+ * Inbound compare is local CSV dry-run only. Live HTTP fails closed without CRC_API_KEY.
+ */
+export type CrcClientStatus = {
+  externalId: string;
+  status: "NOT_CONNECTED";
+};
+
+export interface CreditRepairCloudProvider {
+  readonly name: "credit_repair_cloud";
+  getClientStatus(externalId: string): Promise<CrcClientStatus>;
+}
+
+export class MockCreditRepairCloudProvider implements CreditRepairCloudProvider {
+  readonly name = "credit_repair_cloud" as const;
+
+  async getClientStatus(externalId: string): Promise<CrcClientStatus> {
+    return { externalId, status: "NOT_CONNECTED" };
+  }
+}
+
+export function getCrcProvider(): CreditRepairCloudProvider {
+  return new MockCreditRepairCloudProvider();
+}

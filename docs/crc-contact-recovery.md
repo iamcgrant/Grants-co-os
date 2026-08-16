@@ -1,5 +1,7 @@
 # CRC contact recovery + missing-data backfill
 
+Canonical spec: [`docs/CRC-MIGRATION.md`](./CRC-MIGRATION.md). Adapter: `src/lib/integrations/crc/` (DisputeFox inbound-attach shape).
+
 Credit Repair Cloud (CRC) was Grants & Co’s primary system for about five years. Existing OS work imported the 26 verified-active DisputeFox masters and inbound GHL links. That is **not** a CRC recovery. Charles (2026-08-16) required the migration to recover **actual client contacts**, not just historical metadata.
 
 This document is the identify + tooling + dry-run spec. It contains **no client PII**. Real CRC exports, raw credit reports, and secrets must never be committed.
