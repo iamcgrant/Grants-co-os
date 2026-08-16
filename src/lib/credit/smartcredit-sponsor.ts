@@ -6,8 +6,9 @@
  * - SMARTCREDIT_SPONSOR_CODE → sponsor/partner code if separate from the URL
  *
  * Example URL shape (yours may differ):
- *   https://www.smartcredit.com/...?aff=YOURCODE
- */
+ *   https://www.smartcredit.com/join/?pid=YOUR_PID
+ *
+ * Important: never strip or overwrite `pid` / affiliate params — that is the payout attribution.
 
 export function getSmartCreditSponsorConfig() {
   const sponsorUrl = process.env.SMARTCREDIT_SPONSOR_URL?.trim() || null;

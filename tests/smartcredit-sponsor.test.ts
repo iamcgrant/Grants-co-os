@@ -20,6 +20,14 @@ describe("SmartCredit sponsor attribution", () => {
     ).toBeNull();
   });
 
+  it("preserves SmartCredit pid attribution and appends Grants Client ID", () => {
+    process.env.SMARTCREDIT_SPONSOR_URL =
+      "https://www.smartcredit.com/join/?pid=69411";
+    const url = buildSponsoredEnrollmentUrl({ grantsClientId: "GC-000001" })!;
+    expect(url).toContain("pid=69411");
+    expect(url).toContain("gc_ref=GC-000001");
+  });
+
   it("preserves sponsor URL and appends Grants Client ID", () => {
     process.env.SMARTCREDIT_SPONSOR_URL =
       "https://www.smartcredit.com/enroll?aff=GRANTSCO";

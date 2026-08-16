@@ -28,9 +28,10 @@ Do **not** paste passwords into chat, GitHub, or source files. Store them in Cur
 **Yes — your personal sponsor/partner signup link is required** so Grants & Co is credited every time a client enrolls.
 
 Provide either:
-1. Full sponsor URL → `SMARTCREDIT_SPONSOR_URL` (best)
+1. Full sponsor URL → `SMARTCREDIT_SPONSOR_URL` (best)  
+   Example shape: `https://www.smartcredit.com/join/?pid=YOUR_PID`
 2. And/or sponsor code → `SMARTCREDIT_SPONSOR_CODE`
 
 Where: SmartCredit partner/affiliate dashboard → copy your sponsored enrollment link.
 
-The OS appends `gc_ref=<GrantsClientId>` for internal tracking while preserving your affiliate attribution.
+The OS keeps your `pid` (or other affiliate params) intact and appends `gc_ref=<GrantsClientId>` for internal tracking.
