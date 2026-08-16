@@ -37,7 +37,8 @@ Tools: `ask_x1`, `ask_payment_processing`, `route_agent_task`, `get_agent_capabi
 
 | Env | Purpose |
 |-----|---------|
-| `CURSOR_API_KEY` | Launch Cloud Agents (bots → Cursor). Must be visible to the **running** Cloud Agent process. |
+| `AGENT_HUB_CURSOR_API_KEY` | Preferred on Cloud Agent VMs. Cursor rejects session env names that start with `CURSOR_`, so a dashboard secret named `CURSOR_API_KEY` often never reaches `process.env`. |
+| `CURSOR_API_KEY` | Local/dev alias. Same value. Must be visible to the **running** process. |
 | `AGENT_HUB_TOKEN` | Optional bearer for Hub HTTP API |
 | `AGENT_HUB_ALLOW_UNAUTH` | Dev-only for local MCP (never production) |
 | `AGENT_HUB_SIMULATE_CURSOR` | Dev simulate launch without API key |

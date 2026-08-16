@@ -87,7 +87,9 @@ async function main() {
       cursorAgentId: live.launch.cursorAgentId,
     });
   } else {
-    console.log("Skipping live launch — CURSOR_API_KEY not visible to this process yet");
+    console.log(
+      "Skipping live launch — AGENT_HUB_CURSOR_API_KEY / CURSOR_API_KEY not visible to this process yet",
+    );
   }
 }
 

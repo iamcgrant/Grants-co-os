@@ -21,6 +21,7 @@ describe("Grants Agent Hub — bidirectional bridge", () => {
     process.env.DATABASE_URL = `file:${testDb}`;
     process.env.GC_ENV = "development";
     delete process.env.CURSOR_API_KEY;
+    delete process.env.AGENT_HUB_CURSOR_API_KEY;
     delete process.env.AGENT_HUB_SIMULATE_CURSOR;
     execSync("npx prisma db push", {
       env: { ...process.env, DATABASE_URL: `file:${testDb}` },
@@ -81,7 +82,7 @@ describe("Grants Agent Hub — bidirectional bridge", () => {
     });
     expect(task.type).toBe("CODE_CHANGE_REQUIRED");
     expect(launch.mode).toBe("QUEUED_AWAITING_KEY");
-    expect(launch.message).toMatch(/CURSOR_API_KEY/i);
+    expect(launch.message).toMatch(/AGENT_HUB_CURSOR_API_KEY|CURSOR_API_KEY/i);
 
     const stored = await getTask(task.id);
     expect(stored?.status).toBe("AWAITING_CURSOR_API_KEY");
@@ -105,6 +106,18 @@ describe("Grants Agent Hub — bidirectional bridge", () => {
     });
     if (result.escalated) throw new Error("unexpected escalation");
     expect(result.agentId).toBe("payment-processing");
+  });
+
+  it("treats AGENT_HUB_CURSOR_API_KEY as launch-ready without exposing the value", async () => {
+    const { isCursorLaunchReady, getCursorApiKeySource, CURSOR_API_KEY_ENV_NAMES } =
+      await import("../src/lib/agent-hub");
+    expect(CURSOR_API_KEY_ENV_NAMES).toContain("AGENT_HUB_CURSOR_API_KEY");
+    expect(isCursorLaunchReady()).toBe(false);
+    process.env.AGENT_HUB_CURSOR_API_KEY = "test-key-not-for-launch";
+    expect(isCursorLaunchReady()).toBe(true);
+    expect(getCursorApiKeySource()).toEqual({ name: "AGENT_HUB_CURSOR_API_KEY", present: true });
+    delete process.env.AGENT_HUB_CURSOR_API_KEY;
+    expect(isCursorLaunchReady()).toBe(false);
   });
 
   it("never returns secret-like keys in health payload", async () => {

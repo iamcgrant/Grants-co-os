@@ -23,6 +23,8 @@ export {
   launchCursorForTask,
   reportCursorResult,
   isCursorLaunchReady,
+  getCursorApiKeySource,
+  CURSOR_API_KEY_ENV_NAMES,
   drainAwaitingCursorLaunches,
   syncWaitingCursorTasks,
   getCursorAgentStatus,

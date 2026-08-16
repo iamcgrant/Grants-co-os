@@ -10,8 +10,30 @@ import { scrubSecrets } from "./types";
 
 const CURSOR_API = "https://api.cursor.com/v1";
 
+/**
+ * Cursor Cloud Agent API rejects session env names that start with `CURSOR_`.
+ * Dashboard Runtime Secrets with that prefix often never reach process.env.
+ * Prefer AGENT_HUB_CURSOR_API_KEY on Cloud Agent VMs; keep CURSOR_API_KEY for local.
+ */
+export const CURSOR_API_KEY_ENV_NAMES = [
+  "AGENT_HUB_CURSOR_API_KEY",
+  "CURSOR_API_KEY",
+] as const;
+
+export function getCursorApiKeySource(): { name: (typeof CURSOR_API_KEY_ENV_NAMES)[number]; present: true } | null {
+  for (const name of CURSOR_API_KEY_ENV_NAMES) {
+    const value = process.env[name]?.trim();
+    if (value) return { name, present: true };
+  }
+  return null;
+}
+
 export function getCursorApiKey(): string | null {
-  return process.env.CURSOR_API_KEY?.trim() || null;
+  for (const name of CURSOR_API_KEY_ENV_NAMES) {
+    const value = process.env[name]?.trim();
+    if (value) return value;
+  }
+  return null;
 }
 
 export function isCursorLaunchReady(): boolean {
@@ -29,9 +51,18 @@ export type LaunchCursorResult = {
 
 function defaultRepoUrl() {
   return (
+    process.env.AGENT_HUB_CURSOR_REPO_URL?.trim() ||
     process.env.CURSOR_REPO_URL?.trim() ||
     process.env.GITHUB_REPO_URL?.trim() ||
     "https://github.com/iamcgrant/Grants-co-os"
+  );
+}
+
+function defaultStartingRef() {
+  return (
+    process.env.AGENT_HUB_CURSOR_STARTING_REF?.trim() ||
+    process.env.CURSOR_STARTING_REF?.trim() ||
+    "main"
   );
 }
 
@@ -106,7 +137,7 @@ export async function launchCursorForTask(input: {
       mode: "QUEUED_AWAITING_KEY",
       taskId: input.taskId,
       message:
-        "Task queued. Add CURSOR_API_KEY to launch Cloud Agents. Charles is not asked to relay the prompt.",
+        "Task queued. Add AGENT_HUB_CURSOR_API_KEY (or CURSOR_API_KEY locally) so this process can launch Cloud Agents. Charles is not asked to relay the prompt.",
     };
   }
 
@@ -128,7 +159,7 @@ export async function launchCursorForTask(input: {
     repos: [
       {
         url: defaultRepoUrl(),
-        startingRef: input.startingRef || process.env.CURSOR_STARTING_REF || "main",
+        startingRef: input.startingRef || defaultStartingRef(),
       },
     ],
     autoCreatePR: input.autoCreatePR ?? true,
@@ -195,7 +226,8 @@ export async function drainAwaitingCursorLaunches(limit = 10) {
     return {
       ready: false,
       drained: [] as LaunchCursorResult[],
-      message: "CURSOR_API_KEY still not available in this process",
+      message:
+        "AGENT_HUB_CURSOR_API_KEY / CURSOR_API_KEY still not available in this process",
     };
   }
 
@@ -338,17 +370,30 @@ export async function reportCursorResult(input: {
 export async function probeCursorApiKey() {
   const apiKey = getCursorApiKey();
   if (!apiKey) {
-    return { present: false, valid: false, message: "CURSOR_API_KEY not in process env" };
+    return {
+      present: false,
+      valid: false,
+      checkedNames: [...CURSOR_API_KEY_ENV_NAMES],
+      message: "No Cursor API key in process env (AGENT_HUB_CURSOR_API_KEY or CURSOR_API_KEY)",
+    };
   }
+  const source = getCursorApiKeySource();
   try {
     const res = await fetch(`${CURSOR_API}/me`, { headers: authHeaders(apiKey) });
     if (!res.ok) {
-      return { present: true, valid: false, httpStatus: res.status, message: "API key rejected" };
+      return {
+        present: true,
+        valid: false,
+        sourceName: source?.name,
+        httpStatus: res.status,
+        message: "API key rejected",
+      };
     }
     const data = (await res.json()) as { email?: string; name?: string };
     return {
       present: true,
       valid: true,
+      sourceName: source?.name,
       // Never return email raw to other agents in logs if sensitive — owner-facing only
       accountHint: data.email ? `${data.email.slice(0, 2)}…` : data.name || "ok",
     };

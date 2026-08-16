@@ -16,7 +16,7 @@ export function CursorBridgeActions() {
         setMsg(
           data.launchReady
             ? `Cursor bridge ready · ${data.probe?.valid ? "key valid" : data.probe?.message || "key present"}`
-            : `Awaiting CURSOR_API_KEY · ${data.probe?.message || "not in env"}`,
+            : `Awaiting Cursor API key · ${data.probe?.message || "not in env"}`,
         );
       } else {
         const res = await fetch("/api/agent-hub/cursor", {

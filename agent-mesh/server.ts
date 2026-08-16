@@ -198,7 +198,7 @@ server.tool(
 
 server.tool(
   "drain_cursor_launch_queue",
-  "Launch all Agent Hub tasks waiting for CURSOR_API_KEY once the key is present.",
+  "Launch all Agent Hub tasks waiting for a Cursor API key once AGENT_HUB_CURSOR_API_KEY or CURSOR_API_KEY is present.",
   { limit: z.number().int().min(1).max(50).optional() },
   async ({ limit }) => {
     const api = await hub();
@@ -208,7 +208,7 @@ server.tool(
 
 server.tool(
   "probe_cursor_api_key",
-  "Check whether CURSOR_API_KEY is present and accepted by api.cursor.com (never returns the key).",
+  "Check whether AGENT_HUB_CURSOR_API_KEY or CURSOR_API_KEY is present and accepted by api.cursor.com (never returns the key).",
   {},
   async () => {
     const api = await hub();
