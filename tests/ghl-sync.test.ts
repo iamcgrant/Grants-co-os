@@ -280,6 +280,41 @@ describe("GHL → Grants Client inbound sync (existing master records only)", ()
     fetchSpy.mockRestore();
   });
 
+  it("phone-only link keeps the existing identity email (no second client)", async () => {
+    await seedMaster({
+      grantsClientId: "GC-000901",
+      email: "primary.identity@example.com",
+      phone: "5559010001",
+      firstName: "Primary",
+      lastName: "Human",
+    });
+
+    const result = await syncGhlContactToGrants({
+      id: "ghl_alt_inbox",
+      email: "alt.inbox@example.com",
+      phone: "(555) 901-0001",
+      firstName: "Alt",
+      lastName: "Inbox",
+    });
+    expect(result.action).toBe("LINKED");
+    expect(result.matchedBy).toBe("phone");
+    expect(await prisma.client.count()).toBe(1);
+    const kept = await prisma.client.findUniqueOrThrow({
+      where: { emailNormalized: "primary.identity@example.com" },
+    });
+    expect(kept.grantsClientId).toBe("GC-000901");
+    expect(
+      await prisma.client.findUnique({
+        where: { emailNormalized: "alt.inbox@example.com" },
+      }),
+    ).toBeNull();
+    expect(
+      await prisma.clientIdentifier.count({
+        where: { provider: "GHL", externalId: "ghl_alt_inbox" },
+      }),
+    ).toBe(1);
+  });
+
   it("skips ambiguous phone matches instead of creating or linking the wrong record", async () => {
     await seedMaster({
       grantsClientId: "GC-000801",

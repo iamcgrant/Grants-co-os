@@ -225,8 +225,18 @@ async function applyInboundUpdate(input: {
     };
   }
 
-  const email = contact.email?.trim();
-  const emailNormalized = email ? normalizeEmail(email) : client.emailNormalized;
+  const inboundEmail = contact.email?.trim();
+  const inboundEmailNormalized = inboundEmail ? normalizeEmail(inboundEmail) : null;
+  // Phone-only links attach a second GHL row onto the same human.
+  // Do not replace the master identity email (GHL email chosen at import).
+  const keepExistingEmail =
+    matchedBy === "phone" &&
+    Boolean(inboundEmailNormalized) &&
+    inboundEmailNormalized !== client.emailNormalized;
+  const email = keepExistingEmail ? client.email : inboundEmail || client.email;
+  const emailNormalized = keepExistingEmail
+    ? client.emailNormalized
+    : inboundEmailNormalized || client.emailNormalized;
   const phoneNormalized = normalizePhone(contact.phone) || client.phoneNormalized;
   const { firstName, lastName } = mapContactName(contact);
   const meta = buildMeta(contact);
