@@ -89,9 +89,18 @@ export async function getDisputeFoxMapping(query?: string) {
     category: "MAPPING",
     query: query || "disputefox",
   });
+  const creds = integrationCredentialStatus();
   return scrubSecrets({
     source: "business_facts",
     mappings: facts,
+    inbound: {
+      existingMasterRecordsOnly: true,
+      requiredEnvName: "DISPUTEFOX_API_KEY",
+      failClosedWithoutKey: !creds.disputeFoxApi,
+      zapId: "374413762",
+      zapEnabled: false,
+      inventDfIds: false,
+    },
     intake: {
       templateEnv: "DISPUTEFOX_INTAKE_URL_TEMPLATE",
       configured: Boolean(process.env.DISPUTEFOX_INTAKE_URL_TEMPLATE?.trim()),

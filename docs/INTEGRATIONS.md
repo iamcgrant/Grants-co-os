@@ -5,7 +5,7 @@ All integrations are adapters beneath Grants & Co OS.
 | Provider | Module | Status |
 |----------|--------|--------|
 | GoHighLevel | `LiveGoHighLevelProvider` when `GHL_API_KEY` is set (`GHL_LOCATION_ID` defaults to `NsmlbLVNr4SBJNC8gnrn`); else mock | **Live inbound onto existing master records only** |
-| DisputeFox | `MockDisputeFoxProvider` | Mock — dispute processing (intake path preserved) |
+| DisputeFox | `MockDisputeFoxProvider` + inbound attach onto existing masters | **Local roster attach** (26 Charles-confirmed clients). Live path **fails closed** without `DISPUTEFOX_API_KEY`. Zap `374413762` stays **OFF**. |
 | SmartCredit | `MockSmartCreditProvider` | Mock — sponsored enrollment + scores |
 | Credit Karma | `MockCreditKarmaConnector` | Mock — **read only** |
 | Experian | `MockExperianConnector` | Mock — weekly score |
@@ -39,8 +39,17 @@ Portal passwords enable staff-browser / connector scaffolding. Production sync p
 
 ### DisputeFox
 - Login email / password → `DISPUTEFOX_LOGIN_EMAIL`, `DISPUTEFOX_LOGIN_PASSWORD` (local/secrets only)
-- Preferred for automation: API key from DisputeFox admin when available → `DISPUTEFOX_API_KEY`
+- **Required for live inbound attach:** `DISPUTEFOX_API_KEY` (Cursor Secrets / host env — never commit). Do **not** regenerate the Fox API key.
+- Without `DISPUTEFOX_API_KEY` the live path **fails closed** (no DisputeFox HTTP, no client writes on that path).
 - Intake URL template → `DISPUTEFOX_INTAKE_URL_TEMPLATE`
+
+## DisputeFox → Grants Client (existing master records only)
+
+1. **Local attach** (no API key): `POST /api/integrations/disputefox/sync` mode `local`, or `npm run df:inbound-attach -- --local --apply`. Uses the checked-in 26-row roster (identity email + DF stage/started). Idempotent. Does **not** invent DisputeFox numeric IDs.
+2. Match order: **email** (GHL identity, plus known alts such as Kimberly’s DF inbox) → **normalized phone**. Unmatched rows are skipped — this path never creates a Grants Client.
+3. Writes only existing Client fields (`stage`, `nextAction`, `nextActionOwner`) and `DisputeRound`. Does **not** create a second client table.
+4. **Does not** create/update/delete DisputeFox records. **Does not** send messages. **Does not** write GHL. **Does not** enable Zap `374413762` (stays OFF).
+5. Live pull (`mode: pull`) without `DISPUTEFOX_API_KEY` fails closed. Live list/get stays disabled so the Zap is never used as a sync bus.
 
 ### SmartCredit (affiliate payouts)
 **Yes — your personal sponsor/partner signup link is required** so Grants & Co is credited every time a client enrolls.
