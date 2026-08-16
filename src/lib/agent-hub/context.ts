@@ -85,6 +85,22 @@ export const CORE_BUSINESS_FACTS: {
   },
   {
     category: "RULE",
+    key: "ghl.inbound.existing_only",
+    title: "GHL inbound sync — existing master records only",
+    value: {
+      matchOrder: ["ghl_id", "email", "normalized_phone"],
+      createGrantsClient: false,
+      createUpdateDeleteGhlContact: false,
+      sendMessages: false,
+      failClosedWithoutKey: true,
+      requiredSecret: "GHL_API_KEY",
+      optionalSecret: "GHL_LOCATION_ID",
+      defaultLocationId: "NsmlbLVNr4SBJNC8gnrn",
+      locationUrl: "https://app.gohighlevel.com/v2/location/NsmlbLVNr4SBJNC8gnrn/",
+    },
+  },
+  {
+    category: "RULE",
     key: "rule.resolve_before_escalate",
     title: "Resolve before escalate",
     value: {

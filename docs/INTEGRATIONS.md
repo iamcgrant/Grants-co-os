@@ -4,7 +4,7 @@ All integrations are adapters beneath Grants & Co OS.
 
 | Provider | Module | Status |
 |----------|--------|--------|
-| GoHighLevel | `LiveGoHighLevelProvider` when `GHL_API_KEY` + `GHL_LOCATION_ID` set; else mock | **Live inbound contact sync** · Client 360 vertical slice |
+| GoHighLevel | `LiveGoHighLevelProvider` when `GHL_API_KEY` is set (`GHL_LOCATION_ID` defaults to `NsmlbLVNr4SBJNC8gnrn`); else mock | **Live inbound onto existing master records only** |
 | DisputeFox | `MockDisputeFoxProvider` | Mock — dispute processing (intake path preserved) |
 | SmartCredit | `MockSmartCreditProvider` | Mock — sponsored enrollment + scores |
 | Credit Karma | `MockCreditKarmaConnector` | Mock — **read only** |
@@ -13,11 +13,15 @@ All integrations are adapters beneath Grants & Co OS.
 
 ## GHL → Grants Client → Client 360
 
-1. Pull contacts via `POST /api/integrations/ghl/sync` (Owners/managers).
-2. Upsert into Grants Client by **GHL id → email → phone** (no duplicates).
-3. Attach `ClientIdentifier` provider `GHL` with metadata `{ source: "ghl_api", dataPlane }`.
+1. Pull contacts via `POST /api/integrations/ghl/sync` (Owners/managers). `dryRun: true` previews matches without writes.
+2. Link onto **existing** Grants master clients only, match order **GHL id → email → normalized phone**. Unmatched GHL contacts are skipped — this path never creates a Grants Client.
+3. Attach `ClientIdentifier` provider `GHL` with metadata `{ source: "ghl_api", dataPlane, locationId }`.
 4. Client 360 shows Grants Client ID, GHL Contact ID, DisputeFox ID, stage, staff, next action, onboarding, docs, disputes, tasks, OS comms, credit/pay/timeline — or **Awaiting Integration** when a source is not connected.
-5. **Does not** send live messages. **Does not** create GHL contacts. **Does not** replace DisputeFox → GHL / post-pay intake.
+5. **Does not** send live messages. **Does not** create/update/delete GHL contacts. **Does not** replace DisputeFox → GHL / post-pay intake.
+6. Without `GHL_API_KEY` the live path **fails closed** (no GHL HTTP, no client writes).
+
+Known location: `NsmlbLVNr4SBJNC8gnrn`  
+URL: https://app.gohighlevel.com/v2/location/NsmlbLVNr4SBJNC8gnrn/
 
 Development seed identifiers are tagged `{ source: "seed", dataPlane: "development" }` and labeled as dev samples — never presented as live CRM data.
 
@@ -27,9 +31,11 @@ Do **not** paste passwords into chat, GitHub, or source files. Store them in Cur
 
 ### GoHighLevel
 - Login email / password (staff portal) → `GHL_LOGIN_EMAIL`, `GHL_LOGIN_PASSWORD` (local/secrets only)
-- Required for live sync: **API Key** + **Location ID** → Settings → Integrations → API Keys / Private Integration → `GHL_API_KEY`, `GHL_LOCATION_ID`
+- **Required for live inbound sync:** `GHL_API_KEY` (Cursor Secrets / host env — never commit)
+- **Optional:** `GHL_LOCATION_ID` — defaults to `NsmlbLVNr4SBJNC8gnrn` when omitted
+- Source: Settings → Integrations → API Keys / Private Integration
 
-Portal passwords enable staff-browser / connector scaffolding. Production sync prefers API keys.
+Portal passwords enable staff-browser / connector scaffolding. Production sync prefers API keys. This inbound path never writes GHL contacts.
 
 ### DisputeFox
 - Login email / password → `DISPUTEFOX_LOGIN_EMAIL`, `DISPUTEFOX_LOGIN_PASSWORD` (local/secrets only)
