@@ -1,4 +1,9 @@
 {
-  "install": "npm install\nnpx prisma generate\nnpx prisma migrate deploy\nnpm run db:seed",
-  "start": "npm run dev"
+  "install": "bash .cursor/install.sh",
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "npm run dev"
+    }
+  ]
 }
