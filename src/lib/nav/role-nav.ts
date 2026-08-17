@@ -70,6 +70,8 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/pay", label: "Grants Pay", group: "finance" },
       { href: "/intelligence", label: "Reports", group: "finance" },
       { href: "/acquisition", label: "Acquisition", group: "finance" },
+      { href: "/automations", label: "Automations", group: "system" },
+      { href: "/system-health", label: "System Health", group: "system" },
       { href: "/team-chat", label: "Team Chat", group: "system" },
       { href: "/agents", label: "Agent Hub", group: "system" },
       { href: "/more", label: "Settings", group: "system" },
@@ -83,6 +85,7 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/inbox", label: "Inbox", group: "primary" },
       { href: "/work", label: "Tasks", group: "ops" },
       { href: "/credit-pulse", label: "Credit Intelligence", group: "ops" },
+      { href: "/search", label: "Search", group: "system" },
       { href: "/team-chat", label: "Team Chat", group: "system" },
       { href: "/more", label: "Settings", group: "system" },
     ];
@@ -96,6 +99,7 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/work", label: "File Queues", group: "ops" },
       { href: "/work?view=jona", label: "Disputes", group: "ops" },
       { href: "/credit-pulse", label: "Credit Intelligence", group: "ops" },
+      { href: "/search", label: "Search", group: "system" },
       { href: "/team-chat", label: "Team Chat", group: "system" },
       { href: "/more", label: "Settings", group: "system" },
     ];

@@ -64,3 +64,8 @@ CLAUDE.md
 # Local CRC exports and recovery reports (real client PII — never commit)
 /local/crc-exports/
 /tmp/crc-*-report.json
+
+# Tauri build
+desktop/src-tauri/target
+desktop/node_modules
+desktop/public-desktop

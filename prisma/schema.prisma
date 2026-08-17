@@ -189,6 +189,9 @@ model Client {
   paymentTransactions PaymentTransaction[]
   refunds             Refund[]
   paymentDisputes     PaymentDispute[]
+  paymentRequests     PaymentRequest[]
+  paymentLinks        PaymentLink[]
+  onboardingTokens    OnboardingToken[]
   documents           Document[]
   tasks               Task[]
   assignments         ClientAssignment[]
@@ -201,6 +204,8 @@ model Client {
   creditMonitoringEvents CreditMonitoringEvent[]
   conversionEvents    ConversionEvent[]
   leadAttributions    LeadAttribution[]
+  automationRuns      AutomationRun[]
+  exceptionTickets    ExceptionTicket[]
   referredByPartner   Partner?              @relation("PartnerReferredClients", fields: [referredByPartnerId], references: [id], onDelete: SetNull)
   partnerReferrals    PartnerReferral[]
 
@@ -365,6 +370,8 @@ model Invoice {
   transactions  PaymentTransaction[]
   refunds       Refund[]
   disputes      PaymentDispute[]
+  paymentRequests PaymentRequest[]
+  paymentLinks  PaymentLink[]
 
   @@index([clientId])
   @@index([status])
@@ -1335,4 +1342,185 @@ model OwnerApproval {
   agent AgentDefinition? @relation(fields: [agentId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
+}
+
+// --- Grants Pay payment requests (Commas-primary hosted checkout) ---
+
+enum PaymentRequestStatus {
+  DRAFT
+  PENDING
+  SENT
+  VIEWED
+  PAID
+  PARTIALLY_PAID
+  FAILED
+  CANCELED
+  EXPIRED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  DISPUTED
+}
+
+enum PaymentLinkKind {
+  ONE_TIME
+  RECURRING
+  PARTIAL
+}
+
+model PaymentRequest {
+  id                String               @id @default(cuid())
+  publicId          String               @unique // GP-######
+  clientId          String
+  invoiceId         String?
+  status            PaymentRequestStatus @default(PENDING)
+  amountCents       Int
+  amountPaidCents   Int                  @default(0)
+  currency          String               @default("USD")
+  serviceName       String?
+  description       String?
+  dueAt             DateTime?
+  notes             String?
+  allowPartial      Boolean              @default(false)
+  recurring         Boolean              @default(false)
+  recurringDays     Int?
+  provider          String               @default("commas")
+  createdByUserId   String?
+  sentAt            DateTime?
+  paidAt            DateTime?
+  canceledAt        DateTime?
+  metadataJson      String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  client   Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  invoice  Invoice?      @relation(fields: [invoiceId], references: [id])
+  links    PaymentLink[]
+  notesLog PaymentRequestNote[]
+
+  @@index([clientId, status])
+  @@index([invoiceId])
+  @@index([status, dueAt])
+}
+
+model PaymentRequestNote {
+  id               String   @id @default(cuid())
+  paymentRequestId String
+  body             String
+  createdByUserId  String?
+  createdAt        DateTime @default(now())
+
+  paymentRequest PaymentRequest @relation(fields: [paymentRequestId], references: [id], onDelete: Cascade)
+
+  @@index([paymentRequestId])
+}
+
+model PaymentLink {
+  id                   String          @id @default(cuid())
+  paymentRequestId     String?
+  invoiceId            String?
+  clientId             String
+  kind                 PaymentLinkKind @default(ONE_TIME)
+  provider             String
+  providerSessionId    String?
+  providerCheckoutId   String?
+  url                  String
+  osPayPath            String?
+  status               String          @default("ACTIVE") // ACTIVE USED EXPIRED CANCELED
+  expiresAt            DateTime?
+  lastSentChannel      String?
+  lastSentAt           DateTime?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  paymentRequest PaymentRequest? @relation(fields: [paymentRequestId], references: [id], onDelete: SetNull)
+  invoice        Invoice?        @relation(fields: [invoiceId], references: [id])
+  client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([invoiceId])
+  @@index([provider, providerSessionId])
+  @@index([paymentRequestId])
+}
+
+model OnboardingToken {
+  id              String    @id @default(cuid())
+  tokenHash       String    @unique
+  tokenPrefix     String
+  clientId        String
+  invoiceId       String?
+  paymentId       String?
+  serviceName     String?
+  email           String
+  phone           String?
+  expiresAt       DateTime
+  usedAt          DateTime?
+  revokedAt       DateTime?
+  prefillJson     String?
+  answersJson     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([expiresAt])
+}
+
+model AutomationRun {
+  id             String    @id @default(cuid())
+  kind           String // PAYMENT_COMPLETED | INTAKE_COMPLETED | FRIDAY_CREDIT_PULSE | INVOICE_REMINDER | ...
+  status         String    @default("QUEUED") // QUEUED RUNNING SUCCEEDED FAILED SKIPPED
+  clientId       String?
+  entityType     String?
+  entityId       String?
+  idempotencyKey String?   @unique
+  attempt        Int       @default(0)
+  maxAttempts    Int       @default(5)
+  nextRetryAt    DateTime?
+  errorMessage   String?
+  resultJson     String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([kind, status])
+  @@index([status, nextRetryAt])
+  @@index([clientId])
+}
+
+model ExceptionTicket {
+  id          String    @id @default(cuid())
+  kind        String
+  severity    String    @default("NORMAL") // LOW NORMAL HIGH CRITICAL
+  title       String
+  detail      String?
+  status      String    @default("OPEN") // OPEN ACKNOWLEDGED RESOLVED
+  clientId    String?
+  entityType  String?
+  entityId    String?
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([status, severity])
+  @@index([clientId])
+}
+
+model SystemHealthCheck {
+  id              String   @id @default(cuid())
+  component       String   @unique // commas | ghl | disputefox | smartcredit | email | sms | voice | database | queues | webhooks | jobs
+  status          String   // CONNECTED | DEGRADED | ACTION_REQUIRED | OFFLINE
+  detail          String?
+  lastSuccessAt   DateTime?
+  lastFailureAt   DateTime?
+  lastCheckedAt   DateTime @default(now())
+  metadataJson    String?
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
 }

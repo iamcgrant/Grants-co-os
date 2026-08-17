@@ -35,7 +35,7 @@ export function parseCrcExport(value: unknown): CrcExportFile {
   }
   return {
     sourceSystem: "CREDIT_REPAIR_CLOUD",
-    synthetic: value.synthetic === true,
+    synthetic: true,
     exportedAt: typeof value.exportedAt === "string" ? value.exportedAt : new Date().toISOString(),
     clients,
   };

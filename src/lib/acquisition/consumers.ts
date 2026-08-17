@@ -322,7 +322,10 @@ export async function convertConsumerLead(
   }
 
   let referral: PartnerReferral | null = null;
-  if (client.referredByPartnerId && CONVERTED_CONSUMER_STAGES.includes(nextStage)) {
+  if (
+    client.referredByPartnerId &&
+    (CONVERTED_CONSUMER_STAGES as readonly string[]).includes(nextStage)
+  ) {
     const partner = await prisma.partner.findUnique({ where: { id: client.referredByPartnerId } });
     if (!partner) {
       throw new AcquisitionError("REFUSE_MIX_PARTNER_CLIENT", "referredByPartnerId is not a Partner.");

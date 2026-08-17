@@ -82,7 +82,8 @@ export function failClosedWithoutCrcKey(dryRun = false) {
     fetched: 0,
     requiredSecrets: [CRC_API_KEY_ENV],
     writesEnabled: isCrcRecoveryWritesEnabled(),
-    createdClients: 0,
+    liveListEnabled: false as const,
+    createdClients: 0 as const,
     message: `Fail-closed: ${CRC_API_KEY_ENV} is not set. Add it to host/runtime secrets (never commit). Use local CSV compare. ${CRC_RECOVERY_WRITES_ENV} stays false.`,
   };
 }

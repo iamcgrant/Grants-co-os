@@ -147,8 +147,8 @@ export function failClosedWithoutDisputeFoxKey(dryRun = false) {
     fetched: 0,
     requiredSecrets: [DISPUTEFOX_API_KEY_ENV],
     zapId: DISPUTEFOX_ZAP_ID,
-    zapEnabled: DISPUTEFOX_ZAP_ENABLED,
-    liveListEnabled: DISPUTEFOX_LIVE_LIST_ENABLED,
+    zapEnabled: false as const,
+    liveListEnabled: false as const,
     message: `Fail-closed: ${DISPUTEFOX_API_KEY_ENV} is not set. Add it to host/runtime secrets (never commit). Do not regenerate the Fox API key. Zap ${DISPUTEFOX_ZAP_ID} stays OFF.`,
   };
 }

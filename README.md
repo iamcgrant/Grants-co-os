@@ -32,15 +32,15 @@ Invoice **GC-1051** (Donna James) is due — open `/pay/GC-1051`.
 
 ## Priority
 
-**Payments and financial infrastructure are Priority #1.** Later modules must never compromise payment stability.
+**Payments and financial infrastructure are Priority #1.** Commas is the approved primary payment platform. Later modules must never compromise payment stability.
 
 ## Stack
 
 - Next.js (App Router) + React + TypeScript
 - Prisma + SQLite (local) → PostgreSQL/Supabase (production)
-- Adapter-based payment providers (Mock default / Authorize.Net sandbox Accept.js / Commas stub)
+- Adapter-based payment providers (**Commas primary** / Mock default / Authorize.Net sandbox optional)
 - Brand system inspired by grantandconsultants.com (Fraunces + Manrope, charcoal/gold) — see `docs/BRAND.md`
-- PWA (manifest + service worker)
+- PWA (manifest + service worker) + Tauri desktop scaffold (`/desktop`)
 - Vitest for critical financial/identity tests
 
 ## Scripts

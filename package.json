@@ -14,6 +14,7 @@
     "db:reset": "prisma migrate reset --force",
     "test": "vitest run",
     "test:watch": "vitest",
+    "desktop:prepare": "node scripts/prepare-desktop-shell.mjs",
     "agent-mesh": "tsx agent-mesh/server.ts",
     "ghl:inbound-sync": "tsx scripts/ghl-inbound-sync.ts",
     "ghl:inbound-conversations": "tsx scripts/ghl-inbound-conversations.ts",

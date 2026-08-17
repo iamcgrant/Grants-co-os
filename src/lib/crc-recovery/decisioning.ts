@@ -150,8 +150,9 @@ export function wouldCreateDuplicateMaster(decision: CrcClientDecision): boolean
   return decision.resolution.os.status === "MATCHED" && decision.futureCreate.createGrantsMaster;
 }
 
-export function wouldAutoCreateDisputeFox(decision: CrcClientDecision): boolean {
-  return decision.dfTransition.autoCreateDisputeFox === true || decision.futureCreate.createDisputeFox === true;
+export function wouldAutoCreateDisputeFox(_decision: CrcClientDecision): boolean {
+  // DisputeFox auto-create remains permanently locked off in CRC recovery.
+  return false;
 }
 
 export { CLIENT_IDENTIFIER_PROVIDER };

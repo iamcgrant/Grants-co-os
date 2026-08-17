@@ -96,7 +96,11 @@ export interface PaymentProvider {
     successUrl: string;
     cancelUrl: string;
     metadata?: Record<string, string>;
-  }): Promise<{ sessionId: string; url: string }>;
+    title?: string;
+    description?: string;
+    type?: "onetime_non_reusable" | "onetime_reusable" | "subscription";
+    frequencyDays?: number;
+  }): Promise<{ sessionId: string; url: string; checkoutId?: string }>;
   tokenizePaymentMethod(
     input: TokenizePaymentMethodInput,
   ): Promise<TokenizePaymentMethodResult>;
