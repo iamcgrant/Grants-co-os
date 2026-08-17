@@ -24,10 +24,11 @@ export default async function PortalLayout({
         </p>
       </header>
       <div className="px-5 py-8 max-w-lg mx-auto">{children}</div>
-      <nav className="gc-nav-mobile" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+      <nav className="gc-nav-mobile" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
         {[
           ["/portal", "Home"],
           ["/portal/credit", "Credit"],
+          ["/portal/pulse", "Pulse"],
           ["/portal/payments", "Pay"],
           ["/portal/documents", "Docs"],
         ].map(([href, label]) => (
