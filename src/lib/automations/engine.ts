@@ -5,6 +5,8 @@ import { runFridayCreditPulse } from "@/lib/credit/pulse";
 import { ensureMasterOnboarding } from "@/lib/clients/onboarding-runtime";
 import { issueOnboardingToken } from "@/lib/payments/payment-requests";
 import { assignDefaultStaff } from "@/lib/ops/assignment";
+import { sendGhlOutboundMessage } from "@/lib/integrations/ghl/outbound";
+import { GHL_CONVERSATIONS_MESSAGE_WRITE_SCOPE } from "@/lib/integrations/ghl/location";
 
 export type AutomationKind =
   | "PAYMENT_COMPLETED"
@@ -129,20 +131,59 @@ async function dispatchAutomation(
     case "PAYMENT_COMPLETED":
       return handlePaymentCompleted(ctx);
     case "PAYMENT_LINK_EMAIL":
-    case "PAYMENT_LINK_SMS":
-      // Providers may not be wired; record intent without inventing delivery success as revenue.
+    case "PAYMENT_LINK_SMS": {
+      const channel = kind === "PAYMENT_LINK_EMAIL" ? "Email" : "SMS";
+      const ghlContactId = await resolveGhlContactId(ctx.clientId);
+      const body =
+        typeof ctx.payload.url === "string"
+          ? `Grants & Co payment link: ${ctx.payload.url}`
+          : "Grants & Co payment link (see staff portal).";
+
+      if (!ghlContactId) {
+        await writeAuditLog({
+          action: kind,
+          entityType: ctx.entityType || "PaymentLink",
+          entityId: ctx.entityId || undefined,
+          metadata: {
+            delivery: "ACTION_REQUIRED",
+            channel,
+            to: ctx.payload.to,
+            note: "No linked GHL contact on master client — cannot send via LeadConnector",
+            requiredScope: GHL_CONVERSATIONS_MESSAGE_WRITE_SCOPE,
+          },
+        });
+        return { recorded: true, delivered: false, status: "ACTION_REQUIRED" };
+      }
+
+      const result = await sendGhlOutboundMessage({
+        channel,
+        ghlContactId,
+        body,
+        subject: "Grants & Co payment link",
+      });
+
       await writeAuditLog({
         action: kind,
         entityType: ctx.entityType || "PaymentLink",
         entityId: ctx.entityId || undefined,
         metadata: {
-          delivery: "queued",
-          channel: kind === "PAYMENT_LINK_EMAIL" ? "EMAIL" : "SMS",
+          delivery: result.ok ? "SENT" : result.status,
+          channel,
           to: ctx.payload.to,
-          note: "Outbound delivery adapter pending provider credentials — link recorded for staff copy/send",
+          ghlContactId,
+          providerMessageId: result.ok ? result.providerMessageId : undefined,
+          reason: result.ok ? undefined : result.reason,
+          requiredScope: result.ok ? undefined : result.requiredScope,
+          httpStatus: result.ok ? undefined : result.httpStatus,
         },
       });
-      return { recorded: true, delivered: false };
+
+      return {
+        recorded: true,
+        delivered: result.ok,
+        status: result.ok ? "SENT" : result.status,
+      };
+    }
     case "FRIDAY_CREDIT_PULSE": {
       const clients = await prisma.client.findMany({
         where: { status: "ACTIVE" },
@@ -175,6 +216,16 @@ async function dispatchAutomation(
     default:
       return { skipped: true, reason: `No handler for ${kind}` };
   }
+}
+
+async function resolveGhlContactId(clientId?: string | null): Promise<string | null> {
+  if (!clientId) return null;
+  const ident = await prisma.clientIdentifier.findFirst({
+    where: { clientId, provider: "GHL" },
+    orderBy: { createdAt: "asc" },
+    select: { externalId: true },
+  });
+  return ident?.externalId?.trim() || null;
 }
 
 async function handlePaymentCompleted(ctx: {

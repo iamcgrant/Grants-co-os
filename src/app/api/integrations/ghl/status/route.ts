@@ -53,6 +53,14 @@ export async function GET() {
           additionalScopesNeeded: ["conversations/message.readonly"],
         },
       },
+      outbound: {
+        endpoint: "POST /conversations/messages",
+        sendMessages: false,
+        requiredScope: "conversations/message.write",
+        additionalScopesNeeded: ["conversations.write"],
+        status: "ACTION_REQUIRED",
+        note: "Live PIT returns 401 not authorized for this scope until write scopes are added",
+      },
       // Never expose secret values or hints that embed secrets
     });
   } catch (e) {

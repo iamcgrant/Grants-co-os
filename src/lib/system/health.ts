@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { getPaymentProvider } from "@/lib/payments/provider";
 import { commasPublicStatus, isCommasConfigured } from "@/lib/payments/commas-config";
 import { isGhlApiReady } from "@/lib/integrations/ghl/http";
+import { GHL_CONVERSATIONS_MESSAGE_WRITE_SCOPE } from "@/lib/integrations/ghl/location";
 import { integrationCredentialStatus } from "@/lib/integrations/credentials";
 import { getGcEnvironment } from "@/lib/integrations/env";
 
@@ -129,18 +130,20 @@ export async function collectSystemHealth(): Promise<{
     {
       component: "email",
       label: "Email",
-      status: "DEGRADED",
-      detail: "Outbound email adapter records intent; provider wire-up pending",
+      status: "ACTION_REQUIRED",
+      detail: isGhlApiReady()
+        ? `Outbound email via POST /conversations/messages · PIT missing ${GHL_CONVERSATIONS_MESSAGE_WRITE_SCOPE} (live 401)`
+        : `Fail-closed: GHL_API_KEY + PIT scope ${GHL_CONVERSATIONS_MESSAGE_WRITE_SCOPE} required`,
       lastSuccessAt: null,
       lastCheckedAt: now.toISOString(),
     },
     {
       component: "sms",
       label: "SMS / MMS",
-      status: isGhlApiReady() ? "DEGRADED" : "ACTION_REQUIRED",
+      status: "ACTION_REQUIRED",
       detail: isGhlApiReady()
-        ? "Inbound GHL conversations available · outbound send requires conversation write scopes"
-        : "Awaiting GHL messaging scopes",
+        ? `Inbound conversations OK · outbound SMS needs PIT ${GHL_CONVERSATIONS_MESSAGE_WRITE_SCOPE} (live 401)`
+        : `Fail-closed: GHL_API_KEY + PIT scope ${GHL_CONVERSATIONS_MESSAGE_WRITE_SCOPE} required`,
       lastSuccessAt: null,
       lastCheckedAt: now.toISOString(),
     },
