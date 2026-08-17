@@ -50,6 +50,9 @@ skills-lock.json
 
 # vercel
 .vercel
+.env.vercel*
+.env.vercel.production
+.env.vercel.local
 
 # typescript
 *.tsbuildinfo

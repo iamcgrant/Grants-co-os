@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Grants & Co OS",
         "width": 1280,
         "height": 840,
@@ -28,7 +29,11 @@
     "active": true,
     "targets": [
       "appimage",
-      "deb"
+      "deb",
+      "dmg",
+      "app",
+      "nsis",
+      "msi"
     ],
     "icon": [
       "icons/32x32.png",
@@ -45,5 +50,17 @@
     },
     "createUpdaterArtifacts": false
   },
-  "plugins": {}
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["grantscoos"]
+      }
+    },
+    "updater": {
+      "pubkey": "REPLACE_WITH_TAURI_UPDATER_PUBKEY_WHEN_SIGNING_IS_READY",
+      "endpoints": [
+        "https://github.com/iamcgrant/Grants-co-os/releases/latest/download/latest.json"
+      ]
+    }
+  }
 }

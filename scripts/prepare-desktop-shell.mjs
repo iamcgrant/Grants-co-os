@@ -4,10 +4,14 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 
 const root = path.resolve(import.meta.dirname, "..");
 const outDir = path.join(root, "desktop/public-desktop");
 fs.mkdirSync(outDir, { recursive: true });
+
+const iconScript = path.join(root, "scripts/generate-desktop-icons.mjs");
+spawnSync(process.execPath, [iconScript], { stdio: "inherit", cwd: root });
 
 const appUrl = process.env.GC_DESKTOP_URL || "https://os.grantsandco.com";
 
@@ -18,23 +22,164 @@ const html = `<!doctype html>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Grants &amp; Co OS</title>
     <style>
-      html, body { margin: 0; height: 100%; background: #040404; color: #fff; font-family: Georgia, serif; }
-      .wrap { height: 100%; display: grid; place-items: center; text-align: center; padding: 2rem; }
-      .gold { color: #f5b82a; letter-spacing: 0.35em; text-transform: uppercase; font-size: 0.75rem; }
-      a { color: #f5b82a; }
+      :root {
+        --gc-black: #040404;
+        --gc-charcoal: #16161a;
+        --gc-gold: #f5b82a;
+        --gc-gold-soft: #d4a017;
+        --gc-cream: #f8f4ec;
+        --gc-muted: #929292;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: var(--gc-black);
+        color: var(--gc-cream);
+        font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        overflow: hidden;
+      }
+      .shell {
+        position: relative;
+        height: 100%;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        padding: 2.5rem 1.5rem;
+        background:
+          radial-gradient(ellipse 80% 60% at 50% 0%, rgba(245, 184, 42, 0.08), transparent 55%),
+          radial-gradient(circle at 50% 100%, rgba(22, 22, 26, 0.9), var(--gc-black));
+      }
+      .shell::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(245, 184, 42, 0.04) 0%, transparent 40%);
+        pointer-events: none;
+      }
+      .panel {
+        position: relative;
+        z-index: 1;
+        max-width: 26rem;
+        animation: rise 0.9s ease-out both;
+      }
+      .mark {
+        width: 4.5rem;
+        height: 4.5rem;
+        margin: 0 auto 1.5rem;
+        border-radius: 1.1rem;
+        border: 1px solid rgba(245, 184, 42, 0.45);
+        display: grid;
+        place-items: center;
+        background: rgba(22, 22, 26, 0.72);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      }
+      .mark span {
+        font-size: 2rem;
+        color: var(--gc-gold);
+        line-height: 1;
+      }
+      .eyebrow {
+        margin: 0 0 0.75rem;
+        color: var(--gc-gold);
+        letter-spacing: 0.42em;
+        text-transform: uppercase;
+        font-size: 0.62rem;
+      }
+      h1 {
+        margin: 0 0 0.75rem;
+        font-size: clamp(1.6rem, 4vw, 2rem);
+        font-weight: 500;
+        letter-spacing: 0.02em;
+      }
+      .sub {
+        margin: 0 0 1.75rem;
+        color: var(--gc-muted);
+        font-size: 0.95rem;
+        line-height: 1.6;
+      }
+      .bar {
+        width: min(12rem, 70vw);
+        height: 2px;
+        margin: 0 auto 1rem;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .bar i {
+        display: block;
+        height: 100%;
+        width: 35%;
+        background: linear-gradient(90deg, var(--gc-gold-soft), var(--gc-gold));
+        border-radius: inherit;
+        animation: sweep 1.2s ease-in-out infinite;
+      }
+      .status {
+        margin: 0;
+        font-size: 0.72rem;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: rgba(248, 244, 236, 0.55);
+      }
+      a.fallback {
+        display: inline-block;
+        margin-top: 1.25rem;
+        color: var(--gc-gold);
+        font-size: 0.82rem;
+        letter-spacing: 0.08em;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(245, 184, 42, 0.35);
+      }
+      a.fallback:hover { color: var(--gc-cream); }
+      @keyframes rise {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes sweep {
+        0% { transform: translateX(-120%); }
+        100% { transform: translateX(320%); }
+      }
     </style>
-    <meta http-equiv="refresh" content="0;url=${appUrl}" />
   </head>
   <body>
-    <div class="wrap">
-      <div>
-        <p class="gold">Grants &amp; Co</p>
-        <h1>Opening Grants &amp; Co OS</h1>
-        <p><a href="${appUrl}">Continue</a></p>
+    <div class="shell">
+      <div class="panel">
+        <div class="mark" aria-hidden="true"><span>G</span></div>
+        <p class="eyebrow">Grants &amp; Co</p>
+        <h1>Grants &amp; Co OS</h1>
+        <p class="sub">Opening your operating system&hellip;</p>
+        <div class="bar" aria-hidden="true"><i></i></div>
+        <p class="status" id="status">Connecting</p>
+        <a class="fallback" id="fallback" href="${appUrl}" hidden>Continue manually</a>
       </div>
     </div>
+    <script>
+      (function () {
+        var APP_URL = ${JSON.stringify(appUrl)};
+        var navigated = false;
+
+        function navigate() {
+          if (navigated) return;
+          navigated = true;
+          window.__gcNavigated = true;
+          window.location.replace(APP_URL);
+        }
+
+        function showFallback() {
+          var link = document.getElementById("fallback");
+          var status = document.getElementById("status");
+          if (link) link.hidden = false;
+          if (status) status.textContent = "Tap continue if loading stalls";
+        }
+
+        window.addEventListener("load", function () {
+          setTimeout(navigate, 1400);
+          setTimeout(showFallback, 4500);
+        });
+      })();
+    </script>
   </body>
 </html>`;
 
 fs.writeFileSync(path.join(outDir, "index.html"), html);
-console.log("Prepared desktop shell →", outDir);
+console.log("Prepared desktop shell →", outDir, "→", appUrl);

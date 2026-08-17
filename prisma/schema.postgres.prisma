@@ -1,0 +1,1527 @@
+// Grants & Co OS — Production PostgreSQL schema (Neon / Supabase via Vercel Marketplace).
+// Local Cloud Agent + Vitest continue to use prisma/schema.prisma (sqlite).
+// Generate with: DATABASE_URL=postgresql://… node scripts/prisma-generate.mjs
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MANAGER
+  CUSTOMER_SERVICE
+  FILE_PREPARER
+  MARKETING
+  CLIENT
+}
+
+enum BillingPolicyType {
+  MANUAL_INVOICE
+  AFTER_SERVICE_MILESTONE
+  RECURRING_AFTER_MILESTONE
+  PAY_PER_COMPLETED_SERVICE
+  CUSTOM_CONFIGURABLE_POLICY
+}
+
+enum InvoiceStatus {
+  DRAFT
+  NOT_YET_BILLABLE
+  DUE
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELED
+  PARTIALLY_REFUNDED
+  REFUNDED
+  DISPUTED
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELED
+}
+
+enum SettlementStatus {
+  UNSETTLED
+  PENDING
+  SETTLED
+  FAILED
+}
+
+enum PayoutStatus {
+  NONE
+  PENDING
+  IN_TRANSIT
+  PAID
+  FAILED
+  CANCELED
+}
+
+enum CreditBureau {
+  EQUIFAX
+  EXPERIAN
+  TRANSUNION
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  BLOCKED
+  DONE
+  CANCELED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  role          Role
+  isActive      Boolean   @default(true)
+  mfaEnabled    Boolean   @default(false)
+  mfaSecret     String?
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  staffProfile       StaffProfile?
+  client             Client?
+  sessions           Session[]
+  auditLogs          AuditLog[]           @relation("AuditActor")
+  assignedTasks      Task[]               @relation("TaskAssignee")
+  createdTasks       Task[]               @relation("TaskCreator")
+  clientAssignments  ClientAssignment[]   @relation("StaffAssignments")
+  completedMilestones ServiceMilestone[]  @relation("MilestoneCompleter")
+  timelineEvents     ClientTimelineEvent[] @relation("TimelineActor")
+  conversationParts  ConversationParticipant[]
+  messagesSent       Message[]            @relation("MessageSender")
+  teamMentions       MessageMention[]
+}
+
+model Session {
+  id               String   @id @default(cuid())
+  userId           String
+  tokenHash        String   @unique
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  userAgent        String?
+  ipAddress        String?
+  createdAt        DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model StaffProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  title     String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Client {
+  id              String   @id @default(cuid())
+  grantsClientId  String   @unique // GC-000001
+  userId          String?  @unique
+  email           String
+  emailNormalized String
+  phone           String?
+  phoneNormalized String?
+  firstName       String
+  lastName        String
+  status          String   @default("ACTIVE")
+  stage           String   @default("NEW_ENROLLMENT")
+  nextAction      String?
+  nextActionOwner String? // CHARLES | SIMON | JONA | CLIENT | SYSTEM
+  urgency         String   @default("NORMAL") // LOW NORMAL HIGH CRITICAL
+  lastInteractionAt DateTime?
+  nextDueAt       DateTime?
+  duplicateFlag   Boolean  @default(false)
+  notes           String?
+  /// Engine B — consumer lead pipeline. Null when the master is not an acquisition lead.
+  acquisitionStage           ConsumerLeadStage?
+  /// Command-center source. Null = unknown (never coerced to ORGANIC).
+  acquisitionSource          AcquisitionSource?
+  /// Partner-attributed consumer leads must carry a locked AcquisitionMarket.
+  acquisitionMarket          AcquisitionMarket?
+  grantsLeadScore            Int?
+  grantsLeadScoreReasonsJson String?
+  referredByPartnerId        String?
+  doNotContact               Boolean  @default(false)
+  unsubscribed               Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user                User?                 @relation(fields: [userId], references: [id])
+  conversations       Conversation[]
+  onboardingChecklist OnboardingItem[]
+  disputeRounds       DisputeRound[]
+  fridayPulseItems    FridayPulseItem[]
+  identifiers         ClientIdentifier[]
+  addresses           Address[]
+  clientServices      ClientService[]
+  contracts           Contract[]
+  invoices            Invoice[]
+  paymentCustomers    PaymentCustomer[]
+  paymentMethods      PaymentMethod[]
+  paymentTransactions PaymentTransaction[]
+  refunds             Refund[]
+  paymentDisputes     PaymentDispute[]
+  paymentRequests     PaymentRequest[]
+  paymentLinks        PaymentLink[]
+  onboardingTokens    OnboardingToken[]
+  documents           Document[]
+  tasks               Task[]
+  assignments         ClientAssignment[]
+  timelineEvents      ClientTimelineEvent[]
+  notifications       Notification[]
+  creditConnections   CreditConnection[]
+  creditSnapshots     CreditSnapshot[]
+  creditScores        CreditScore[]
+  creditAccounts      CreditAccount[]
+  creditMonitoringEvents CreditMonitoringEvent[]
+  conversionEvents    ConversionEvent[]
+  leadAttributions    LeadAttribution[]
+  automationRuns      AutomationRun[]
+  exceptionTickets    ExceptionTicket[]
+  referredByPartner   Partner?              @relation("PartnerReferredClients", fields: [referredByPartnerId], references: [id], onDelete: SetNull)
+  partnerReferrals    PartnerReferral[]
+
+  @@unique([emailNormalized])
+  @@index([phoneNormalized])
+  @@index([lastName, firstName])
+  @@index([acquisitionStage])
+  @@index([acquisitionSource])
+  @@index([acquisitionMarket])
+  @@index([referredByPartnerId])
+}
+
+model ClientIdentifier {
+  id           String   @id @default(cuid())
+  clientId     String
+  provider     String // GHL, DISPUTEFOX, CREDIT_REPAIR_CLOUD, SMARTCREDIT, PAYMENT, etc.
+  externalId   String
+  metadataJson String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalId])
+  @@index([clientId])
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  clientId   String
+  type       String   @default("PRIMARY")
+  line1      String
+  line2      String?
+  city       String
+  state      String
+  postalCode String
+  country    String   @default("US")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  name        String
+  description String?
+  basePriceCents Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  billingPolicies BillingPolicy[]
+  clientServices  ClientService[]
+}
+
+model BillingPolicy {
+  id              String            @id @default(cuid())
+  serviceId       String
+  type            BillingPolicyType
+  name            String
+  configJson      String? // flexible policy configuration
+  amountCents     Int?
+  isActive        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  service         Service           @relation(fields: [serviceId], references: [id])
+  clientServices  ClientService[]
+  milestones      ServiceMilestone[]
+
+  @@index([serviceId])
+}
+
+model ClientService {
+  id              String   @id @default(cuid())
+  clientId        String
+  serviceId       String
+  billingPolicyId String
+  status          String   @default("ACTIVE")
+  startedAt       DateTime @default(now())
+  endedAt         DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  client        Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  service       Service        @relation(fields: [serviceId], references: [id])
+  billingPolicy BillingPolicy  @relation(fields: [billingPolicyId], references: [id])
+  milestones    ServiceMilestone[]
+  invoices      Invoice[]
+  contracts     Contract[]
+
+  @@index([clientId])
+  @@index([serviceId])
+}
+
+model Contract {
+  id              String   @id @default(cuid())
+  clientId        String
+  clientServiceId String?
+  title           String
+  status          String   @default("DRAFT")
+  signedAt        DateTime?
+  documentId      String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  client        Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientService ClientService? @relation(fields: [clientServiceId], references: [id])
+
+  @@index([clientId])
+}
+
+model ServiceMilestone {
+  id                   String   @id @default(cuid())
+  clientServiceId      String
+  billingPolicyId      String
+  name                 String
+  sequence             Int      @default(1)
+  isCompleted          Boolean  @default(false)
+  completedAt          DateTime?
+  completedByUserId    String?
+  supportingDocumentId String?
+  invoiceEligible      Boolean  @default(false)
+  invoiceCreated       Boolean  @default(false)
+  paymentEligible      Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  clientService   ClientService @relation(fields: [clientServiceId], references: [id], onDelete: Cascade)
+  billingPolicy   BillingPolicy @relation(fields: [billingPolicyId], references: [id])
+  completedByUser User?         @relation("MilestoneCompleter", fields: [completedByUserId], references: [id])
+  invoices        Invoice[]
+
+  @@index([clientServiceId])
+}
+
+model Invoice {
+  id                String        @id @default(cuid())
+  invoiceNumber     String        @unique // GC-1048
+  clientId          String
+  clientServiceId   String?
+  milestoneId       String?
+  status            InvoiceStatus @default(DRAFT)
+  amountCents       Int
+  amountPaidCents   Int           @default(0)
+  currency          String        @default("USD")
+  description       String?
+  dueAt             DateTime?
+  paidAt            DateTime?
+  idempotencyKey    String?       @unique
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  client        Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientService ClientService?       @relation(fields: [clientServiceId], references: [id])
+  milestone     ServiceMilestone?    @relation(fields: [milestoneId], references: [id])
+  items         InvoiceItem[]
+  transactions  PaymentTransaction[]
+  refunds       Refund[]
+  disputes      PaymentDispute[]
+  paymentRequests PaymentRequest[]
+  paymentLinks  PaymentLink[]
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model InvoiceItem {
+  id          String @id @default(cuid())
+  invoiceId   String
+  description String
+  quantity    Int    @default(1)
+  unitCents   Int
+  totalCents  Int
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model PaymentCustomer {
+  id                 String   @id @default(cuid())
+  clientId           String
+  provider           String
+  providerCustomerId String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerCustomerId])
+  @@index([clientId])
+}
+
+model PaymentMethod {
+  id                     String   @id @default(cuid())
+  clientId               String
+  provider               String
+  providerPaymentMethodId String
+  type                   String // card, ach
+  brand                  String?
+  last4                  String?
+  expMonth               Int?
+  expYear                Int?
+  isDefault              Boolean  @default(false)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  client       Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  transactions PaymentTransaction[]
+
+  @@unique([provider, providerPaymentMethodId])
+  @@index([clientId])
+}
+
+model PaymentTransaction {
+  id                   String            @id @default(cuid())
+  clientId             String
+  invoiceId            String?
+  paymentMethodId      String?
+  provider             String
+  providerTransactionId String
+  idempotencyKey       String            @unique
+  amountCents          Int
+  currency             String            @default("USD")
+  status               TransactionStatus @default(PENDING)
+  settlementStatus     SettlementStatus  @default(UNSETTLED)
+  payoutStatus         PayoutStatus      @default(NONE)
+  failureCode          String?
+  failureMessage       String?
+  settledAt            DateTime?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  client        Client            @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  invoice       Invoice?          @relation(fields: [invoiceId], references: [id])
+  paymentMethod PaymentMethod?    @relation(fields: [paymentMethodId], references: [id])
+  attempts      PaymentAttempt[]
+  refunds       Refund[]
+  disputes      PaymentDispute[]
+  payouts       Payout[]
+
+  @@unique([provider, providerTransactionId])
+  @@index([clientId])
+  @@index([invoiceId])
+  @@index([status])
+}
+
+model PaymentAttempt {
+  id            String   @id @default(cuid())
+  transactionId String
+  attemptNumber Int
+  status        String
+  providerRawId String?
+  errorCode     String?
+  errorMessage  String?
+  createdAt     DateTime @default(now())
+
+  transaction PaymentTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@unique([transactionId, attemptNumber])
+  @@index([transactionId])
+}
+
+model Refund {
+  id                String   @id @default(cuid())
+  clientId          String
+  invoiceId         String?
+  transactionId     String
+  provider          String
+  providerRefundId  String
+  idempotencyKey    String   @unique
+  amountCents       Int
+  reason            String?
+  status            String   @default("SUCCEEDED")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  client      Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  invoice     Invoice?           @relation(fields: [invoiceId], references: [id])
+  transaction PaymentTransaction @relation(fields: [transactionId], references: [id])
+
+  @@unique([provider, providerRefundId])
+  @@index([clientId])
+  @@index([transactionId])
+}
+
+model PaymentDispute {
+  id                  String   @id @default(cuid())
+  clientId            String
+  invoiceId           String?
+  transactionId       String
+  provider            String
+  providerDisputeId   String
+  amountCents         Int
+  reason              String?
+  status              String   @default("OPEN")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  client      Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  invoice     Invoice?           @relation(fields: [invoiceId], references: [id])
+  transaction PaymentTransaction @relation(fields: [transactionId], references: [id])
+
+  @@unique([provider, providerDisputeId])
+  @@index([clientId])
+}
+
+model Payout {
+  id               String   @id @default(cuid())
+  transactionId    String?
+  provider         String
+  providerPayoutId String
+  amountCents      Int
+  status           PayoutStatus @default(PENDING)
+  arrivedAt        DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  transaction PaymentTransaction? @relation(fields: [transactionId], references: [id])
+
+  @@unique([provider, providerPayoutId])
+}
+
+model WebhookEvent {
+  id              String   @id @default(cuid())
+  provider        String
+  providerEventId String
+  eventType       String
+  payloadJson     String
+  processedAt     DateTime?
+  status          String   @default("RECEIVED")
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+
+  @@unique([provider, providerEventId])
+  @@index([status])
+}
+
+model IntegrationConnection {
+  id           String   @id @default(cuid())
+  provider     String   @unique
+  status       String   @default("MOCK")
+  configJson   String?
+  lastSyncAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  syncEvents IntegrationSyncEvent[]
+}
+
+model IntegrationSyncEvent {
+  id           String   @id @default(cuid())
+  connectionId String
+  direction    String // inbound, outbound
+  entityType   String
+  externalId   String?
+  status       String
+  payloadJson  String?
+  errorMessage String?
+  createdAt    DateTime @default(now())
+
+  connection IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId])
+}
+
+model Document {
+  id             String    @id @default(cuid())
+  clientId       String
+  name           String
+  mimeType       String
+  storageKey     String
+  category       String?
+  uploadedById   String?
+  sourceSystem   String? // CREDIT_REPAIR_CLOUD when recovered from CRC
+  originalDate   DateTime?
+  sourceClientId String? // CRC client ID when sourceSystem=CREDIT_REPAIR_CLOUD
+  documentType   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([sourceSystem])
+}
+
+model Task {
+  id           String       @id @default(cuid())
+  clientId     String?
+  title        String
+  description  String?
+  status       TaskStatus   @default(OPEN)
+  priority     TaskPriority @default(MEDIUM)
+  dueAt        DateTime?
+  assigneeId   String?
+  createdById  String?
+  category     String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  client    Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  assignee  User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdBy User?   @relation("TaskCreator", fields: [createdById], references: [id])
+
+  @@index([assigneeId])
+  @@index([clientId])
+  @@index([status])
+}
+
+model ClientAssignment {
+  id         String   @id @default(cuid())
+  clientId   String
+  staffId    String
+  roleLabel  String?
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  staff  User   @relation("StaffAssignments", fields: [staffId], references: [id])
+
+  @@unique([clientId, staffId])
+}
+
+model ClientTimelineEvent {
+  id          String   @id @default(cuid())
+  clientId    String
+  actorId     String?
+  eventType   String
+  title       String
+  description String?
+  metadataJson String?
+  idempotencyKey String? @unique
+  createdAt   DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  actor  User?  @relation("TimelineActor", fields: [actorId], references: [id])
+
+  @@index([clientId, createdAt])
+  @@index([eventType])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  clientId  String?
+  userId    String?
+  channel   String   @default("IN_APP")
+  title     String
+  body      String
+  status    String   @default("PENDING")
+  sentAt    DateTime?
+  createdAt DateTime @default(now())
+
+  client Client? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([userId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  metadataJson String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model SystemEvent {
+  id        String   @id @default(cuid())
+  kind      String
+  payloadJson String?
+  createdAt DateTime @default(now())
+
+  @@index([kind])
+}
+
+model CreditConnection {
+  id             String   @id @default(cuid())
+  clientId       String
+  provider       String // SMARTCREDIT, CREDIT_KARMA, EXPERIAN
+  status         String   @default("DISCONNECTED")
+  externalId     String?
+  lastSyncedAt   DateTime?
+  needsReauth    Boolean  @default(false)
+  // Encrypted credential reference — never expose to staff UI
+  credentialRef  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, provider])
+  @@index([provider])
+}
+
+model CreditSnapshot {
+  id         String   @id @default(cuid())
+  clientId   String
+  source     String
+  capturedAt DateTime @default(now())
+  summaryJson String?
+  createdAt  DateTime @default(now())
+
+  client Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  scores CreditScore[]
+
+  @@index([clientId, capturedAt])
+}
+
+model CreditScore {
+  id            String       @id @default(cuid())
+  clientId      String
+  snapshotId    String?
+  bureau        CreditBureau
+  score         Int
+  scoringModel  String
+  source        String
+  capturedAt    DateTime     @default(now())
+  createdAt     DateTime     @default(now())
+
+  client   Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  snapshot CreditSnapshot? @relation(fields: [snapshotId], references: [id])
+
+  @@index([clientId, bureau, capturedAt])
+  @@index([scoringModel])
+}
+
+model CreditChange {
+  id           String   @id @default(cuid())
+  clientId     String
+  bureau       CreditBureau
+  previousScore Int?
+  newScore     Int
+  scoringModel String
+  source       String
+  changeAmount Int
+  detectedAt   DateTime @default(now())
+
+  @@index([clientId, detectedAt])
+}
+
+model CreditAccount {
+  id           String   @id @default(cuid())
+  clientId     String
+  bureau       CreditBureau?
+  creditorName String
+  accountType  String?
+  status       String?
+  balanceCents Int?
+  source       String
+  externalId   String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+}
+
+model CreditMonitoringEvent {
+  id        String   @id @default(cuid())
+  clientId  String
+  provider  String
+  eventType String
+  payloadJson String?
+  createdAt DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+}
+
+model MarketingSource {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  platform  String?
+  createdAt DateTime @default(now())
+
+  campaigns MarketingCampaign[]
+  leads     LeadSource[]
+}
+
+model MarketingCampaign {
+  id        String   @id @default(cuid())
+  sourceId  String
+  name      String
+  contentId String?
+  costCents Int      @default(0)
+  status    String   @default("ACTIVE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  source           MarketingSource   @relation(fields: [sourceId], references: [id])
+  leads            LeadSource[]
+  conversionEvents ConversionEvent[]
+
+  @@index([sourceId])
+}
+
+model LeadSource {
+  id          String   @id @default(cuid())
+  sourceId    String?
+  campaignId  String?
+  email       String?
+  phone       String?
+  firstName   String?
+  lastName    String?
+  status      String   @default("NEW")
+  clientId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  source   MarketingSource?   @relation(fields: [sourceId], references: [id])
+  campaign MarketingCampaign? @relation(fields: [campaignId], references: [id])
+
+  @@index([status])
+}
+
+model ConversionEvent {
+  id          String   @id @default(cuid())
+  clientId    String?
+  campaignId  String?
+  eventType   String // LEAD, CONSULTATION, CLIENT, PAYMENT, RESULT, TESTIMONIAL
+  revenueCents Int    @default(0)
+  metadataJson String?
+  createdAt   DateTime @default(now())
+
+  client   Client?            @relation(fields: [clientId], references: [id])
+  campaign MarketingCampaign? @relation(fields: [campaignId], references: [id])
+
+  @@index([eventType])
+  @@index([clientId])
+}
+
+/// Fail-closed child of Client. ONE HUMAN = ONE MASTER — never a second client.
+/// Missing intake stamp = DATA UNAVAILABLE (not organic). amountCollected stays
+/// null until a verified X5 / Jobber / Authorize.Net payment fact exists.
+enum AttributionSource {
+  facebook
+  instagram
+  youtube
+  email
+  referral
+  direct
+  unknown
+}
+
+enum AttributionShowStatus {
+  showed
+  no_show
+  unknown
+}
+
+/// GHL organization Service Status for CRC recovery (document + schema).
+/// Do not live-write GHL. Phase 2 scaffolding only.
+enum GhlServiceStatus {
+  ACTIVE_CREDIT_CLIENT
+  RECENTLY_WORKED_REVIEW
+  DORMANT_REACTIVATION
+  CLOSED_DO_NOT_REACTIVATE
+  AMBIGUOUS_IDENTITY
+  TEST_JUNK
+}
+
+model LeadAttribution {
+  id              String                 @id @default(cuid())
+  clientId        String
+  source          AttributionSource      @default(unknown)
+  platform        String?
+  campaignId      String?
+  campaignName    String?
+  contentId       String?
+  adId            String?
+  cta             String?
+  leadAt          DateTime?
+  consultBookedAt DateTime?
+  showStatus      AttributionShowStatus  @default(unknown)
+  converted       Boolean?
+  service         String?
+  /// Cents. Null until filled from a verified payment fact only.
+  amountCollected Int?
+  /// City/market stamp. Null = unstamped (revenue-by-market stays DATA UNAVAILABLE).
+  market          AcquisitionMarket?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([source])
+  @@index([campaignId])
+  @@index([contentId])
+  @@index([market])
+}
+
+/// Engine A — referral partner pipeline. Enum only; not live GHL writes.
+enum PartnerPipelineStage {
+  NEW_PROSPECT
+  QUALIFIED_PARTNER_PROSPECT
+  OUTREACH_READY
+  CONTACTED
+  REPLIED
+  INTRO_CALL
+  PARTNER_INTERESTED
+  ACTIVE_REFERRAL_PARTNER
+  REFERRED_FIRST_CLIENT
+  ACTIVE_PRODUCING_PARTNER
+  NURTURE
+  NOT_INTERESTED
+  DND
+}
+
+/// Engine B — consumer lead pipeline on the existing Client master.
+enum ConsumerLeadStage {
+  NEW_LEAD
+  ATTEMPTING_CONTACT
+  ENGAGED
+  CONSULTATION_BOOKED
+  CONSULTATION_COMPLETED
+  QUALIFIED
+  PAYMENT_PENDING
+  PAID_ONBOARDING
+  CONVERTED_CLIENT
+  NURTURE
+  LOST
+  DND
+}
+
+/// Command-center source taxonomy. Missing stamp ≠ ORGANIC (see parseAcquisitionSource).
+enum AcquisitionSource {
+  GHL_PROSPECTING
+  PROSPECT_AI
+  REALTOR_PARTNER
+  MORTGAGE_PARTNER
+  BUILDER_PARTNER
+  FORMER_CLIENT_REFERRAL
+  FACEBOOK
+  INSTAGRAM
+  GOOGLE
+  WEBSITE
+  ORGANIC
+  EMAIL_CAMPAIGN
+  REACTIVATION_CAMPAIGN
+  OTHER
+}
+
+/// Charles-locked city/market vocabulary for partner prospecting.
+/// PRIMARY is the default start set. SECONDARY is supported. UNKNOWN/OTHER allowed.
+/// Estill, SC is not a member and must never be a default.
+enum AcquisitionMarket {
+  HILTON_HEAD_ISLAND_SC
+  BLUFFTON_SC
+  SAVANNAH_GA
+  ATLANTA_GA
+  WASHINGTON_DC
+  ARLINGTON_VA
+  CHARLOTTE_NC
+  COLUMBIA_SC
+  CHARLESTON_SC
+  AUGUSTA_GA
+  ALEXANDRIA_VA
+  FAIRFAX_VA
+  RICHMOND_VA
+  UNKNOWN
+  OTHER
+}
+
+/// Business referral partner — never a Client / credit-repair human.
+model Partner {
+  id                         String               @id @default(cuid())
+  businessName               String
+  contactFirstName           String?
+  contactLastName            String?
+  email                      String?
+  emailNormalized            String?
+  phone                      String?
+  phoneNormalized            String?
+  partnerType                String?
+  pipelineStage              PartnerPipelineStage @default(NEW_PROSPECT)
+  acquisitionSource          AcquisitionSource?
+  /// Required city/market. No Estill default — must be an AcquisitionMarket value.
+  market                     AcquisitionMarket
+  grantsLeadScore            Int?
+  grantsLeadScoreReasonsJson String?
+  doNotContact               Boolean              @default(false)
+  unsubscribed               Boolean              @default(false)
+  notes                      String?
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
+
+  referrals       PartnerReferral[]
+  referredClients Client[]          @relation("PartnerReferredClients")
+
+  @@index([pipelineStage])
+  @@index([emailNormalized])
+  @@index([phoneNormalized])
+  @@index([market])
+}
+
+/// Links Partner → Client only after the referred consumer converts on an existing master.
+model PartnerReferral {
+  id        String            @id @default(cuid())
+  partnerId String
+  clientId  String
+  /// Required. Copied from the partner / partner-attributed consumer stamp.
+  market    AcquisitionMarket
+  createdAt DateTime          @default(now())
+
+  partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  client  Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([partnerId, clientId])
+  @@index([partnerId])
+  @@index([clientId])
+  @@index([market])
+}
+
+enum ConversationKind {
+  CLIENT
+  TEAM
+  CLIENT_INTERNAL
+}
+
+enum MessageChannel {
+  INTERNAL
+  SMS
+  EMAIL
+  CALL
+  VOICEMAIL
+  NOTE
+  SYSTEM
+}
+
+model Conversation {
+  id            String           @id @default(cuid())
+  kind          ConversationKind
+  subject       String?
+  clientId      String?
+  lastMessageAt DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  client       Client?                   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([kind, lastMessageAt])
+  @@index([clientId])
+}
+
+model ConversationParticipant {
+  id             String    @id @default(cuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String         @id @default(cuid())
+  conversationId String
+  senderId       String?
+  channel        MessageChannel @default(INTERNAL)
+  body           String
+  isInternal     Boolean        @default(true)
+  deliveryStatus String         @default("RECORDED") // RECORDED SENT DELIVERED FAILED
+  metadataJson   String?
+  provider       String? // GHL when imported from an inbound conversation pull
+  externalId     String? // Provider message id — used to refuse duplicate imports
+  createdAt      DateTime       @default(now())
+
+  conversation Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User?            @relation("MessageSender", fields: [senderId], references: [id])
+  mentions     MessageMention[]
+
+  @@unique([provider, externalId])
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+}
+
+model MessageMention {
+  id        String   @id @default(cuid())
+  messageId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+}
+
+model OnboardingItem {
+  id          String    @id @default(cuid())
+  clientId    String
+  key         String
+  label       String
+  status      String    @default("MISSING") // COMPLETE MISSING WAIVED
+  completedAt DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, key])
+  @@index([clientId, status])
+}
+
+model DisputeRound {
+  id                 String    @id @default(cuid())
+  clientId           String
+  roundNumber        Int
+  status             String    @default("PREPARING")
+  preparedAt         DateTime?
+  sentAt             DateTime?
+  resultsReceivedAt  DateTime?
+  nextReviewAt       DateTime?
+  negativeItemsCount Int       @default(0)
+  deletedItemsCount  Int       @default(0)
+  remainingItemsCount Int      @default(0)
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, roundNumber])
+  @@index([clientId, status])
+}
+
+model FridayPulseRun {
+  id          String   @id @default(cuid())
+  weekOf      DateTime
+  status      String   @default("DRAFT") // DRAFT RUNNING COMPLETED
+  triggeredBy String?
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+
+  items FridayPulseItem[]
+
+  @@index([weekOf])
+}
+
+model FridayPulseItem {
+  id              String   @id @default(cuid())
+  runId           String
+  clientId        String
+  statusUpdate    String
+  updateStatus    String   @default("PENDING") // PENDING SENT FAILED SKIPPED
+  scoreRequestStatus String @default("PENDING")
+  scoreResponseStatus String @default("NONE")
+  reviewRequired  Boolean  @default(false)
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  run    FridayPulseRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  client Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, clientId])
+  @@index([clientId])
+}
+
+model IdSequence {
+  name  String @id
+  value Int    @default(0)
+}
+
+// ─── Grants Agent Hub ─────────────────────────────────────────────────────────
+
+model AgentDefinition {
+  id              String   @id // e.g. x1-operations
+  displayName     String
+  role            String
+  mode            String   // EXTERNAL_AGENT | GRANTS_NATIVE_AGENT
+  instructions    String
+  allowedToolsJson String  // JSON string[]
+  deniedToolsJson  String  // JSON string[]
+  permissionsJson String   // JSON string[]
+  maxAutonomyLevel Int     @default(1) // 0..3
+  scopesJson      String   // JSON string[]
+  status          String   @default("IDLE") // IDLE WORKING WAITING BLOCKED ERROR
+  currentTaskId   String?
+  metadataJson    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  memories    AgentMemory[]
+  tasksOwned  AgentTask[]   @relation("TaskOwner")
+  tasksAssigned AgentTask[] @relation("TaskAssignee")
+  events      AgentEvent[]
+  messages    AgentMessage[]
+  approvals   OwnerApproval[]
+}
+
+model AgentMemory {
+  id        String   @id @default(cuid())
+  agentId   String
+  kind      String   // FACT | PREFERENCE | WORKING | EPISODE
+  key       String
+  valueJson String
+  durable   Boolean  @default(true)
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agent AgentDefinition @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, key])
+  @@index([agentId, kind])
+}
+
+model BusinessFact {
+  id          String   @id @default(cuid())
+  category    String   // ARCHITECTURE | MAPPING | WORKFLOW | RULE | DECISION | QA
+  key         String   @unique
+  title       String
+  valueJson   String
+  sourceAgent String?
+  durable     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+}
+
+model AgentTask {
+  id              String   @id @default(cuid())
+  idempotencyKey  String?  @unique
+  type            String   // ASK | CODE_CHANGE_REQUIRED | SYNC | QA | APPROVAL | GENERIC
+  eventKind       String?  // CLIENT_SYNC_REQUIRED | PAYMENT_EXCEPTION | ...
+  title           String
+  prompt          String
+  status          String   @default("QUEUED")
+  // QUEUED | ROUTING | IN_PROGRESS | WAITING_AGENT | WAITING_CURSOR | AWAITING_CURSOR_API_KEY
+  // AWAITING_APPROVAL | COMPLETED | FAILED | CANCELLED | DENIED
+  autonomyLevel   Int      @default(0)
+  priority        String   @default("NORMAL")
+  ownerAgentId    String?
+  assigneeAgentId String?
+  parentTaskId    String?
+  resultJson      String?
+  errorMessage    String?
+  cursorAgentId   String?
+  cursorRunId     String?
+  cursorUrl       String?
+  grantsClientId  String?
+  metadataJson    String?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  ownerAgent    AgentDefinition? @relation("TaskOwner", fields: [ownerAgentId], references: [id])
+  assigneeAgent AgentDefinition? @relation("TaskAssignee", fields: [assigneeAgentId], references: [id])
+  parentTask    AgentTask?       @relation("TaskTree", fields: [parentTaskId], references: [id])
+  childTasks    AgentTask[]      @relation("TaskTree")
+  events        AgentEvent[]
+  messages      AgentMessage[]
+  approvals     OwnerApproval[]
+
+  @@index([status])
+  @@index([assigneeAgentId, status])
+  @@index([type, status])
+  @@index([createdAt])
+}
+
+model AgentEvent {
+  id           String   @id @default(cuid())
+  kind         String
+  taskId       String?
+  agentId      String?
+  payloadJson  String?
+  createdAt    DateTime @default(now())
+
+  task  AgentTask?       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  agent AgentDefinition? @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@index([kind, createdAt])
+  @@index([taskId])
+}
+
+model AgentMessage {
+  id         String   @id @default(cuid())
+  taskId     String?
+  agentId    String?
+  role       String   // CURSOR | AGENT | SYSTEM | OWNER
+  body       String
+  metadataJson String?
+  createdAt  DateTime @default(now())
+
+  task  AgentTask?       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  agent AgentDefinition? @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, createdAt])
+}
+
+model OwnerApproval {
+  id            String   @id @default(cuid())
+  taskId        String?
+  agentId       String?
+  title         String
+  what          String
+  why           String
+  risk          String
+  status        String   @default("PENDING") // PENDING APPROVED DENIED EXPIRED
+  decidedById   String?
+  decidedAt     DateTime?
+  decisionNote  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  task  AgentTask?       @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  agent AgentDefinition? @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+}
+
+// --- Grants Pay payment requests (Commas-primary hosted checkout) ---
+
+enum PaymentRequestStatus {
+  DRAFT
+  PENDING
+  SENT
+  VIEWED
+  PAID
+  PARTIALLY_PAID
+  FAILED
+  CANCELED
+  EXPIRED
+  REFUNDED
+  PARTIALLY_REFUNDED
+  DISPUTED
+}
+
+enum PaymentLinkKind {
+  ONE_TIME
+  RECURRING
+  PARTIAL
+}
+
+model PaymentRequest {
+  id                String               @id @default(cuid())
+  publicId          String               @unique // GP-######
+  clientId          String
+  invoiceId         String?
+  status            PaymentRequestStatus @default(PENDING)
+  amountCents       Int
+  amountPaidCents   Int                  @default(0)
+  currency          String               @default("USD")
+  serviceName       String?
+  description       String?
+  dueAt             DateTime?
+  notes             String?
+  allowPartial      Boolean              @default(false)
+  recurring         Boolean              @default(false)
+  recurringDays     Int?
+  provider          String               @default("commas")
+  createdByUserId   String?
+  sentAt            DateTime?
+  paidAt            DateTime?
+  canceledAt        DateTime?
+  metadataJson      String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  client   Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  invoice  Invoice?      @relation(fields: [invoiceId], references: [id])
+  links    PaymentLink[]
+  notesLog PaymentRequestNote[]
+
+  @@index([clientId, status])
+  @@index([invoiceId])
+  @@index([status, dueAt])
+}
+
+model PaymentRequestNote {
+  id               String   @id @default(cuid())
+  paymentRequestId String
+  body             String
+  createdByUserId  String?
+  createdAt        DateTime @default(now())
+
+  paymentRequest PaymentRequest @relation(fields: [paymentRequestId], references: [id], onDelete: Cascade)
+
+  @@index([paymentRequestId])
+}
+
+model PaymentLink {
+  id                   String          @id @default(cuid())
+  paymentRequestId     String?
+  invoiceId            String?
+  clientId             String
+  kind                 PaymentLinkKind @default(ONE_TIME)
+  provider             String
+  providerSessionId    String?
+  providerCheckoutId   String?
+  url                  String
+  osPayPath            String?
+  status               String          @default("ACTIVE") // ACTIVE USED EXPIRED CANCELED
+  expiresAt            DateTime?
+  lastSentChannel      String?
+  lastSentAt           DateTime?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  paymentRequest PaymentRequest? @relation(fields: [paymentRequestId], references: [id], onDelete: SetNull)
+  invoice        Invoice?        @relation(fields: [invoiceId], references: [id])
+  client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([invoiceId])
+  @@index([provider, providerSessionId])
+  @@index([paymentRequestId])
+}
+
+model OnboardingToken {
+  id              String    @id @default(cuid())
+  tokenHash       String    @unique
+  tokenPrefix     String
+  clientId        String
+  invoiceId       String?
+  paymentId       String?
+  serviceName     String?
+  email           String
+  phone           String?
+  expiresAt       DateTime
+  usedAt          DateTime?
+  revokedAt       DateTime?
+  prefillJson     String?
+  answersJson     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([expiresAt])
+}
+
+model AutomationRun {
+  id             String    @id @default(cuid())
+  kind           String // PAYMENT_COMPLETED | INTAKE_COMPLETED | FRIDAY_CREDIT_PULSE | INVOICE_REMINDER | ...
+  status         String    @default("QUEUED") // QUEUED RUNNING SUCCEEDED FAILED SKIPPED
+  clientId       String?
+  entityType     String?
+  entityId       String?
+  idempotencyKey String?   @unique
+  attempt        Int       @default(0)
+  maxAttempts    Int       @default(5)
+  nextRetryAt    DateTime?
+  errorMessage   String?
+  resultJson     String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([kind, status])
+  @@index([status, nextRetryAt])
+  @@index([clientId])
+}
+
+model ExceptionTicket {
+  id          String    @id @default(cuid())
+  kind        String
+  severity    String    @default("NORMAL") // LOW NORMAL HIGH CRITICAL
+  title       String
+  detail      String?
+  status      String    @default("OPEN") // OPEN ACKNOWLEDGED RESOLVED
+  clientId    String?
+  entityType  String?
+  entityId    String?
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([status, severity])
+  @@index([clientId])
+}
+
+model SystemHealthCheck {
+  id              String   @id @default(cuid())
+  component       String   @unique // commas | ghl | disputefox | smartcredit | email | sms | voice | database | queues | webhooks | jobs
+  status          String   // CONNECTED | DEGRADED | ACTION_REQUIRED | OFFLINE
+  detail          String?
+  lastSuccessAt   DateTime?
+  lastFailureAt   DateTime?
+  lastCheckedAt   DateTime @default(now())
+  metadataJson    String?
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+}

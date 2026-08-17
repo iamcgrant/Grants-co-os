@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Production deploy helper for Grants & Co OS → Vercel + Postgres.
+# Production deploy for Grants & Co OS → Vercel + Neon (Marketplace) Postgres.
 # Does not invent credentials. Fails closed with ACTION_REQUIRED when secrets missing.
+# Never prints secret values.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -15,59 +16,122 @@ need() {
 }
 
 need VERCEL_TOKEN
-need DATABASE_URL
-
-if [[ "${DATABASE_URL}" != postgres* && "${DATABASE_URL}" != postgresql* ]]; then
-  echo "ACTION_REQUIRED: DATABASE_URL must be a production postgresql:// connection string (not SQLite)."
-  exit 2
-fi
 
 export NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-https://os.grantsandco.com}"
 export PAYMENT_PROVIDER="${PAYMENT_PROVIDER:-commas}"
 export COMMAS_ENVIRONMENT="${COMMAS_ENVIRONMENT:-sandbox}"
+export COMMAS_LIVE_CHARGES="${COMMAS_LIVE_CHARGES:-false}"
+export GC_ENV="${GC_ENV:-production}"
 
-if [[ -z "${AUTH_SECRET:-}" ]]; then
-  echo "ACTION_REQUIRED: set AUTH_SECRET for production sessions."
+# Internal secrets: prefer env, else load from agent-generated files (never commit).
+if [[ -z "${AUTH_SECRET:-}" && -f /tmp/gc_auth_secret.val ]]; then
+  AUTH_SECRET="$(tr -d '\n' < /tmp/gc_auth_secret.val)"
+  export AUTH_SECRET
+fi
+if [[ -z "${GC_CRON_SECRET:-}" && -f /tmp/gc_cron_secret.val ]]; then
+  GC_CRON_SECRET="$(tr -d '\n' < /tmp/gc_cron_secret.val)"
+  export GC_CRON_SECRET
+fi
+
+need AUTH_SECRET
+need GC_CRON_SECRET
+need COMMAS_API_KEY
+need GHL_API_KEY
+need GHL_LOCATION_ID
+
+PROJECT_NAME="${VERCEL_PROJECT_NAME:-grants-co-os}"
+SCOPE_ARGS=()
+if [[ -n "${VERCEL_ORG_ID:-}" ]]; then
+  SCOPE_ARGS+=(--scope "$VERCEL_ORG_ID")
+fi
+
+echo "Linking Vercel project ${PROJECT_NAME} to iamcgrant/Grants-co-os…"
+npx vercel link --yes --project "$PROJECT_NAME" --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}" || \
+  npx vercel project add "$PROJECT_NAME" --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}"
+
+# Persist org/project ids if present after link
+if [[ -f .vercel/project.json ]]; then
+  echo "Linked project metadata written to .vercel/project.json (gitignored)."
+fi
+
+echo "Provisioning Neon Postgres via Vercel Marketplace (not discontinued Vercel Postgres)…"
+if ! npx vercel integration list --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}" 2>/dev/null | rg -qi 'neon|postgres'; then
+  npx vercel install neon \
+    --name grants-co-os-db \
+    --plan free \
+    -e production \
+    -e preview \
+    --token "$VERCEL_TOKEN" \
+    "${SCOPE_ARGS[@]}" \
+    --yes || {
+      echo "ACTION_REQUIRED: Neon Marketplace install needs Vercel account terms acceptance or plan selection in the dashboard."
+      echo "Open: https://vercel.com/marketplace/neon — Install → connect to project ${PROJECT_NAME} → enable backups."
+      exit 2
+    }
+fi
+
+echo "Pulling production env (includes DATABASE_URL from Neon when connected)…"
+npx vercel env pull .env.vercel.production --environment=production --yes --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}" || true
+
+if [[ -f .env.vercel.production ]]; then
+  # shellcheck disable=SC1091
+  set -a
+  # Only import DATABASE_URL from pulled file if not already set
+  if [[ -z "${DATABASE_URL:-}" ]]; then
+    DATABASE_URL="$(rg -N '^DATABASE_URL=' .env.vercel.production | head -1 | cut -d= -f2- | sed 's/^"//;s/"$//')"
+    export DATABASE_URL
+  fi
+  set +a
+fi
+
+if [[ -z "${DATABASE_URL:-}" || ( "${DATABASE_URL}" != postgres* && "${DATABASE_URL}" != postgresql* ) ]]; then
+  echo "ACTION_REQUIRED: DATABASE_URL missing after Neon install. Connect Neon to the project in Vercel Storage, enable automated backups, then re-run."
   exit 2
 fi
 
-if [[ -z "${COMMAS_API_KEY:-}" ]]; then
-  echo "ACTION_REQUIRED: set COMMAS_API_KEY before production money path."
-  exit 2
+upsert_env() {
+  local key="$1"
+  local val="$2"
+  local env_target="${3:-production}"
+  # vercel env add is interactive; use API-style stdin trick
+  printf '%s' "$val" | npx vercel env add "$key" "$env_target" --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}" --force 2>/dev/null \
+    || printf '%s' "$val" | npx vercel env add "$key" "$env_target" --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}" 2>/dev/null \
+    || echo "WARN: could not upsert $key via CLI — set it in Vercel Project → Settings → Environment Variables"
+}
+
+echo "Upserting required production env vars (values not echoed)…"
+upsert_env NEXT_PUBLIC_APP_URL "$NEXT_PUBLIC_APP_URL"
+upsert_env PAYMENT_PROVIDER "$PAYMENT_PROVIDER"
+upsert_env COMMAS_ENVIRONMENT "$COMMAS_ENVIRONMENT"
+upsert_env COMMAS_LIVE_CHARGES "$COMMAS_LIVE_CHARGES"
+upsert_env AUTH_SECRET "$AUTH_SECRET"
+upsert_env GC_CRON_SECRET "$GC_CRON_SECRET"
+upsert_env GC_ENV production
+upsert_env COMMAS_API_KEY "$COMMAS_API_KEY"
+upsert_env GHL_API_KEY "$GHL_API_KEY"
+upsert_env GHL_LOCATION_ID "$GHL_LOCATION_ID"
+if [[ -n "${COMMAS_WEBHOOK_SECRET:-}" ]]; then
+  upsert_env COMMAS_WEBHOOK_SECRET "$COMMAS_WEBHOOK_SECRET"
+fi
+if [[ -n "${COMMAS_CREATOR_HANDLE:-}" ]]; then
+  upsert_env COMMAS_CREATOR_HANDLE "$COMMAS_CREATOR_HANDLE"
 fi
 
-echo "Installing Vercel CLI deps if needed…"
-npx vercel --version >/dev/null
+echo "Running production schema migrate…"
+bash scripts/migrate-production.sh
 
-echo "Linking / pulling project (non-interactive)…"
-npx vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
-
-echo "Building…"
+echo "Building & deploying production…"
+npx vercel pull --yes --environment=production --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}"
 npx vercel build --prod --token "$VERCEL_TOKEN"
-
-echo "Deploying production…"
-URL=$(npx vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN")
+URL=$(npx vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}")
 echo "Deployed: $URL"
 
-echo "Setting critical env on Vercel project (idempotent)…"
-# Note: vercel env add is interactive; prefer dashboard or vercel env for CI.
-cat <<EOF
-ACTION NEXT (if not already set in Vercel project env):
-  NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
-  DATABASE_URL=<postgres>
-  AUTH_SECRET=<long random>
-  PAYMENT_PROVIDER=commas
-  COMMAS_API_KEY=<sandbox/prod>
-  COMMAS_WEBHOOK_SECRET=<from webhook register>
-  COMMAS_ENVIRONMENT=sandbox
-  COMMAS_LIVE_CHARGES=false
-  GHL_API_KEY / GHL_LOCATION_ID
-  GC_CRON_SECRET=<random>
-  Domain: os.grantsandco.com → Vercel
+echo "Adding domain os.grantsandco.com…"
+DOMAIN_OUT=$(npx vercel domains add os.grantsandco.com --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}" 2>&1 || true)
+echo "$DOMAIN_OUT"
+INSPECT=$(npx vercel domains inspect os.grantsandco.com --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}" 2>&1 || true)
+echo "$INSPECT"
+echo "ACTION_REQUIRED (DNS): apply the EXACT records printed above from Vercel (do not guess CNAME targets)."
 
-Then run:
-  npx tsx scripts/commas-register-webhook.ts
-  # apply Prisma migrations against production DATABASE_URL
-  npm run test
-  npx tsx scripts/production-e2e.ts
-EOF
+echo "Done. Next: npm run commas:register-webhook with NEXT_PUBLIC_APP_URL=https://os.grantsandco.com"
+echo "Then smoke-test https://os.grantsandco.com/api/health"

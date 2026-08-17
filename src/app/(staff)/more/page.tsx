@@ -92,6 +92,13 @@ export default async function MorePage() {
             Payment → intake → staffing · exceptions only when needed.
           </p>
         </Link>
+        <Link href="/downloads" className="gc-card hover:bg-white/[0.06] transition-colors">
+          <p className="gc-eyebrow mb-2">Desktop</p>
+          <p className="text-xl display">Download OS</p>
+          <p className="text-sm text-[var(--gc-muted)] mt-2">
+            Mac, Windows, and Linux installers when release URLs are configured.
+          </p>
+        </Link>
         <Link href="/dashboard" className="gc-card hover:bg-white/[0.06] transition-colors">
           <p className="gc-eyebrow mb-2">Legacy</p>
           <p className="text-xl display">Finance health</p>
