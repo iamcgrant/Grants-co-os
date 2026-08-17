@@ -1,19 +1,17 @@
 #!/usr/bin/env npx tsx
 /**
- * FINAL PRODUCTION LAUNCH readiness gate.
- * Never declares PRODUCTION COMPLETE while mock / localhost / missing secrets remain.
- * Does not print secret values.
+ * Production launch readiness — fixed 11 gates.
+ * Exit 0 only on 11/11. Never prints secret values.
  */
 import "dotenv/config";
 
-type Gate = { id: string; ok: boolean; detail: string; blocker?: boolean };
+type Gate = { id: string; ok: boolean; detail: string };
 
 const gates: Gate[] = [];
 
-function gate(id: string, ok: boolean, detail: string, blocker = false) {
-  gates.push({ id, ok, detail, blocker });
-  const mark = ok ? "OK  " : blocker ? "BLOCK" : "WARN";
-  console.log(`${mark}  ${id} — ${detail}`);
+function gate(id: string, ok: boolean, detail: string) {
+  gates.push({ id, ok, detail });
+  console.log(`${ok ? "PASS" : "FAIL"}  ${id} — ${detail}`);
 }
 
 function present(name: string): boolean {
@@ -43,12 +41,8 @@ async function probeGhlOutbound(): Promise<{ ok: boolean; detail: string }> {
   });
   const body = await res.text();
   if (res.status === 401 || res.status === 403) {
-    return {
-      ok: false,
-      detail: `PIT missing conversations/message.write (HTTP ${res.status})`,
-    };
+    return { ok: false, detail: `PIT missing conversations/message.write (HTTP ${res.status})` };
   }
-  // 404/422 on dummy contact means the write scope is present
   if (res.status === 404 || res.status === 422 || res.status === 400) {
     return { ok: true, detail: `Write scope appears present (HTTP ${res.status})` };
   }
@@ -71,89 +65,69 @@ async function probePublicOrigin(url: string): Promise<{ ok: boolean; detail: st
 }
 
 async function main() {
-  console.log("=== Grants & Co OS — Launch Readiness ===\n");
+  console.log("=== Grants & Co OS — Launch Readiness (11 gates) ===\n");
 
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
   const paymentProvider = (process.env.PAYMENT_PROVIDER || "mock").toLowerCase();
   const db = process.env.DATABASE_URL || "";
 
+  gate("1_commas_api_key", present("COMMAS_API_KEY"), present("COMMAS_API_KEY") ? "set" : "ACTION_REQUIRED: Commas dashboard → COMMAS_API_KEY");
   gate(
-    "commas_api_key",
-    present("COMMAS_API_KEY"),
-    present("COMMAS_API_KEY") ? "set" : "missing — add Cursor/host secret",
-    true,
-  );
-  gate(
-    "commas_webhook_secret",
+    "2_commas_webhook_secret",
     present("COMMAS_WEBHOOK_SECRET"),
-    present("COMMAS_WEBHOOK_SECRET") ? "set" : "missing — register webhook then store secret",
-    true,
+    present("COMMAS_WEBHOOK_SECRET") ? "set" : "ACTION_REQUIRED: run commas:register-webhook after public URL",
   );
   gate(
-    "payment_provider_commas",
+    "3_payment_provider_commas",
     paymentProvider === "commas",
-    `PAYMENT_PROVIDER=${paymentProvider} (need commas)`,
-    true,
+    `PAYMENT_PROVIDER=${paymentProvider}`,
   );
   gate(
-    "public_app_url",
+    "4_public_app_url",
     Boolean(appUrl) && !appUrl.includes("localhost") && appUrl.startsWith("https://"),
     appUrl || "NEXT_PUBLIC_APP_URL unset",
-    true,
   );
   gate(
-    "production_postgres",
+    "5_production_postgres",
     isPostgres(db),
-    isPostgres(db) ? "postgresql configured" : `DATABASE_URL is not Postgres (${db.slice(0, 24)}…)`,
-    true,
+    isPostgres(db) ? "postgresql configured" : "ACTION_REQUIRED: Neon/Supabase DATABASE_URL",
+  );
+  gate("6_auth_secret", present("AUTH_SECRET"), present("AUTH_SECRET") ? "set" : "missing AUTH_SECRET");
+  gate(
+    "7_gc_cron_secret",
+    present("GC_CRON_SECRET") || present("CRON_SECRET"),
+    present("GC_CRON_SECRET") || present("CRON_SECRET") ? "set" : "missing GC_CRON_SECRET",
   );
   gate(
-    "auth_secret",
-    present("AUTH_SECRET"),
-    present("AUTH_SECRET") ? "set" : "missing",
-    true,
-  );
-  gate(
-    "vercel_token",
+    "8_vercel_token",
     present("VERCEL_TOKEN"),
-    present("VERCEL_TOKEN") ? "set" : "missing — needed for npm run deploy:production",
-    true,
+    present("VERCEL_TOKEN") ? "set" : "ACTION_REQUIRED: vercel.com/account/tokens → VERCEL_TOKEN",
   );
-  gate("ghl_api_key", present("GHL_API_KEY"), present("GHL_API_KEY") ? "set" : "missing", false);
-  gate(
-    "ghl_location",
-    present("GHL_LOCATION_ID"),
-    present("GHL_LOCATION_ID") ? "set" : "missing",
-    false,
-  );
+  gate("9_ghl_inbound", present("GHL_API_KEY") && present("GHL_LOCATION_ID"), present("GHL_API_KEY") && present("GHL_LOCATION_ID") ? "set" : "missing GHL credentials");
 
   const outbound = await probeGhlOutbound();
-  gate("ghl_outbound_write_scope", outbound.ok, outbound.detail, true);
+  gate("10_ghl_outbound_write", outbound.ok, outbound.detail);
 
   if (appUrl && appUrl.startsWith("https://") && !appUrl.includes("localhost")) {
     const pub = await probePublicOrigin(appUrl);
-    gate("public_health", pub.ok, pub.detail, true);
+    gate("11_public_health", pub.ok, pub.detail);
   } else {
-    gate("public_health", false, "skipped — no public HTTPS origin", true);
+    gate("11_public_health", false, "skipped — no public HTTPS origin yet");
   }
 
-  const blockers = gates.filter((g) => !g.ok && g.blocker);
-  const warnings = gates.filter((g) => !g.ok && !g.blocker);
+  const passed = gates.filter((g) => g.ok).length;
+  console.log(`\n--- ${passed}/11 PASS ---`);
 
-  console.log("\n--- Summary ---");
-  console.log(`Pass: ${gates.filter((g) => g.ok).length}/${gates.length}`);
-  console.log(`Blockers: ${blockers.length}`);
-  console.log(`Warnings: ${warnings.length}`);
-
-  if (blockers.length > 0) {
+  if (passed < 11) {
     console.log("\nNOT PRODUCTION-COMPLETE");
-    console.log("ACTION_REQUIRED blockers:");
-    for (const b of blockers) console.log(`  - ${b.id}: ${b.detail}`);
+    for (const g of gates.filter((x) => !x.ok)) {
+      console.log(`  - ${g.id}: ${g.detail}`);
+    }
     process.exit(3);
   }
 
-  console.log("\nPRODUCTION-COMPLETE gate passed (secrets + public health + Commas + GHL write).");
-  console.log("Still run full E2E: npm run e2e:production");
+  console.log("\n11/11 PASS — production readiness gate cleared.");
+  console.log("Next: npm run e2e:production && npm run smoke:production");
 }
 
 main().catch((e) => {

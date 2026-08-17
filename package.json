@@ -16,6 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "desktop:prepare": "node scripts/prepare-desktop-shell.mjs",
+    "desktop:smoke": "node scripts/desktop-smoke-check.mjs",
     "agent-mesh": "tsx agent-mesh/server.ts",
     "ghl:inbound-sync": "tsx scripts/ghl-inbound-sync.ts",
     "ghl:inbound-conversations": "tsx scripts/ghl-inbound-conversations.ts",
@@ -26,7 +27,10 @@
     "postinstall": "node scripts/prisma-generate.mjs",
     "commas:register-webhook": "tsx scripts/commas-register-webhook.ts",
     "deploy:production": "bash scripts/deploy-production.sh",
+    "go:live": "bash scripts/go-live.sh",
+    "domain:configure": "bash scripts/configure-domain.sh",
     "e2e:production": "tsx scripts/production-e2e.ts",
+    "smoke:production": "tsx scripts/production-smoke.ts",
     "launch:readiness": "tsx scripts/launch-readiness.ts",
     "desktop:linux": "node scripts/prepare-desktop-shell.mjs && cd desktop && npm install && npm run build"
   },

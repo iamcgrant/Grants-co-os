@@ -25,7 +25,16 @@ cd desktop && npm install && npm run build
 
 Requires Rust ≥ 1.88 and `libwebkit2gtk-4.1-dev` on Linux.
 
-`prepare-desktop-shell.mjs` generates a luxury black/champagne splash page that navigates to the production URL with `window.location.replace()` (no meta-refresh). Icons are regenerated via `scripts/generate-desktop-icons.mjs`.
+`prepare-desktop-shell.mjs` generates a luxury black/champagne splash page that probes the production URL with retries, shows an offline banner when the network is down, and navigates with `window.location.replace()` (no meta-refresh). Icons are regenerated via `scripts/generate-desktop-icons.mjs`.
+
+### Smoke check
+
+```bash
+npm run desktop:smoke
+# or: node scripts/desktop-smoke-check.mjs
+```
+
+Verifies `tauri.conf.json` branding/identifier/bundle targets, capabilities, shell preparation, and that Linux AppImage/deb artifacts exist (in `desktop/src-tauri/target/release/bundle` or `/opt/cursor/artifacts/desktop`).
 
 ## CI release workflow
 
@@ -52,6 +61,23 @@ Linux AppImage/deb do not require signing for internal distribution.
 ### Updater
 
 `tauri.conf.json` includes updater scaffolding with a placeholder pubkey (`REPLACE_WITH_TAURI_UPDATER_PUBKEY_WHEN_SIGNING_IS_READY`). Replace with a real Tauri updater keypair before enabling auto-update in production.
+
+## Go-live checklist
+
+Ship desktop downloads **only after** the web app is live at `https://os.grantsandco.com`.
+
+1. **Confirm production web** — staff can sign in and use core flows on `https://os.grantsandco.com`.
+2. **Tag a desktop release** — from `main` (or your release branch), push a tag such as `desktop-v0.1.0`. This triggers `.github/workflows/desktop-release.yml` for macOS, Windows, and Linux.
+3. **Review the draft GitHub Release** — download and smoke-test each platform artifact. Publish the release when ready.
+4. **Set download env vars** — in Vercel/Cursor production secrets, point each `GC_DESKTOP_*_URL` at the **direct asset URLs** from the published release (not the releases index page):
+   - `GC_DESKTOP_MAC_URL` — macOS `.dmg` or `.app` zip
+   - `GC_DESKTOP_WIN_URL` — Windows `.msi` or `.exe` installer
+   - `GC_DESKTOP_LINUX_URL` — Linux `.AppImage` or `.deb`
+   - `GC_DESKTOP_RELEASES_URL` — optional link to the GitHub Releases index
+5. **Redeploy the web app** — env changes require a production deploy before `/downloads` picks them up.
+6. **Verify `/downloads`** — buttons appear only when the URLs above are set; until then the page shows **Coming soon** / **Release pending**.
+
+Do **not** expose unfinished or unsigned builds on `/downloads` before step 4.
 
 ## Web app download page
 

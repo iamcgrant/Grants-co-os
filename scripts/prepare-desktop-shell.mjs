@@ -39,6 +39,22 @@ const html = `<!doctype html>
         font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
         overflow: hidden;
       }
+      .offline-banner {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 10;
+        padding: 0.55rem 1rem;
+        background: rgba(22, 22, 26, 0.96);
+        border-bottom: 1px solid rgba(245, 184, 42, 0.35);
+        color: var(--gc-gold);
+        font-size: 0.72rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        text-align: center;
+      }
+      .offline-banner[hidden] { display: none; }
       .shell {
         position: relative;
         height: 100%;
@@ -142,6 +158,9 @@ const html = `<!doctype html>
     </style>
   </head>
   <body>
+    <div class="offline-banner" id="offline-banner" hidden role="status">
+      You appear to be offline — Grants &amp; Co OS will open when your connection returns
+    </div>
     <div class="shell">
       <div class="panel">
         <div class="mark" aria-hidden="true"><span>G</span></div>
@@ -156,7 +175,26 @@ const html = `<!doctype html>
     <script>
       (function () {
         var APP_URL = ${JSON.stringify(appUrl)};
+        var MAX_ATTEMPTS = 4;
+        var RETRY_MS = 1800;
         var navigated = false;
+        var statusEl = document.getElementById("status");
+        var offlineBanner = document.getElementById("offline-banner");
+        var fallbackLink = document.getElementById("fallback");
+
+        function setStatus(text) {
+          if (statusEl) statusEl.textContent = text;
+        }
+
+        function updateOfflineBanner() {
+          if (!offlineBanner) return;
+          offlineBanner.hidden = navigator.onLine;
+        }
+
+        function showFallback() {
+          if (fallbackLink) fallbackLink.hidden = false;
+          setStatus("Tap continue if loading stalls");
+        }
 
         function navigate() {
           if (navigated) return;
@@ -165,16 +203,46 @@ const html = `<!doctype html>
           window.location.replace(APP_URL);
         }
 
-        function showFallback() {
-          var link = document.getElementById("fallback");
-          var status = document.getElementById("status");
-          if (link) link.hidden = false;
-          if (status) status.textContent = "Tap continue if loading stalls";
+        function probeReachable() {
+          if (!navigator.onLine) return Promise.resolve(false);
+          return fetch(APP_URL, { method: "HEAD", mode: "no-cors", cache: "no-store" })
+            .then(function () { return true; })
+            .catch(function () { return false; });
         }
 
+        function attemptLaunch(attempt) {
+          if (navigated) return;
+
+          if (!navigator.onLine) {
+            setStatus("Waiting for network");
+            updateOfflineBanner();
+            setTimeout(function () { attemptLaunch(attempt); }, RETRY_MS);
+            return;
+          }
+
+          updateOfflineBanner();
+          setStatus(attempt > 1 ? "Retrying connection (" + attempt + ")" : "Connecting");
+
+          probeReachable().then(function (reachable) {
+            if (navigated) return;
+            if (reachable || attempt >= MAX_ATTEMPTS) {
+              navigate();
+              return;
+            }
+            setTimeout(function () { attemptLaunch(attempt + 1); }, RETRY_MS);
+          });
+        }
+
+        window.addEventListener("online", function () {
+          updateOfflineBanner();
+          if (!navigated) attemptLaunch(1);
+        });
+        window.addEventListener("offline", updateOfflineBanner);
+
         window.addEventListener("load", function () {
-          setTimeout(navigate, 1400);
-          setTimeout(showFallback, 4500);
+          updateOfflineBanner();
+          setTimeout(function () { attemptLaunch(1); }, 900);
+          setTimeout(showFallback, 6500);
         });
       })();
     </script>

@@ -1,3 +1,12 @@
+# Grants & Co OS desktop release — macOS, Windows, and Linux via Tauri 2.
+# Triggers: push tag desktop-v* (e.g. desktop-v0.1.0) or manual workflow_dispatch.
+#
+# Optional signing secrets (builds succeed unsigned when omitted):
+#   macOS  — APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD, APPLE_SIGNING_IDENTITY,
+#            APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
+#   Windows — WINDOWS_CERTIFICATE, WINDOWS_CERTIFICATE_PASSWORD
+# Linux AppImage/deb require no signing secrets.
+
 name: Desktop release
 
 on:

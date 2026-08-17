@@ -3,11 +3,27 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { drainAutomationQueue, scheduleFridayCreditPulse } from "@/lib/automations/engine";
 
+function isAuthorizedCron(req: Request): boolean {
+  const expected = process.env.GC_CRON_SECRET?.trim() || process.env.CRON_SECRET?.trim();
+  if (!expected) return false;
+
+  const headerSecret = req.headers.get("x-gc-cron-secret")?.trim();
+  if (headerSecret && headerSecret === expected) return true;
+
+  // Vercel Cron sends Authorization: Bearer <CRON_SECRET> when CRON_SECRET is set.
+  const auth = req.headers.get("authorization")?.trim();
+  if (auth?.toLowerCase().startsWith("bearer ")) {
+    const token = auth.slice(7).trim();
+    const vercelCron = process.env.CRON_SECRET?.trim() || expected;
+    if (token && token === vercelCron) return true;
+  }
+
+  return false;
+}
+
 export async function POST(req: Request) {
   const user = await getCurrentUser();
-  const isCron =
-    req.headers.get("x-gc-cron-secret") &&
-    req.headers.get("x-gc-cron-secret") === process.env.GC_CRON_SECRET;
+  const isCron = isAuthorizedCron(req);
 
   if (!isCron && (!user || !hasPermission(user.role, "MANAGE_OPERATIONS"))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

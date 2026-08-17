@@ -2,60 +2,66 @@
 
 ## Compatible targets
 
-- **Docker** (`Dockerfile` in repo root) — preferred for full control of workers + cron
-- **Vercel** (`vercel.json` cron hits `/api/automations/run`)
-- Any Node 22 host with PostgreSQL
+- **Vercel** (`vercel.json` — cron every 5m → `/api/automations/run`, region `iad1`)
+- **Docker** (`Dockerfile`) — full control of workers
+- Any Node 22 host with PostgreSQL (Neon or Supabase via Vercel Marketplace — **not** discontinued Vercel Postgres)
 
-## Environment
+## One-shot go-live (after secrets exist)
 
-Copy `.env.example` → set secrets in the host (never commit production secrets).
+```bash
+# Required secrets in the environment (never commit):
+# VERCEL_TOKEN, COMMAS_API_KEY, GHL_API_KEY, GHL_LOCATION_ID
+# AUTH_SECRET + GC_CRON_SECRET (agent can generate)
+# PAYMENT_PROVIDER=commas  NEXT_PUBLIC_APP_URL=https://os.grantsandco.com
 
-Required:
+npm run go:live
+```
 
-- `DATABASE_URL` (Postgres in production)
-- `AUTH_SECRET`
-- `PAYMENT_PROVIDER` (`commas` for production money path after sandbox validation)
-- `NEXT_PUBLIC_APP_URL` (public HTTPS origin)
+This runs: Neon install → migrate → Vercel deploy → domain inspect (exact DNS) → Commas webhook register → readiness 11/11 → smoke → desktop smoke.
 
-Commas (primary):
+Individual steps:
 
-- `COMMAS_API_KEY`
-- `COMMAS_WEBHOOK_SECRET`
-- `COMMAS_ENVIRONMENT=sandbox` until live activation
-- `COMMAS_LIVE_CHARGES=false` until explicit live approval
+| Script | Purpose |
+|--------|---------|
+| `npm run deploy:production` | Link project, Neon, env upsert, migrate, deploy |
+| `npm run db:migrate:production` | `prisma db push` against Postgres schema |
+| `npm run domain:configure` | Add `os.grantsandco.com` + print **exact** Vercel DNS |
+| `npm run commas:register-webhook` | Create webhook; store `COMMAS_WEBHOOK_SECRET` once |
+| `npm run launch:readiness` | Fixed **11/11** gate |
+| `npm run smoke:production` | Public SSL/health/login/webhook/cron smoke |
+| `npm run e2e:production` | Broader authenticated E2E |
+| `npm run desktop:smoke` | Packaging integrity |
 
-Optional: `GC_CRON_SECRET` for authenticated cron calls to `/api/automations/run`.
+## Environment templates
+
+- `.env.example` — local / Cloud Agent
+- `.env.production.example` — Vercel production checklist
+- `docs/PRODUCTION_ENV.md` — exact names from source
 
 ## Database
 
-1. Switch Prisma datasource / `DATABASE_URL` to `postgresql` for production
-2. Run migrations / schema sync
-3. Apply Supabase RLS policies (see Security)
-4. Seed only non-production environments
-5. Enable automated backups on the host
+1. Provision **Neon** (or Supabase) via Vercel Marketplace
+2. Enable automated backups in the Neon/Supabase dashboard
+3. `DATABASE_URL=postgresql://…`
+4. `npm run db:migrate:production` (uses `prisma/schema.postgres.prisma`; local sqlite untouched)
 
-Local Cloud Agent / SQLite rebuild (dev only):
+## Webhooks & cron
+
+- Payments: `POST /api/webhooks/payments` (HMAC via `COMMAS_WEBHOOK_SECRET`); `GET` returns non-secret status
+- Automations: `POST /api/automations/run` — staff session **or** `x-gc-cron-secret` / Vercel `Authorization: Bearer $CRON_SECRET`
+
+## Domain
 
 ```bash
-npx prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script -o /tmp/gc-schema.sql
-# apply with better-sqlite3, then npm run db:seed
+npm run domain:configure
+# Apply the printed records at your DNS host — do not guess CNAME targets
 ```
-
-## Background jobs
-
-- `instrumentation.ts` drains the automation queue every 30s and schedules Friday Credit Pulse (Friday 14:00 UTC window)
-- `POST /api/automations/run` for external cron / Vercel cron
-- Webhooks: `POST /api/webhooks/payments` (Commas HMAC)
-
-## Health
-
-- Public liveness: `GET /api/health`
-- Owner system health: `/system-health` + `GET /api/system/health`
 
 ## Desktop
 
-See `docs/DESKTOP.md`. Tauri wrapper under `/desktop` packages macOS / Windows / Linux installers that load the production web OS.
+See `docs/DESKTOP.md`. After web is live and 11/11 passes, tag `desktop-v0.1.0` for Mac/Windows/Linux CI artifacts; set `GC_DESKTOP_*_URL` before exposing `/downloads`.
 
-## PWA
+## Health
 
-`public/manifest.webmanifest` + `public/sw.js` + icons. HTTPS required for install on phones.
+- `GET /api/health`
+- `/system-health` + `GET /api/system/health`
