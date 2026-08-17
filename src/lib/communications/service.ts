@@ -104,14 +104,65 @@ export async function postMessage(input: {
     // allow default SMS for outbound client
   }
 
+  const channel = input.channel || (input.isInternal ? "INTERNAL" : "SMS");
+  let deliveryStatus = input.isInternal ? "RECORDED" : "PENDING";
+  let provider: string | null = null;
+  let externalId: string | null = null;
+  let metadata: Record<string, unknown> | undefined;
+
+  if (!input.isInternal && (channel === "SMS" || channel === "EMAIL")) {
+    const conv = await prisma.conversation.findUnique({
+      where: { id: input.conversationId },
+      include: {
+        client: {
+          include: {
+            identifiers: { where: { provider: "GHL" }, take: 1 },
+          },
+        },
+      },
+    });
+    const ghlContactId = conv?.client?.identifiers[0]?.externalId;
+    if (!ghlContactId) {
+      deliveryStatus = "FAILED";
+      metadata = {
+        actionRequired:
+          "No GHL contact id on master client — link GHL before outbound send",
+      };
+    } else {
+      const { sendGhlOutboundMessage } = await import("@/lib/integrations/ghl/outbound");
+      const sent = await sendGhlOutboundMessage({
+        channel: channel === "EMAIL" ? "Email" : "SMS",
+        ghlContactId,
+        body: input.body,
+      });
+      if (sent.ok) {
+        deliveryStatus = "SENT";
+        provider = "GHL";
+        externalId = sent.providerMessageId;
+        metadata = { conversationId: sent.conversationId };
+      } else {
+        deliveryStatus = "FAILED";
+        metadata = {
+          actionRequired: sent.reason,
+          requiredScope: sent.requiredScope,
+          httpStatus: sent.httpStatus,
+          providerMessage: sent.providerMessage,
+        };
+      }
+    }
+  }
+
   const message = await prisma.message.create({
     data: {
       conversationId: input.conversationId,
       senderId: input.senderId,
       body: input.body,
-      channel: input.channel || (input.isInternal ? "INTERNAL" : "SMS"),
+      channel,
       isInternal: input.isInternal,
-      deliveryStatus: input.isInternal ? "RECORDED" : "SENT",
+      deliveryStatus,
+      provider,
+      externalId,
+      metadataJson: metadata ? JSON.stringify(metadata) : null,
       mentions: input.mentionUserIds?.length
         ? { create: input.mentionUserIds.map((userId) => ({ userId })) }
         : undefined,
@@ -123,7 +174,7 @@ export async function postMessage(input: {
     data: { lastMessageAt: new Date() },
   });
 
-  return message;
+  return { message, deliveryStatus, metadata };
 }
 
 export async function listInbox(userId: string, tab: "all" | "client" | "team" = "all") {

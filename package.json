@@ -22,7 +22,12 @@
     "clients:import-confirmed-masters": "tsx scripts/import-confirmed-masters.ts",
     "crc:recovery-report": "tsx scripts/crc-recovery-report.ts",
     "crc:inbound-compare": "tsx scripts/crc-inbound-compare.ts",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "commas:register-webhook": "tsx scripts/commas-register-webhook.ts",
+    "deploy:production": "bash scripts/deploy-production.sh",
+    "e2e:production": "tsx scripts/production-e2e.ts",
+    "launch:readiness": "tsx scripts/launch-readiness.ts",
+    "desktop:linux": "node scripts/prepare-desktop-shell.mjs && cd desktop && npm install && npm run build"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

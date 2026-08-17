@@ -2,111 +2,79 @@
 
 **Date:** 2026-08-17  
 **Branch:** `cursor/grants-co-os-completion-30e7`  
-**Repo:** `github.com/iamcgrant/Grants-co-os`
+**Repo:** `github.com/iamcgrant/Grants-co-os`  
+**Launch gate:** `npm run launch:readiness` → currently **NOT PRODUCTION-COMPLETE** (external secrets / DNS)
 
 ## LIVE URL
 
-Not yet published to a public production host from this agent run.
+**Not live.** `os.grantsandco.com` does not resolve from this agent environment.
 
-- Local / Cloud Agent: `http://localhost:3000` (production `npm run start` verified)
-- Public health: `GET /api/health`
-- Owner system health: `/system-health`
-- Target production origin (configure DNS + host): `https://os.grantsandco.com` via `NEXT_PUBLIC_APP_URL` / `GC_DESKTOP_URL`
+| Surface | Status |
+|---------|--------|
+| Cloud Agent localhost | `http://localhost:3000` (verified build + local E2E) |
+| Public health | `GET /api/health` (local only until deploy) |
+| Owner system health | `/system-health` |
+| Target origin | `https://os.grantsandco.com` via `NEXT_PUBLIC_APP_URL` |
 
-Deploy artifacts ready in-repo: `Dockerfile`, `vercel.json` (cron), `docs/DEPLOYMENT.md`.
+Deploy tooling ready: `Dockerfile`, `vercel.json`, `npm run deploy:production`, `docs/DEPLOYMENT.md`.
 
 ## DESKTOP DOWNLOADS
 
-Packaging scaffold: `/desktop` (Tauri 2).
-
 | Platform | Status |
 |----------|--------|
-| macOS | Build on macOS with Rust + `cd desktop && npm run build` → `.dmg` |
-| Windows | Build on Windows → NSIS installer |
-| Linux | Build on Linux → AppImage + `.deb` |
+| Linux AppImage + `.deb` | **Built** in this environment — see `/opt/cursor/artifacts/desktop/` + `SHA256SUMS.txt` |
+| macOS `.dmg` | Blocked on Apple Developer ID + notarization (human) |
+| Windows installer | Blocked on Authenticode / Trusted Signing cert (human) |
 
-See `docs/DESKTOP.md`. Installers are not produced inside this Linux Cloud Agent (no full Tauri cross-compile toolchain). Auto-updater endpoints are wired in `tauri.conf.json` (pubkey must be replaced before public release).
+See `docs/DESKTOP.md`. Rebuild Linux: `npm run desktop:linux`.
 
-## OWNER ACCESS
+## OWNER / STAFF ACCESS (dev seed — rotate before prod)
 
-| Field | Value |
-|-------|-------|
-| Email | `owner@grantsandco.com` |
-| Password | Dev seed only: see README (rotate before production) |
-| Role | OWNER — full command center |
+| Role | Email |
+|------|-------|
+| OWNER | `owner@grantsandco.com` |
+| CUSTOMER_SERVICE | `simon@grantsandco.com` |
+| FILE_PREPARER | `jona@grantsandco.com` |
 
-## SIMON ACCESS
-
-| Field | Value |
-|-------|-------|
-| Email | `simon@grantsandco.com` |
-| Role | CUSTOMER_SERVICE — Client Care home, inbox, tasks, credit |
-
-## JONA ACCESS
-
-| Field | Value |
-|-------|-------|
-| Email | `jona@grantsandco.com` |
-| Role | FILE_PREPARER — File queues / disputes view |
+Password: README seed only — **rotate before production**.
 
 ## INTEGRATIONS
 
 | System | Status |
 |--------|--------|
-| **Commas** | Primary adapter implemented (hosted `payment_link` + HMAC webhooks + refunds). **ACTION REQUIRED:** add `COMMAS_API_KEY` (+ webhook secret) in Cursor Secrets / host. Live charges locked (`COMMAS_LIVE_CHARGES`). |
-| **GHL** | Live inbound contacts + conversations when `GHL_API_KEY` present (configured in this environment). Outbound SMS/email/voice still require provider write scopes / telephony adapter. |
-| **DisputeFox** | Local roster attach + native `/setup` intake primary. Live API + `DISPUTEFOX_INTAKE_URL_TEMPLATE` optional fallback. |
-| **SmartCredit** | Sponsor enrollment helper; add `SMARTCREDIT_SPONSOR_URL`. Score path mock until partner API. |
-| **Credit Karma** | Client-assisted secure entry architecture (no scraping / MFA bypass). |
-| **Voice** | ACTION REQUIRED — LeadConnector/GHL browser voice session not exposed; adapter pending provider capability. |
-| **SMS / MMS** | Inbound via GHL conversation pull; outbound delivery adapter records intent until send scopes. |
-| **iMessage** | Only if provider supports — marked degraded until configured. |
-| **Email** | Intent queue for payment links; provider wire-up pending. |
+| **Commas** | Adapter complete (checkout + HMAC webhooks + refunds + payment requests). **BLOCKED:** `COMMAS_API_KEY`, `COMMAS_WEBHOOK_SECRET`, `PAYMENT_PROVIDER=commas` |
+| **GHL inbound** | **Live** — contacts + conversations pull with current PIT |
+| **GHL outbound SMS/MMS/email** | Adapter fail-closed. Live probe: `POST /conversations/messages` → **401** missing `conversations/message.write` |
+| **GHL voice / browser dialer** | Adapter honest (`browserDialer: false`). Phone-system + voice-ai endpoints → **401** |
+| **DisputeFox** | Native `/setup` intake primary; optional intake URL template |
+| **SmartCredit** | Sponsor URL optional |
 
 ## AUTOMATIONS
 
 | Flow | Status |
 |------|--------|
-| Payment request → link → email/SMS queue | Implemented |
-| Payment completed → onboarding token → staff assign (Simon/Jona) | Implemented |
-| Intake completed → file prep routing | Implemented |
-| Friday Credit Pulse | Scheduler in `instrumentation.ts` (Friday 14:00 UTC) + `POST /api/automations/run` |
-| Invoice reminders / missing docs | Queue kinds ready; delivery provider-dependent |
-| Exception tickets | Created on exhausted automation retries |
+| Payment request → link → email/SMS queue | Implemented (delivery provider-dependent) |
+| Payment → onboarding token → Simon/Jona assign | Implemented |
+| Intake completed → file prep | Implemented |
+| Friday Credit Pulse | Scheduler + `/api/automations/run` |
+| Exception tickets | On exhausted retries |
 
 ## TEST RESULTS
 
 | Suite | Result |
 |-------|--------|
-| Unit / integration (Vitest) | **143 / 143 passed** |
-| Commas lifecycle + webhook idempotency | Passed |
-| System health + universal search | Passed |
-| Production `npm run build` | Passed |
-| Smoke: login, payment request, mock charge, search, automations drain, pages | Passed |
-| Security | No raw card storage; webhook HMAC; secrets not logged; RBAC on finance/health |
-| Desktop | Scaffold ready; native binaries need host build |
-| Mobile | Responsive staff shell + luxury pay/setup pages (PWA retained) |
+| Vitest | Run `npm test` on this branch |
+| Local `npm run e2e:production` | Harness ready; exits **NOT PRODUCTION-COMPLETE** while `PAYMENT_PROVIDER=mock` |
+| `npm run launch:readiness` | Fail-closed gate for Commas + public HTTPS + Postgres + GHL write |
+| `npm run build` | Production build verified previously on branch |
+| Desktop Linux | AppImage + deb artifacts produced |
 
-## SYSTEM HEALTH
+## REMAINING EXTERNAL BLOCKERS (human only)
 
-| Component | Notes |
-|-----------|-------|
-| Database | Connected (SQLite local; Postgres for production) |
-| Backups | ACTION REQUIRED on production Postgres host |
-| Queues | Automation drain every 30s |
-| Scheduled jobs | Friday pulse window + Vercel cron path |
-| Webhooks | `/api/webhooks/payments` money application + idempotency |
+1. **Commas** — sandbox API key + webhook secret → Cursor Secrets / Vercel env as `COMMAS_API_KEY`, `COMMAS_WEBHOOK_SECRET`; set `PAYMENT_PROVIDER=commas`, `COMMAS_ENVIRONMENT=sandbox`.
+2. **Vercel + Postgres + DNS** — `VERCEL_TOKEN`, production `DATABASE_URL` (`postgresql://…`), enable backups, point `os.grantsandco.com`, set `NEXT_PUBLIC_APP_URL=https://os.grantsandco.com`, `AUTH_SECRET`, `GC_CRON_SECRET`.
+3. **GHL Private Integration scopes** — add `conversations/message.write` (+ phone/voice scopes for dialer); replace/reissue PIT if needed.
+4. **Desktop signing** — Apple Developer ID + Windows code-signing cert.
+5. **Commas live charges** — only after sandbox QA: `COMMAS_LIVE_CHARGES=true`.
 
-## REMAINING EXTERNAL BLOCKERS
-
-Only provider-side / human-required:
-
-1. **Commas dashboard** — create sandbox API key + webhook subscription → store `COMMAS_API_KEY`, `COMMAS_WEBHOOK_SECRET` (requested via environment setup actions).
-2. **Production host + domain HTTPS** — DNS, secrets vault, Postgres URL (cannot be invented by the agent).
-3. **Commas live charges** — requires explicit `COMMAS_LIVE_CHARGES=true` after sandbox validation.
-4. **Telephony / outbound messaging scopes** — GHL/LeadConnector must expose browser voice + conversation write scopes; MFA/provider agreements if any.
-5. **Desktop signing certificates** — Apple/Windows code signing for public installers.
-6. **DisputeFox intake URL template** — optional fallback; native setup works without it.
-7. **SmartCredit sponsor URL** — for affiliate attribution.
-
-Do not list agent-completable work here — payment domain, intake, automations, health, search, desktop scaffold, Docker, and tests are in this branch.
+Do **not** declare PRODUCTION COMPLETE while any money path, public origin, or outbound comms path is mock / localhost / degraded / unverified.

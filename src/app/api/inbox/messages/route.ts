@@ -35,7 +35,7 @@ export async function POST(req: Request) {
       .filter((u) => mentionMatches.includes(u.firstName.toLowerCase()))
       .map((u) => u.id);
 
-    const message = await postMessage({
+    const result = await postMessage({
       conversationId: parsed.data.conversationId,
       senderId: user.id,
       body: parsed.data.body,
@@ -56,7 +56,24 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({ message });
+    if (!parsed.data.isInternal && result.deliveryStatus === "FAILED") {
+      return NextResponse.json(
+        {
+          error:
+            (result.metadata?.actionRequired as string) ||
+            "Outbound send failed — ACTION_REQUIRED",
+          message: result.message,
+          deliveryStatus: result.deliveryStatus,
+          actionRequired: true,
+        },
+        { status: 502 },
+      );
+    }
+
+    return NextResponse.json({
+      message: result.message,
+      deliveryStatus: result.deliveryStatus,
+    });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Failed" },
