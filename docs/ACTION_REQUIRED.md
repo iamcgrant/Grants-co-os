@@ -29,6 +29,19 @@ npm run go:live
 
 → Neon Postgres → migrate → Vercel deploy → exact DNS for `os.grantsandco.com` → Commas webhook → 11/11 gate → smoke.
 
-## Desktop (already done)
+## Make repository public (GitHub requires owner)
 
-https://github.com/iamcgrant/Grants-co-os/releases/tag/desktop-v0.1.2 — Mac `.dmg`, Windows `.exe`, Linux AppImage/`.deb` (unsigned).
+The Cloud Agent token can push code and publish releases but **cannot** change visibility (`admin: false` → HTTP 403).
+
+As repo owner `iamcgrant`, run one of:
+
+**UI:** https://github.com/iamcgrant/Grants-co-os/settings → Danger Zone → Change repository visibility → **Make public**
+
+**CLI (on your machine, logged in as yourself):**
+```bash
+gh repo edit iamcgrant/Grants-co-os --visibility public --accept-visibility-change-consequences
+```
+
+Then say **done** — agent will verify public release URLs while logged out.
+
+Pre-public scrub completed: demo passwords removed from README/docs; seed requires `SEED_PASSWORD`; `.env` never committed.
