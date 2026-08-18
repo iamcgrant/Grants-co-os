@@ -72,7 +72,16 @@ async function main() {
     ],
   });
 
-  const passwordHash = await bcrypt.hash("GrantsCo2026!", 12);
+  const passwordPlain =
+    process.env.SEED_PASSWORD?.trim() ||
+    process.env.E2E_OWNER_PASSWORD?.trim() ||
+    "";
+  if (!passwordPlain) {
+    throw new Error(
+      "Set SEED_PASSWORD (or E2E_OWNER_PASSWORD) before seeding. Do not commit passwords.",
+    );
+  }
+  const passwordHash = await bcrypt.hash(passwordPlain, 12);
 
   const charles = await prisma.user.create({
     data: {

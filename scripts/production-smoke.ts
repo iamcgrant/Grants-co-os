@@ -7,7 +7,11 @@ import "dotenv/config";
 
 const base = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
 const ownerEmail = process.env.E2E_OWNER_EMAIL || "owner@grantsandco.com";
-const ownerPassword = process.env.E2E_OWNER_PASSWORD || "GrantsCo2026!";
+const ownerPassword = process.env.E2E_OWNER_PASSWORD || "";
+if (!ownerPassword) {
+  console.error("ACTION_REQUIRED: set E2E_OWNER_PASSWORD for smoke login (never commit).");
+  process.exit(2);
+}
 
 type Step = { name: string; ok: boolean; detail?: string };
 const steps: Step[] = [];

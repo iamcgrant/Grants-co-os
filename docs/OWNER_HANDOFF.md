@@ -173,7 +173,7 @@ GRANTS & CO OS (Next.js App Router + TypeScript + Prisma)
 ### Demo accounts (seed — not production)
 | Role | Email | Password |
 |------|-------|----------|
-| Owner | owner@grantsandco.com | GrantsCo2026! |
+| Owner | owner@grantsandco.com | Set via `SEED_PASSWORD` when seeding — never commit |
 | Manager | manager@grantsandco.com | same |
 | File Preparer | preparer@grantsandco.com | same |
 | Marketing | marketing@grantsandco.com | same |

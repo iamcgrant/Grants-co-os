@@ -8,7 +8,11 @@ import "dotenv/config";
 
 const base = (process.env.NEXT_PUBLIC_APP_URL || "http://127.0.0.1:3000").replace(/\/$/, "");
 const ownerEmail = process.env.E2E_OWNER_EMAIL || "owner@grantsandco.com";
-const ownerPassword = process.env.E2E_OWNER_PASSWORD || "GrantsCo2026!";
+const ownerPassword = process.env.E2E_OWNER_PASSWORD || "";
+if (!ownerPassword) {
+  console.error("ACTION_REQUIRED: set E2E_OWNER_PASSWORD for E2E login (never commit).");
+  process.exit(2);
+}
 
 type Step = { name: string; ok: boolean; detail?: string };
 

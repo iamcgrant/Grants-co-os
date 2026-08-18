@@ -14,4 +14,4 @@ Installable PWA experience branded as **Grants & Co** (not the internal stack).
 
 ## Demo client
 
-`donna.james@example.com` / `GrantsCo2026!`
+`donna.james@example.com` — password set via `SEED_PASSWORD` during seed (never commit passwords).

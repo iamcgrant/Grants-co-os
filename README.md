@@ -17,14 +17,14 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ### Development staff accounts
 
-Passwords are for local/dev only — never shown in the product UI.
+Local seed creates these emails. Set a password with `SEED_PASSWORD` before `npm run db:seed` (never commit real passwords). Rotate before any shared or production use.
 
-| Role | Email | Password |
-|------|-------|----------|
-| Charles (Owner) | owner@grantsandco.com | GrantsCo2026! |
-| Simon (Client Care) | simon@grantsandco.com | GrantsCo2026! |
-| Jona (File Prep) | jona@grantsandco.com | GrantsCo2026! |
-| Client portal | donna.james@example.com | GrantsCo2026! |
+| Role | Email |
+|------|-------|
+| Charles (Owner) | owner@grantsandco.com |
+| Simon (Client Care) | simon@grantsandco.com |
+| Jona (File Prep) | jona@grantsandco.com |
+| Client portal | donna.james@example.com |
 
 ### Grants Pay demo
 
