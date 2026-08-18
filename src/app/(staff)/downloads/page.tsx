@@ -1,88 +1,38 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
-import {
-  getDesktopDownloadLinks,
-  pickDesktopAssetsFromRelease,
-} from "@/lib/desktop/downloads";
+import { getDesktopDownloadLinks } from "@/lib/desktop/downloads";
 
 type PlatformCard = {
   id: "mac" | "win" | "linux";
   label: string;
   detail: string;
   url: string | null;
-  unsignedHint?: boolean;
 };
-
-async function resolveLinks() {
-  const base = getDesktopDownloadLinks();
-  if (base.anyConfigured) return base;
-
-  // Optional auto-resolve from latest GitHub release when GH token available server-side.
-  // Never required for runtime — fails closed to "Coming soon" / releases page.
-  const token = process.env.GITHUB_TOKEN?.trim() || process.env.GH_TOKEN?.trim();
-  try {
-    const res = await fetch(
-      "https://api.github.com/repos/iamcgrant/Grants-co-os/releases?per_page=5",
-      {
-        headers: {
-          Accept: "application/vnd.github+json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          "User-Agent": "Grants-Co-OS-Downloads",
-        },
-        next: { revalidate: 300 },
-      },
-    );
-    if (!res.ok) return base;
-    const releases = (await res.json()) as Array<{
-      draft?: boolean;
-      prerelease?: boolean;
-      html_url?: string;
-      assets?: Array<{ name: string; browser_download_url: string }>;
-    }>;
-    const release =
-      releases.find((r) => !r.draft && (r.assets?.length || 0) > 0) ||
-      releases.find((r) => (r.assets?.length || 0) > 0);
-    if (!release?.assets?.length) return base;
-    const picked = pickDesktopAssetsFromRelease(release.assets);
-    const any = Boolean(picked.macUrl || picked.winUrl || picked.linuxUrl);
-    return {
-      ...base,
-      ...picked,
-      releasesPageUrl: release.html_url || base.releasesPageUrl,
-      anyConfigured: any,
-      fromEnv: false,
-    };
-  } catch {
-    return base;
-  }
-}
 
 export default async function DownloadsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const links = await resolveLinks();
+  const links = getDesktopDownloadLinks();
 
   const platforms: PlatformCard[] = [
     {
       id: "mac",
       label: "macOS",
-      detail: "Download .dmg / .app (unsigned until Apple signing is configured)",
+      detail: "Apple Silicon .dmg (Intel build also on Releases). Unsigned — Gatekeeper may warn.",
       url: links.macUrl,
-      unsignedHint: true,
     },
     {
       id: "win",
       label: "Windows",
-      detail: "Download .exe / .msi (unsigned until Authenticode is configured)",
+      detail: "NSIS .exe installer. Unsigned — SmartScreen may warn.",
       url: links.winUrl,
-      unsignedHint: true,
     },
     {
       id: "linux",
       label: "Linux",
-      detail: "AppImage or Debian package",
+      detail: "AppImage (Debian .deb also on Releases).",
       url: links.linuxUrl,
     },
   ];
@@ -94,14 +44,13 @@ export default async function DownloadsPage() {
       <p className="gc-section-sub mb-8">
         Native desktop shell for the canonical web app at{" "}
         <span className="text-[var(--gc-gold)]">os.grantsandco.com</span>. No business logic or
-        server secrets are bundled — only a secure window around production.
+        server secrets are bundled.
       </p>
 
       <div className="gc-panel p-6 mb-8">
         <p className="text-sm text-[var(--gc-muted)] leading-relaxed">
-          {links.anyConfigured
-            ? "Install the build for your platform below. First releases may be unsigned — macOS Gatekeeper / Windows SmartScreen may warn until signing certificates are added."
-            : "Release pending — installers are building in CI. Open the releases page or check back once Mac / Windows / Linux assets are published."}
+          Installers are published on GitHub Releases (unsigned v0.1.1). If the repository is
+          private, stay signed into GitHub when downloading.
         </p>
         {links.releasesPageUrl ? (
           <p className="mt-4 text-sm">
@@ -111,7 +60,7 @@ export default async function DownloadsPage() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              View GitHub Releases
+              View all desktop releases
             </a>
           </p>
         ) : null}
@@ -143,11 +92,8 @@ export default async function DownloadsPage() {
       <div className="gc-panel p-6">
         <p className="gc-eyebrow mb-2">Notes</p>
         <ul className="text-sm text-[var(--gc-muted)] space-y-2 list-disc pl-5">
-          <li>Unsigned Mac/Windows builds are intentional for the first downloadable release.</li>
-          <li>Linux AppImage and .deb packages do not require code signing.</li>
-          <li>
-            Deep links use the <code className="text-[var(--gc-gold)]">grantscoos://</code> scheme.
-          </li>
+          <li>First release is intentionally unsigned.</li>
+          <li>Deep links use the <code className="text-[var(--gc-gold)]">grantscoos://</code> scheme.</li>
           <li>Production backend remains https://os.grantsandco.com — one shared database.</li>
         </ul>
         <Link href="/more" className="inline-block mt-5 text-sm text-[var(--gc-gold)]">
