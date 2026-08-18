@@ -75,3 +75,5 @@ desktop/public-desktop
 desktop/desktop/
 desktop/releases/
 desktop/src-tauri/target/
+desktop/src-tauri/icons/android/
+desktop/src-tauri/icons/ios/

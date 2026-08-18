@@ -1,6 +1,6 @@
 [package]
 name = "grants-co-os-desktop"
-version = "0.1.0"
+version = "0.1.1"
 description = "Grants & Co OS desktop wrapper"
 authors = ["Grants & Co Consultants"]
 edition = "2021"

@@ -1,6 +1,6 @@
 /**
- * Generate minimal black/champagne-gold PNG icons for the Tauri desktop shell.
- * Uses Python Pillow (available on Linux CI runners) — no npm deps required.
+ * Generate minimal black/champagne-gold PNG icons when missing.
+ * Prefer existing committed icons; never fail the build if Pillow is absent.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -10,8 +10,15 @@ const root = path.resolve(import.meta.dirname, "..");
 const outDir = path.join(root, "desktop/src-tauri/icons");
 fs.mkdirSync(outDir, { recursive: true });
 
+const required = ["32x32.png", "128x128.png", "icon.png"];
+const hasAll = required.every((name) => fs.existsSync(path.join(outDir, name)));
+if (hasAll) {
+  console.log("Desktop PNG icons already present — skipping Pillow generation.");
+  process.exit(0);
+}
+
 const py = `
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 from pathlib import Path
 
 out = Path(${JSON.stringify(outDir)})
@@ -35,7 +42,6 @@ def draw_icon(size, path):
     draw.polygon(tri, fill=GOLD)
     font_size = max(10, round(size * 0.34))
     try:
-        from PIL import ImageFont
         font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", font_size)
     except Exception:
         font = ImageFont.load_default()
@@ -53,5 +59,8 @@ for size, name in [(32, "32x32.png"), (128, "128x128.png"), (512, "icon.png")]:
 
 const result = spawnSync("python3", ["-c", py], { stdio: "inherit" });
 if (result.status !== 0) {
-  process.exit(result.status ?? 1);
+  if (hasAll) process.exit(0);
+  console.warn("Pillow icon generation failed — relying on committed icons if present.");
+  const stillOk = required.every((name) => fs.existsSync(path.join(outDir, name)));
+  process.exit(stillOk ? 0 : result.status ?? 1);
 }
