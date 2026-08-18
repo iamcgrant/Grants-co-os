@@ -1,36 +1,34 @@
 # ACTION REQUIRED — human credentials only
 
-Checked Cursor env, GitHub, and local secrets stores. These are **not** present and cannot be invented by the agent.
+Re-checked this agent environment: **`VERCEL_TOKEN` and `COMMAS_API_KEY` are still not available here.**
 
-## 1. Vercel deploy (blocks live web)
+If you already added them in the Cursor dashboard, start a **new** Cloud Agent follow-up so secrets inject into a fresh session, then say **continue**.
 
-| Secret | Where to get it | Where to enter |
-|--------|-----------------|----------------|
-| `VERCEL_TOKEN` | https://vercel.com/account/tokens | Cursor Cloud Agent environment secrets |
+## Must add (blocks live production)
 
-After that, say **continue** — agent runs `npm run go:live` (Neon Postgres, migrate, deploy, prints exact DNS for `os.grantsandco.com`).
+| Secret | Get from | Enter in |
+|--------|----------|----------|
+| `VERCEL_TOKEN` | https://vercel.com/account/tokens | [Cursor environment secrets](https://cursor.com/dashboard/cloud-agents/environments/e/0b257c05-9983-11f1-ba66-0e7d0216e441) |
+| `COMMAS_API_KEY` | Commas / Fanbasis sandbox dashboard | Same Cursor secrets |
+| `PAYMENT_PROVIDER` | value: `commas` | Same |
+| `NEXT_PUBLIC_APP_URL` | value: `https://os.grantsandco.com` | Same |
 
-Also set (or agent will set after token):
-- `NEXT_PUBLIC_APP_URL=https://os.grantsandco.com`
-- `PAYMENT_PROVIDER=commas`
-- `AUTH_SECRET` / `GC_CRON_SECRET` (agent can generate)
+Optional until after first public deploy: `COMMAS_WEBHOOK_SECRET` (agent registers webhook once HTTPS is live).
 
-## 2. Commas payments (blocks real money path)
+## GHL outbound (scope, not a new env name)
 
-| Secret | Where to get it | Where to enter |
-|--------|-----------------|----------------|
-| `COMMAS_API_KEY` | Commas / Fanbasis sandbox dashboard | Cursor secrets + Vercel project env |
-| `COMMAS_WEBHOOK_SECRET` | Issued once by `npm run commas:register-webhook` after public URL exists | Cursor + Vercel |
+Reissue Private Integration with `conversations/message.write` and replace the existing `GHL_API_KEY` value.
 
-## 3. GHL outbound SMS/email (blocks autonomous outbound)
+Already present — do not re-add: `GHL_API_KEY`, `GHL_LOCATION_ID`, `CURSOR_API_KEY`.
 
-Not a new env var — **reissue Private Integration** with scope `conversations/message.write`, replace existing `GHL_API_KEY` value in Cursor secrets.
+## After secrets are visible to the agent
 
-Already present (do not re-add): `GHL_API_KEY`, `GHL_LOCATION_ID`, `CURSOR_API_KEY`.
+```bash
+npm run go:live
+```
 
-## 4. Optional later (not required for first downloadable builds)
+→ Neon Postgres → migrate → Vercel deploy → exact DNS for `os.grantsandco.com` → Commas webhook → 11/11 gate → smoke.
 
-- Apple Developer signing / notarization
-- Windows Authenticode certificate
+## Desktop (already done)
 
-Unsigned Mac/Windows installers are intentional for v0.1.x.
+https://github.com/iamcgrant/Grants-co-os/releases/tag/desktop-v0.1.2 — Mac `.dmg`, Windows `.exe`, Linux AppImage/`.deb` (unsigned).
