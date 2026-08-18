@@ -33,11 +33,11 @@ function createPrismaClient(): PrismaClient {
    * Inline require is the documented native-module exception to no-inline-imports:
    * a top-level import of `@prisma/adapter-better-sqlite3` loads `better_sqlite3.node`
    * and crashes Vercel `/var/task` even before DATABASE_URL is inspected.
-   * The package name is split so bundlers cannot hoist a static require into the
-   * serverless login/health chunks.
+   * Keep the specifier static so Next/Turbopack can resolve it; the Vercel
+   * guard above ensures this branch never runs on serverless.
    */
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { PrismaBetterSqlite3 } = require(["@prisma", "adapter-better-sqlite3"].join("/")) as typeof import("@prisma/adapter-better-sqlite3");
+  const { PrismaBetterSqlite3 } = require("@prisma/adapter-better-sqlite3") as typeof import("@prisma/adapter-better-sqlite3");
 
   const dbPath =
     url.replace(/^file:/, "") || path.join(process.cwd(), "prisma", "dev.db");
