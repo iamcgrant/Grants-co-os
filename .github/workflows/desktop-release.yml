@@ -33,7 +33,7 @@ jobs:
             artifact: linux
           - platform: windows-latest
             target: ""
-            bundles: nsis,msi
+            bundles: nsis
             artifact: windows
 
     runs-on: ${{ matrix.platform }}
@@ -100,7 +100,7 @@ jobs:
   publish:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/desktop-v')
+    if: ${{ always() && startsWith(github.ref, 'refs/tags/desktop-v') && (needs.build.result == 'success' || needs.build.result == 'failure') }}
     steps:
       - uses: actions/checkout@v4
 
@@ -108,9 +108,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: release-assets
+          merge-multiple: false
 
-      - name: List assets
-        run: find release-assets -type f | sort
+      - name: Flatten release files
+        run: |
+          mkdir -p dist
+          find release-assets -type f \( -name '*.dmg' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.exe' -o -name '*.msi' \) -exec cp -v {} dist/ \; || true
+          ls -la dist
+          test "$(find dist -type f | wc -l)" -gt 0
 
       - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2
@@ -120,6 +125,7 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: false
+          fail_on_unmatched_files: false
           body: |
             ## Grants & Co OS desktop ${{ github.ref_name }}
 
@@ -128,11 +134,6 @@ jobs:
             **Unsigned first release** — macOS Gatekeeper / Windows SmartScreen may warn until signing certificates are configured.
 
             Server secrets are never bundled in these installers.
-          files: |
-            release-assets/**/*.dmg
-            release-assets/**/*.AppImage
-            release-assets/**/*.deb
-            release-assets/**/*.exe
-            release-assets/**/*.msi
+          files: dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
