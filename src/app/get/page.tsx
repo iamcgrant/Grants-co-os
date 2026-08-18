@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { LIVE_VERCEL_APP_ORIGIN, PERMANENT_OS_ORIGIN } from "@/lib/access/origins";
 import { getDesktopDownloadLinks } from "@/lib/desktop/downloads";
 
 export default function PublicDesktopDownloadPage() {
@@ -17,8 +18,12 @@ export default function PublicDesktopDownloadPage() {
         <p className="gc-eyebrow mt-10 mb-2">Desktop</p>
         <h1 className="text-4xl md:text-5xl mb-3">Download Grants &amp; Co OS</h1>
         <p className="gc-section-sub mb-8 max-w-2xl">
-          Native shell for the same production app. No server secrets are bundled. Sign in after
-          install at os.grantandconsultants.com.
+          Native shell for the same production app. No server secrets are bundled. After install,
+          sign in at{" "}
+          <a href={`${LIVE_VERCEL_APP_ORIGIN}/login`} className="text-[var(--gc-gold)]">
+            the live Vercel login
+          </a>{" "}
+          until {PERMANENT_OS_ORIGIN.replace("https://", "")} has DNS.
         </p>
         <div className="grid gap-4 md:grid-cols-3 mb-10">
           {platforms.map((p) => (

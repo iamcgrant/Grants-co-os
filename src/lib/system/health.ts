@@ -9,6 +9,7 @@ import { databaseEngineLabel, detectDatabaseEngine } from "@/lib/system/database
 import { webhookSecretConfigured } from "@/lib/webhooks/ingest";
 import { lastAssistedKarmaAt } from "@/lib/credit/assisted-karma";
 import { lastPortalSuccessAt } from "@/lib/portals/service";
+import { getProductionDatabaseRefusal } from "@/lib/db/production-guard";
 
 export type HealthStatus = "CONNECTED" | "DEGRADED" | "ACTION_REQUIRED" | "OFFLINE";
 
@@ -40,11 +41,30 @@ export async function collectSystemHealth(): Promise<{
   checkedAt: string;
 }> {
   const now = new Date();
+  const env = getGcEnvironment();
+  const refusal = getProductionDatabaseRefusal();
+  if (refusal) {
+    return {
+      overall: "ACTION_REQUIRED",
+      environment: env,
+      components: [
+        {
+          component: "database",
+          label: "Database",
+          status: "ACTION_REQUIRED",
+          detail: refusal,
+          lastSuccessAt: null,
+          lastCheckedAt: now.toISOString(),
+        },
+      ],
+      checkedAt: now.toISOString(),
+    };
+  }
+
   const creds = integrationCredentialStatus();
   const commas = commasPublicStatus();
   const provider = getPaymentProvider();
   const engine = detectDatabaseEngine();
-  const env = getGcEnvironment();
 
   const [
     lastPaymentWebhook,

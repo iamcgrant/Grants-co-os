@@ -6,6 +6,7 @@ Grants & Co OS desktop shells wrap the **canonical web application**. Do not for
 
 - **Tauri 2** under `/desktop`
 - Loads `GC_DESKTOP_URL` (default `https://os.grantandconsultants.com`) via the local splash shell
+- If that host is unreachable, probes `GC_DESKTOP_FALLBACK_URL` (default `https://temporary-prompt-oboe-st5fuuv.vercel.app`) instead of navigating to a dead address
 - Plugins: notifications, opener (external links), dialog (file pickers), deep-link (`grantscoos://`), updater scaffolding, system tray
 - No server secrets are baked into the desktop build — only the public production URL
 

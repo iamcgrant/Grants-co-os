@@ -109,6 +109,16 @@ if (fs.existsSync(shellHtml)) {
   } else {
     fail("splash shell does not reference https://os.grantandconsultants.com");
   }
+  if (html.includes("https://temporary-prompt-oboe-st5fuuv.vercel.app")) {
+    pass("splash shell references live Vercel fallback origin");
+  } else {
+    fail("splash shell is missing https://temporary-prompt-oboe-st5fuuv.vercel.app fallback");
+  }
+  if (html.includes("Trying backup address")) {
+    pass("splash shell probes fallback when the primary host is unreachable");
+  } else {
+    fail("splash shell does not try a backup address");
+  }
   if (html.includes("offline-banner")) {
     pass("splash shell includes offline banner");
   } else {

@@ -6,6 +6,11 @@ import {
 import { createSession, hashPassword } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { writeAuditLog } from "@/lib/audit/log";
+import {
+  getProductionDatabaseRefusal,
+  isProductionDatabaseNotConfigured,
+  productionDatabaseErrorBody,
+} from "@/lib/db/production-guard";
 
 const schema = z.object({
   token: z.string().min(20),
@@ -22,6 +27,13 @@ const schema = z.object({
 
 /** Public: validate a first-time password setup token (no secrets returned). */
 export async function GET(req: Request) {
+  if (getProductionDatabaseRefusal()) {
+    return NextResponse.json(
+      { ...productionDatabaseErrorBody(), valid: false },
+      { status: 503 },
+    );
+  }
+
   const token = new URL(req.url).searchParams.get("token") || "";
   const claims = await verifyPasswordSetupToken(token);
   if (!claims) {
@@ -63,6 +75,10 @@ export async function GET(req: Request) {
 
 /** Complete first-time Owner password setup and create a session. */
 export async function POST(req: Request) {
+  if (getProductionDatabaseRefusal()) {
+    return NextResponse.json(productionDatabaseErrorBody(), { status: 503 });
+  }
+
   try {
     const body = schema.parse(await req.json());
     if (body.password !== body.confirmPassword) {
@@ -116,6 +132,9 @@ export async function POST(req: Request) {
       },
     });
   } catch (e) {
+    if (isProductionDatabaseNotConfigured(e)) {
+      return NextResponse.json(productionDatabaseErrorBody(), { status: 503 });
+    }
     if (e instanceof z.ZodError) {
       return NextResponse.json(
         { error: e.issues[0]?.message || "Invalid password" },

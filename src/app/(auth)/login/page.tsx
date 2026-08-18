@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { LoginAccessBanner } from "@/components/auth/LoginAccessBanner";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -61,9 +62,10 @@ export default function LoginPage() {
 
           <p className="gc-eyebrow text-center mb-3">Private access</p>
           <h1 className="text-center text-4xl md:text-5xl mb-3">Welcome back</h1>
-          <p className="text-center text-[var(--gc-muted)] mb-10 text-sm leading-relaxed">
+          <p className="text-center text-[var(--gc-muted)] mb-6 text-sm leading-relaxed">
             Sign in to Grants &amp; Co OS — the operating system for Grants &amp; Co Consultants.
           </p>
+          <LoginAccessBanner />
 
           <form onSubmit={onSubmit} className="space-y-4 gc-fade-up-delay">
             <div>

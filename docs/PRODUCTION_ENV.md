@@ -44,6 +44,7 @@ Outbound SMS/email also needs PIT **scope** `conversations/message.write` on the
 | Name | Purpose |
 |------|---------|
 | `GC_DESKTOP_URL` | Desktop webview origin (default `https://os.grantandconsultants.com`) |
+| `GC_DESKTOP_FALLBACK_URL` | Desktop splash backup origin when the primary host does not resolve (default live Vercel app) |
 | `GC_DESKTOP_MAC_URL` | Publish Mac installer link on `/downloads` |
 | `GC_DESKTOP_WIN_URL` | Publish Windows installer link |
 | `GC_DESKTOP_LINUX_URL` | Publish Linux installer link |

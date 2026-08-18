@@ -13,7 +13,9 @@ fs.mkdirSync(outDir, { recursive: true });
 const iconScript = path.join(root, "scripts/generate-desktop-icons.mjs");
 spawnSync(process.execPath, [iconScript], { stdio: "inherit", cwd: root });
 
-const appUrl = process.env.GC_DESKTOP_URL || "https://os.grantandconsultants.com";
+const primaryUrl = process.env.GC_DESKTOP_URL || "https://os.grantandconsultants.com";
+const fallbackUrl =
+  process.env.GC_DESKTOP_FALLBACK_URL || "https://temporary-prompt-oboe-st5fuuv.vercel.app";
 
 const html = `<!doctype html>
 <html lang="en">
@@ -169,12 +171,13 @@ const html = `<!doctype html>
         <p class="sub">Opening your operating system&hellip;</p>
         <div class="bar" aria-hidden="true"><i></i></div>
         <p class="status" id="status">Connecting</p>
-        <a class="fallback" id="fallback" href="${appUrl}" hidden>Continue manually</a>
+        <a class="fallback" id="fallback" href="${fallbackUrl}" hidden>Continue manually</a>
       </div>
     </div>
     <script>
       (function () {
-        var APP_URL = ${JSON.stringify(appUrl)};
+        var PRIMARY_URL = ${JSON.stringify(primaryUrl)};
+        var FALLBACK_URL = ${JSON.stringify(fallbackUrl)};
         var MAX_ATTEMPTS = 4;
         var RETRY_MS = 1800;
         var navigated = false;
@@ -192,20 +195,24 @@ const html = `<!doctype html>
         }
 
         function showFallback() {
-          if (fallbackLink) fallbackLink.hidden = false;
+          if (fallbackLink) {
+            fallbackLink.href = FALLBACK_URL && FALLBACK_URL !== PRIMARY_URL ? FALLBACK_URL : PRIMARY_URL;
+            fallbackLink.hidden = false;
+          }
           setStatus("Tap continue if loading stalls");
         }
 
-        function navigate() {
+        function navigateTo(url) {
           if (navigated) return;
           navigated = true;
           window.__gcNavigated = true;
-          window.location.replace(APP_URL);
+          window.__gcNavigatedUrl = url;
+          window.location.replace(url);
         }
 
-        function probeReachable() {
+        function probeReachable(url) {
           if (!navigator.onLine) return Promise.resolve(false);
-          return fetch(APP_URL, { method: "HEAD", mode: "no-cors", cache: "no-store" })
+          return fetch(url, { method: "HEAD", mode: "no-cors", cache: "no-store" })
             .then(function () { return true; })
             .catch(function () { return false; });
         }
@@ -223,13 +230,31 @@ const html = `<!doctype html>
           updateOfflineBanner();
           setStatus(attempt > 1 ? "Retrying connection (" + attempt + ")" : "Connecting");
 
-          probeReachable().then(function (reachable) {
+          probeReachable(PRIMARY_URL).then(function (reachable) {
             if (navigated) return;
-            if (reachable || attempt >= MAX_ATTEMPTS) {
-              navigate();
+            if (reachable) {
+              navigateTo(PRIMARY_URL);
               return;
             }
-            setTimeout(function () { attemptLaunch(attempt + 1); }, RETRY_MS);
+            if (attempt < MAX_ATTEMPTS) {
+              setTimeout(function () { attemptLaunch(attempt + 1); }, RETRY_MS);
+              return;
+            }
+            if (FALLBACK_URL && FALLBACK_URL !== PRIMARY_URL) {
+              setStatus("Trying backup address");
+              probeReachable(FALLBACK_URL).then(function (fallbackOk) {
+                if (navigated) return;
+                if (fallbackOk) {
+                  navigateTo(FALLBACK_URL);
+                  return;
+                }
+                showFallback();
+                setStatus("Cannot reach OS — use continue");
+              });
+              return;
+            }
+            showFallback();
+            setStatus("Cannot reach OS — use continue");
           });
         }
 
@@ -250,4 +275,4 @@ const html = `<!doctype html>
 </html>`;
 
 fs.writeFileSync(path.join(outDir, "index.html"), html);
-console.log("Prepared desktop shell →", outDir, "→", appUrl);
+console.log("Prepared desktop shell →", outDir, "→", primaryUrl, "fallback", fallbackUrl);

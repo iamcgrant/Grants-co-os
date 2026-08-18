@@ -1,5 +1,8 @@
+import { getProductionDatabaseRefusal } from "./lib/db/production-guard";
+
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
+  if (getProductionDatabaseRefusal()) return;
 
   const { startCursorReturnPoller } = await import("./lib/agent-hub/cursor-poller");
   startCursorReturnPoller();
