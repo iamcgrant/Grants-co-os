@@ -1,46 +1,76 @@
-# ACTION REQUIRED — human credentials only
+# ACTION REQUIRED — get https://os.grantsandco.com online
 
-## You can sign in NOW (temporary public tunnel)
+## Diagnosis (verified 2026-08-18)
 
-While production deploy is blocked on `VERCEL_TOKEN`, the OS is reachable on a Cloudflare quick tunnel from this Cloud Agent:
+| Check | Result |
+|-------|--------|
+| `os.grantsandco.com` DNS | **NXDOMAIN** — Safari “Can’t Find the Server” is correct |
+| `grantsandco.com` apex DNS | **NXDOMAIN** — parent domain is not in public DNS (RDAP 404 / not registered or not delegated) |
+| Live brand domain | **`grantandconsultants.com`** (Squarespace DNS, A `35.208.169.184`) |
+| `VERCEL_TOKEN` in this agent | **Missing** — cannot attach custom domain or provision Neon from here |
+| Temporary Vercel deploy | **Live** (see claim link below; expires ~1 hour from deploy) |
+| Temp `/login` | HTTPS 200 |
+| Temp `/api/health` | `database: error` until Postgres `DATABASE_URL` is set (SQLite cannot run on Vercel) |
 
-1. Open the **SET_PASSWORD_URL** from the latest agent message (or regenerate with `OWNER_SETUP_BASE_URL=<tunnel> npm run owner:setup-link`).
-2. Choose your Owner password (12+ chars, upper/lower/number/symbol).
-3. You land in `/home` as `owner@grantsandco.com` with role `OWNER`.
-4. Later visits: `<tunnel>/login` with that email + password.
-
-This tunnel dies when the agent VM stops. It is **not** `os.grantsandco.com` production.
+**Nothing is wrong with Safari.** There is no DNS record path for `os.grantsandco.com` until the apex exists and an `os` record is published.
 
 ---
 
-## Must add (blocks live production on os.grantsandco.com)
+## ONLY human actions required (do in order)
 
-| Secret | Get from | Enter in |
-|--------|----------|----------|
-| `VERCEL_TOKEN` | https://vercel.com/account/tokens | [Cursor environment secrets](https://cursor.com/dashboard/cloud-agents/environments/e/0b257c05-9983-11f1-ba66-0e7d0216e441) |
-| `COMMAS_API_KEY` | Commas / Fanbasis sandbox dashboard | Same Cursor secrets |
-| `PAYMENT_PROVIDER` | value: `commas` | Same |
-| `NEXT_PUBLIC_APP_URL` | value: `https://os.grantsandco.com` | Same |
+### A — Domain (pick ONE)
 
-Optional until after first public deploy: `COMMAS_WEBHOOK_SECRET` (agent registers webhook once HTTPS is live).
+**Option A1 (keep `os.grantsandco.com`):**  
+1. Register / restore **`grantsandco.com`** at a registrar (Squarespace Domains, Namecheap, etc.).  
+2. Point nameservers wherever you will manage DNS (Squarespace DNS is fine if that is your registrar).
 
-## GHL outbound (scope, not a new env name)
+**Option A2 (faster — use existing brand domain):**  
+Use **`os.grantandconsultants.com`** instead (parent already lives on Squarespace). Tell the agent to retarget `NEXT_PUBLIC_APP_URL` to that host after claim.
 
-Reissue Private Integration with `conversations/message.write` and replace the existing `GHL_API_KEY` value.
+### B — Claim the Vercel deployment (do this within ~1 hour)
 
-Already present — do not re-add: `GHL_API_KEY`, `GHL_LOCATION_ID`, `CURSOR_API_KEY`.
+1. Open: https://vercel.com/claim-deployment?code=107b3743-8b4e-46eb-a083-f0f02d07c27e  
+2. Sign in to your Vercel account and **claim** the deployment.  
+3. Temporary app (proof HTTPS works): https://temporary-prompt-oboe-st5fuuv.vercel.app/login  
 
-## After secrets are visible to the agent
+### C — Give the agent deploy power
 
-Start a **new** Cloud Agent follow-up so secrets inject, then:
+Add to [Cursor environment secrets](https://cursor.com/dashboard/cloud-agents/environments/e/0b257c05-9983-11f1-ba66-0e7d0216e441):
 
-```bash
-npm run go:live
-```
+| Name | Value |
+|------|--------|
+| `VERCEL_TOKEN` | Create at https://vercel.com/account/tokens |
+| `NEXT_PUBLIC_APP_URL` | `https://os.grantsandco.com` **or** `https://os.grantandconsultants.com` (match Option A) |
+| `PAYMENT_PROVIDER` | `commas` (optional for first login; required for payments) |
+| `COMMAS_API_KEY` | From Commas (optional for first login) |
 
-→ Neon Postgres → migrate → Vercel deploy → exact DNS for `os.grantsandco.com` → Commas webhook → gate → smoke.
+Then start a **new** Cloud Agent follow-up and say **continue**.
 
-## Desktop downloads (verified public)
+### D — DNS record (after B; enter exactly what Vercel shows)
 
-Repo is public. Release: https://github.com/iamcgrant/Grants-co-os/releases/tag/desktop-v0.1.2  
-Asset filenames still use package version `0.1.1` (e.g. `Grants.Co.OS_0.1.1_aarch64.dmg`).
+In Vercel → Project → **Settings → Domains** → Add `os.grantsandco.com` (or `os.grantandconsultants.com`).
+
+Then at Squarespace (or your registrar) DNS for that apex, add the record **Vercel prints** (do not invent). Typical shape for a subdomain:
+
+| Field | Value |
+|-------|--------|
+| Type | `CNAME` |
+| Host / Name | `os` |
+| Data / Target | **Copy from Vercel Domains UI** (often `cname.vercel-dns.com`) |
+| TTL | Default / 1 hr |
+
+SSL: Vercel issues HTTPS automatically once the CNAME validates — no separate cert step.
+
+### E — Production database
+
+In the claimed Vercel project: **Storage / Marketplace → Neon** → connect → enable backups. That sets production `DATABASE_URL` (`postgresql://…`). Agent can migrate + seed Owner after `VERCEL_TOKEN` is available.
+
+---
+
+## Sign in NOW (while production DNS is fixed)
+
+Tunnel (works today; dies when this agent VM stops):
+
+- Set password: regenerate with agent or use the latest SET_PASSWORD_URL in chat  
+- Login: https://readily-backing-legs-blog.trycloudflare.com/login  
+- Email: `owner@grantsandco.com` · Role: `OWNER`
