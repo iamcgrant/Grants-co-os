@@ -97,6 +97,11 @@ export default function LoginPage() {
               {loading ? "Signing in…" : "Enter OS"}
             </button>
           </form>
+          <p className="text-center text-sm text-[var(--gc-muted)] mt-8">
+            <a href="/get" className="text-[var(--gc-gold)]">
+              Download desktop OS
+            </a>
+          </p>
         </div>
       </div>
     </main>

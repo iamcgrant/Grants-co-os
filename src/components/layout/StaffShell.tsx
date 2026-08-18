@@ -90,8 +90,8 @@ export function StaffShell({
             </form>
             <div className="gc-topbar-actions">
               {isOwner && (
-                <Link href="/credit-pulse" className="gc-btn gc-btn-outline text-xs py-2 px-3">
-                  Friday Pulse
+                <Link href="/credit" className="gc-btn gc-btn-outline text-xs py-2 px-3">
+                  Credit
                 </Link>
               )}
               <Link href="/clients" className="gc-btn gc-btn-gold text-xs py-2 px-3">

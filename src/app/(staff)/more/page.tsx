@@ -5,6 +5,7 @@ import { hasPermission } from "@/lib/rbac/permissions";
 import { prisma } from "@/lib/db/prisma";
 import { GhlSyncPanel } from "@/components/integrations/GhlSyncPanel";
 import { GhlConversationPullPanel } from "@/components/integrations/GhlConversationPullPanel";
+import { InviteStaffForm } from "@/components/staff/InviteStaffForm";
 import { getGcEnvironment } from "@/lib/integrations/env";
 import { isGhlApiReady } from "@/lib/integrations/ghl/http";
 import { integrationCredentialStatus } from "@/lib/integrations/credentials";
@@ -66,10 +67,12 @@ export default async function MorePage() {
             </p>
           </Link>
         )}
-        <Link href="/credit-pulse" className="gc-card hover:bg-white/[0.06] transition-colors">
+        <Link href="/credit" className="gc-card hover:bg-white/[0.06] transition-colors">
           <p className="gc-eyebrow mb-2">Credit</p>
-          <p className="text-xl display">Friday Pulse</p>
-          <p className="text-sm text-[var(--gc-muted)] mt-2">Weekly updates and score request management.</p>
+          <p className="text-xl display">Credit &amp; Disputes</p>
+          <p className="text-sm text-[var(--gc-muted)] mt-2">
+            DisputeFox, Experian, SmartCredit, Credit Karma, CFPB escalations.
+          </p>
         </Link>
         {hasPermission(user.role, "VIEW_FINANCE_DASHBOARD") && (
           <Link href="/pay" className="gc-card hover:bg-white/[0.06] transition-colors">
@@ -96,7 +99,7 @@ export default async function MorePage() {
           <p className="gc-eyebrow mb-2">Desktop</p>
           <p className="text-xl display">Download OS</p>
           <p className="text-sm text-[var(--gc-muted)] mt-2">
-            Mac, Windows, and Linux installers when release URLs are configured.
+            Mac, Windows, and Linux installers. Public page also at /get.
           </p>
         </Link>
         <Link href="/dashboard" className="gc-card hover:bg-white/[0.06] transition-colors">
@@ -142,6 +145,13 @@ export default async function MorePage() {
           </div>
         </div>
       </section>
+
+      {hasPermission(user.role, "MANAGE_STAFF") && (
+        <section className="mb-10">
+          <h2 className="text-2xl mb-4">Team logins</h2>
+          <InviteStaffForm />
+        </section>
+      )}
 
       {(user.role === "OWNER" || user.role === "ADMIN") && (
         <section>

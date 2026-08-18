@@ -161,12 +161,12 @@ export function buildClientDossierIntegrations(input: {
       ? {
           state: "LIVE",
           value: "Linked",
-          detail: "GHL message pull not enabled in this slice (no live sends)",
+          detail: "Inbound GHL pull onto this master · outbound still needs conversations/message.write",
         }
       : {
           state: "UNMATCHED",
           value: null,
-          detail: "GHL message pull not enabled in this slice (no live sends)",
+          detail: "GHL contact not live-linked · inbound pull skips unlinked masters",
         }
     : {
         state: "AWAITING_INTEGRATION",
