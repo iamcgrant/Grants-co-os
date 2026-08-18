@@ -7,15 +7,15 @@ export type DesktopDownloadLinks = {
   fromEnv: boolean;
 };
 
-const DEFAULT_RELEASES = "https://github.com/iamcgrant/Grants-co-os/releases/tag/desktop-v0.1.1";
+const DEFAULT_RELEASES = "https://github.com/iamcgrant/Grants-co-os/releases/tag/desktop-v0.1.2";
 
-/** Published unsigned v0.1.1 assets (repo may be private — open while logged into GitHub). */
+/** Published unsigned v0.1.2 assets (repo may be private — open while logged into GitHub). */
 const DEFAULT_MAC =
-  "https://github.com/iamcgrant/Grants-co-os/releases/download/desktop-v0.1.1/Grants.Co.OS_0.1.1_aarch64.dmg";
+  "https://github.com/iamcgrant/Grants-co-os/releases/download/desktop-v0.1.2/Grants.Co.OS_0.1.1_aarch64.dmg";
 const DEFAULT_WIN =
-  "https://github.com/iamcgrant/Grants-co-os/releases/download/desktop-v0.1.1/Grants.Co.OS_0.1.1_x64-setup.exe";
+  "https://github.com/iamcgrant/Grants-co-os/releases/download/desktop-v0.1.2/Grants.Co.OS_0.1.1_x64-setup.exe";
 const DEFAULT_LINUX =
-  "https://github.com/iamcgrant/Grants-co-os/releases/download/desktop-v0.1.1/Grants.Co.OS_0.1.1_amd64.AppImage";
+  "https://github.com/iamcgrant/Grants-co-os/releases/download/desktop-v0.1.2/Grants.Co.OS_0.1.1_amd64.AppImage";
 
 function readEnv(name: string): string | null {
   const value = process.env[name]?.trim();
