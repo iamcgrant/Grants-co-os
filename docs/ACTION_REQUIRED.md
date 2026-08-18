@@ -1,10 +1,19 @@
 # ACTION REQUIRED — human credentials only
 
-Re-checked this agent environment: **`VERCEL_TOKEN` and `COMMAS_API_KEY` are still not available here.**
+## You can sign in NOW (temporary public tunnel)
 
-If you already added them in the Cursor dashboard, start a **new** Cloud Agent follow-up so secrets inject into a fresh session, then say **continue**.
+While production deploy is blocked on `VERCEL_TOKEN`, the OS is reachable on a Cloudflare quick tunnel from this Cloud Agent:
 
-## Must add (blocks live production)
+1. Open the **SET_PASSWORD_URL** from the latest agent message (or regenerate with `OWNER_SETUP_BASE_URL=<tunnel> npm run owner:setup-link`).
+2. Choose your Owner password (12+ chars, upper/lower/number/symbol).
+3. You land in `/home` as `owner@grantsandco.com` with role `OWNER`.
+4. Later visits: `<tunnel>/login` with that email + password.
+
+This tunnel dies when the agent VM stops. It is **not** `os.grantsandco.com` production.
+
+---
+
+## Must add (blocks live production on os.grantsandco.com)
 
 | Secret | Get from | Enter in |
 |--------|----------|----------|
@@ -23,25 +32,15 @@ Already present — do not re-add: `GHL_API_KEY`, `GHL_LOCATION_ID`, `CURSOR_API
 
 ## After secrets are visible to the agent
 
+Start a **new** Cloud Agent follow-up so secrets inject, then:
+
 ```bash
 npm run go:live
 ```
 
-→ Neon Postgres → migrate → Vercel deploy → exact DNS for `os.grantsandco.com` → Commas webhook → 11/11 gate → smoke.
+→ Neon Postgres → migrate → Vercel deploy → exact DNS for `os.grantsandco.com` → Commas webhook → gate → smoke.
 
-## Make repository public (GitHub requires owner)
+## Desktop downloads (verified public)
 
-The Cloud Agent token can push code and publish releases but **cannot** change visibility (`admin: false` → HTTP 403).
-
-As repo owner `iamcgrant`, run one of:
-
-**UI:** https://github.com/iamcgrant/Grants-co-os/settings → Danger Zone → Change repository visibility → **Make public**
-
-**CLI (on your machine, logged in as yourself):**
-```bash
-gh repo edit iamcgrant/Grants-co-os --visibility public --accept-visibility-change-consequences
-```
-
-Then say **done** — agent will verify public release URLs while logged out.
-
-Pre-public scrub completed: demo passwords removed from README/docs; seed requires `SEED_PASSWORD`; `.env` never committed.
+Repo is public. Release: https://github.com/iamcgrant/Grants-co-os/releases/tag/desktop-v0.1.2  
+Asset filenames still use package version `0.1.1` (e.g. `Grants.Co.OS_0.1.1_aarch64.dmg`).

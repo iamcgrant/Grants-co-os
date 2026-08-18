@@ -87,18 +87,20 @@ enum TaskPriority {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  passwordHash  String
-  firstName     String
-  lastName      String
-  role          Role
-  isActive      Boolean   @default(true)
-  mfaEnabled    Boolean   @default(false)
-  mfaSecret     String?
-  lastLoginAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  passwordHash       String
+  firstName          String
+  lastName           String
+  role               Role
+  isActive           Boolean   @default(true)
+  mfaEnabled         Boolean   @default(false)
+  mfaSecret          String?
+  /** When true, password login is blocked until /set-password completes. */
+  mustChangePassword Boolean   @default(false)
+  lastLoginAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   staffProfile       StaffProfile?
   client             Client?

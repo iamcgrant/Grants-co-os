@@ -49,9 +49,15 @@ export async function createSession(userId: string, meta?: { userAgent?: string;
     .sign(getSecret());
 
   const cookieStore = await cookies();
+  // Secure cookies whenever we are on HTTPS (production, Cloudflare tunnel, Vercel).
+  const secure =
+    process.env.NODE_ENV === "production" ||
+    process.env.GC_FORCE_SECURE_COOKIES === "1" ||
+    process.env.NEXT_PUBLIC_APP_URL?.startsWith("https://") === true;
+
   cookieStore.set(SESSION_COOKIE, jwt, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure,
     sameSite: "lax",
     path: "/",
     expires: expiresAt,

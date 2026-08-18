@@ -9,7 +9,7 @@ export type DesktopDownloadLinks = {
 
 const DEFAULT_RELEASES = "https://github.com/iamcgrant/Grants-co-os/releases/tag/desktop-v0.1.2";
 
-/** Published unsigned v0.1.2 assets (repo may be private — open while logged into GitHub). */
+/** Published unsigned desktop-v0.1.2 assets (filenames still carry package version 0.1.1). */
 const DEFAULT_MAC =
   "https://github.com/iamcgrant/Grants-co-os/releases/download/desktop-v0.1.2/Grants.Co.OS_0.1.1_aarch64.dmg";
 const DEFAULT_WIN =
