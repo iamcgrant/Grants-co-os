@@ -6,18 +6,19 @@ Do **not** invent alternate names. Values go in Cursor Secrets / Vercel Project 
 
 | Name | Required by | Notes |
 |------|-------------|-------|
-| `VERCEL_TOKEN` | `scripts/deploy-production.sh` | Create at https://vercel.com/account/tokens |
+| `VERCEL_TOKEN` | `scripts/deploy-production.sh` (BUILDX) | Optional in Cloud Agent when `GC_VERCEL_EXTERNAL=1` |
+| `GC_VERCEL_EXTERNAL` | `scripts/launch-readiness.ts` | Set `1` when BUILDX owns Vercel/Neon/domain |
 | `VERCEL_ORG_ID` | Vercel link (optional if default team) | From `.vercel/project.json` after first link, or team settings |
-| `VERCEL_PROJECT_ID` | Vercel link (optional if linked) | Written by `vercel link` |
+| `VERCEL_PROJECT_ID` | Vercel link (optional if linked) | `prj_7k6wvDk7P2NziRrcYsw2yUlSpwCx` (claimed project) |
 | `DATABASE_URL` | Prisma (`prisma.config.ts`, `src/lib/db/prisma.ts`) | Neon/Supabase Postgres via Vercel Marketplace — `postgresql://…` |
-| `NEXT_PUBLIC_APP_URL` | Payment links, webhooks, E2E | `https://os.grantsandco.com` |
+| `NEXT_PUBLIC_APP_URL` | Payment links, webhooks, E2E | `https://os.grantandconsultants.com` |
 | `PAYMENT_PROVIDER` | `src/lib/payments/provider.ts` | `commas` |
 | `COMMAS_API_KEY` | `src/lib/payments/commas-config.ts` | Commas / Fanbasis dashboard (sandbox first) |
 | `COMMAS_WEBHOOK_SECRET` | `src/lib/payments/commas-provider.ts` | Issued once by `npm run commas:register-webhook` |
-| `AUTH_SECRET` | `src/lib/auth/session.ts` | Agent can generate; do not invent weak values |
-| `GC_CRON_SECRET` | `src/app/api/automations/run/route.ts` | Agent can generate; Vercel cron header |
-| `GHL_API_KEY` | `src/lib/integrations/ghl/*` | **Already in Cursor env** — do not re-request unless invalid |
-| `GHL_LOCATION_ID` | `src/lib/integrations/ghl/location.ts` | **Already in Cursor env** |
+| `AUTH_SECRET` | `src/lib/auth/session.ts` | Strong random; do not invent weak values |
+| `GC_CRON_SECRET` | `src/app/api/automations/run/route.ts` | Vercel cron header |
+| `GHL_API_KEY` | `src/lib/integrations/ghl/*` | Copy into Vercel Production |
+| `GHL_LOCATION_ID` | `src/lib/integrations/ghl/location.ts` | Copy into Vercel Production |
 
 ## Commas (exact optional names in code)
 
@@ -42,7 +43,7 @@ Outbound SMS/email also needs PIT **scope** `conversations/message.write` on the
 
 | Name | Purpose |
 |------|---------|
-| `GC_DESKTOP_URL` | Desktop webview origin (default `https://os.grantsandco.com`) |
+| `GC_DESKTOP_URL` | Desktop webview origin (default `https://os.grantandconsultants.com`) |
 | `GC_DESKTOP_MAC_URL` | Publish Mac installer link on `/downloads` |
 | `GC_DESKTOP_WIN_URL` | Publish Windows installer link |
 | `GC_DESKTOP_LINUX_URL` | Publish Linux installer link |

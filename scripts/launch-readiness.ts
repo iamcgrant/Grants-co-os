@@ -98,10 +98,18 @@ async function main() {
     present("GC_CRON_SECRET") || present("CRON_SECRET"),
     present("GC_CRON_SECRET") || present("CRON_SECRET") ? "set" : "missing GC_CRON_SECRET",
   );
+  // BUILDX owns Vercel CLI/token/Neon/domain. Agent sessions set GC_VERCEL_EXTERNAL=1.
+  const vercelExternal =
+    process.env.GC_VERCEL_EXTERNAL === "1" ||
+    process.env.GC_DEPLOY_OWNER?.toLowerCase() === "buildx";
   gate(
-    "8_vercel_token",
-    present("VERCEL_TOKEN"),
-    present("VERCEL_TOKEN") ? "set" : "ACTION_REQUIRED: vercel.com/account/tokens → VERCEL_TOKEN",
+    "8_vercel_deploy",
+    present("VERCEL_TOKEN") || vercelExternal,
+    present("VERCEL_TOKEN")
+      ? "VERCEL_TOKEN set"
+      : vercelExternal
+        ? "BUILDX/external Vercel ownership (GC_VERCEL_EXTERNAL=1)"
+        : "ACTION_REQUIRED: BUILDX sets GC_VERCEL_EXTERNAL=1 on Vercel, or provide VERCEL_TOKEN",
   );
   gate("9_ghl_inbound", present("GHL_API_KEY") && present("GHL_LOCATION_ID"), present("GHL_API_KEY") && present("GHL_LOCATION_ID") ? "set" : "missing GHL credentials");
 

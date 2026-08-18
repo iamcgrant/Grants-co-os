@@ -20,7 +20,8 @@ echo "Generating Prisma client (postgresql)…"
 node scripts/prisma-generate.mjs
 
 echo "Syncing schema to Postgres via prisma db push (no data-loss flag)…"
-npx prisma db push --schema=prisma/schema.postgres.prisma --skip-generate
+# Prisma 7 no longer accepts --skip-generate on db push; generate already ran above.
+npx prisma db push --schema=prisma/schema.postgres.prisma
 
 if [[ "${SEED_PRODUCTION:-}" == "true" ]]; then
   echo "SEED_PRODUCTION=true — running seed (owner/simon/jona). Rotate passwords after."

@@ -43,7 +43,7 @@ export default async function DownloadsPage() {
       <h1 className="text-4xl mb-2">Download Grants &amp; Co OS</h1>
       <p className="gc-section-sub mb-8">
         Native desktop shell for the canonical web app at{" "}
-        <span className="text-[var(--gc-gold)]">os.grantsandco.com</span>. No business logic or
+        <span className="text-[var(--gc-gold)]">os.grantandconsultants.com</span>. No business logic or
         server secrets are bundled.
       </p>
 
@@ -94,7 +94,7 @@ export default async function DownloadsPage() {
         <ul className="text-sm text-[var(--gc-muted)] space-y-2 list-disc pl-5">
           <li>First release is intentionally unsigned.</li>
           <li>Deep links use the <code className="text-[var(--gc-gold)]">grantscoos://</code> scheme.</li>
-          <li>Production backend remains https://os.grantsandco.com — one shared database.</li>
+          <li>Production backend remains https://os.grantandconsultants.com — one shared database.</li>
         </ul>
         <Link href="/more" className="inline-block mt-5 text-sm text-[var(--gc-gold)]">
           ← Back to More

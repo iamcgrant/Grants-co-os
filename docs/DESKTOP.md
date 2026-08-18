@@ -5,7 +5,7 @@ Grants & Co OS desktop shells wrap the **canonical web application**. Do not for
 ## Stack
 
 - **Tauri 2** under `/desktop`
-- Loads `GC_DESKTOP_URL` (default `https://os.grantsandco.com`) via the local splash shell
+- Loads `GC_DESKTOP_URL` (default `https://os.grantandconsultants.com`) via the local splash shell
 - Plugins: notifications, opener (external links), dialog (file pickers), deep-link (`grantscoos://`), updater scaffolding, system tray
 - No server secrets are baked into the desktop build — only the public production URL
 
@@ -64,9 +64,9 @@ Linux AppImage/deb do not require signing for internal distribution.
 
 ## Go-live checklist
 
-Ship desktop downloads **only after** the web app is live at `https://os.grantsandco.com`.
+Ship desktop downloads **only after** the web app is live at `https://os.grantandconsultants.com`.
 
-1. **Confirm production web** — staff can sign in and use core flows on `https://os.grantsandco.com`.
+1. **Confirm production web** — staff can sign in and use core flows on `https://os.grantandconsultants.com`.
 2. **Tag a desktop release** — from `main` (or your release branch), push a tag such as `desktop-v0.1.0`. This triggers `.github/workflows/desktop-release.yml` for macOS, Windows, and Linux.
 3. **Review the draft GitHub Release** — download and smoke-test each platform artifact. Publish the release when ready.
 4. **Set download env vars** — in Vercel/Cursor production secrets, point each `GC_DESKTOP_*_URL` at the **direct asset URLs** from the published release (not the releases index page):
@@ -99,5 +99,5 @@ When URLs are unset, the page shows **Coming soon** / **Release pending** — do
 - Login (web session against production)
 - Dashboard, clients, inbox, tasks, Grants Pay, credit intelligence
 - Native notifications, external link handling, file dialogs
-- Deep links: `grantscoos://path` → navigates to `https://os.grantsandco.com/path`
+- Deep links: `grantscoos://path` → navigates to `https://os.grantandconsultants.com/path`
 - System tray: show/focus window, quit

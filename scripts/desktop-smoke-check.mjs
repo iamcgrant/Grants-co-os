@@ -90,7 +90,7 @@ const prepareScript = path.join(root, "scripts/prepare-desktop-shell.mjs");
 const prepare = spawnSync(process.execPath, [prepareScript], {
   cwd: root,
   encoding: "utf8",
-  env: { ...process.env, GC_DESKTOP_URL: "https://os.grantsandco.com" },
+  env: { ...process.env, GC_DESKTOP_URL: "https://os.grantandconsultants.com" },
 });
 
 if (prepare.status === 0) {
@@ -104,10 +104,10 @@ if (prepare.status === 0) {
 const shellHtml = path.join(root, "desktop/public-desktop/index.html");
 if (fs.existsSync(shellHtml)) {
   const html = fs.readFileSync(shellHtml, "utf8");
-  if (html.includes("https://os.grantsandco.com")) {
+  if (html.includes("https://os.grantandconsultants.com")) {
     pass("splash shell references production GC_DESKTOP_URL");
   } else {
-    fail("splash shell does not reference https://os.grantsandco.com");
+    fail("splash shell does not reference https://os.grantandconsultants.com");
   }
   if (html.includes("offline-banner")) {
     pass("splash shell includes offline banner");

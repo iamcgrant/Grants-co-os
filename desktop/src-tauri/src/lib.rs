@@ -4,7 +4,7 @@
 use tauri::Manager;
 use tauri_plugin_deep_link::DeepLinkExt;
 
-const DEFAULT_APP_URL: &str = "https://os.grantsandco.com";
+const DEFAULT_APP_URL: &str = "https://os.grantandconsultants.com";
 
 fn resolve_app_url() -> String {
   std::env::var("GC_DESKTOP_URL").unwrap_or_else(|_| DEFAULT_APP_URL.to_string())

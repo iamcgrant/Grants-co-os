@@ -4,9 +4,22 @@ import { PrismaClient, Role, CreditBureau } from "../src/generated/prisma/client
 import bcrypt from "bcryptjs";
 import { MASTER_ONBOARDING_ITEMS } from "../src/lib/clients/onboarding";
 
-const dbUrl = process.env.DATABASE_URL || "file:./dev.db";
-const adapter = new PrismaBetterSqlite3({ url: dbUrl });
-const prisma = new PrismaClient({ adapter });
+function createSeedClient(): PrismaClient {
+  const dbUrl = process.env.DATABASE_URL || "file:./dev.db";
+  if (dbUrl.startsWith("postgres://") || dbUrl.startsWith("postgresql://")) {
+    // Production Neon/Postgres path (same dual-adapter pattern as src/lib/db/prisma.ts).
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Pool } = require("pg") as typeof import("pg");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { PrismaPg } = require("@prisma/adapter-pg") as typeof import("@prisma/adapter-pg");
+    return new PrismaClient({ adapter: new PrismaPg(new Pool({ connectionString: dbUrl })) });
+  }
+  return new PrismaClient({
+    adapter: new PrismaBetterSqlite3({ url: dbUrl }),
+  });
+}
+
+const prisma = createSeedClient();
 
 const ONBOARDING = MASTER_ONBOARDING_ITEMS;
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Add / inspect os.grantsandco.com on the linked Vercel project.
+# Add / inspect os.grantandconsultants.com on the linked Vercel project.
 # Prints EXACT DNS records from Vercel — never guesses CNAME targets.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-DOMAIN="${1:-os.grantsandco.com}"
+DOMAIN="${1:-os.grantandconsultants.com}"
 
 if [[ -z "${VERCEL_TOKEN:-}" ]]; then
   echo "ACTION_REQUIRED: set VERCEL_TOKEN, then re-run: npm run domain:configure"

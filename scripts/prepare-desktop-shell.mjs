@@ -13,7 +13,7 @@ fs.mkdirSync(outDir, { recursive: true });
 const iconScript = path.join(root, "scripts/generate-desktop-icons.mjs");
 spawnSync(process.execPath, [iconScript], { stdio: "inherit", cwd: root });
 
-const appUrl = process.env.GC_DESKTOP_URL || "https://os.grantsandco.com";
+const appUrl = process.env.GC_DESKTOP_URL || "https://os.grantandconsultants.com";
 
 const html = `<!doctype html>
 <html lang="en">

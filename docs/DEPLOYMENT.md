@@ -6,15 +6,25 @@
 - **Docker** (`Dockerfile`) — full control of workers
 - Any Node 22 host with PostgreSQL (Neon or Supabase via Vercel Marketplace — **not** discontinued Vercel Postgres)
 
-## One-shot go-live (after secrets exist)
+## One-shot go-live (BUILDX)
+
+BUILDX owns Vercel CLI/token, Neon, and domain attach. Cloud Agent does not need `VERCEL_TOKEN`.
 
 ```bash
-# Required secrets in the environment (never commit):
+# Required on the machine running go-live (BUILDX):
 # VERCEL_TOKEN, COMMAS_API_KEY, GHL_API_KEY, GHL_LOCATION_ID
-# AUTH_SECRET + GC_CRON_SECRET (agent can generate)
-# PAYMENT_PROVIDER=commas  NEXT_PUBLIC_APP_URL=https://os.grantsandco.com
+# AUTH_SECRET + GC_CRON_SECRET
+# PAYMENT_PROVIDER=commas  NEXT_PUBLIC_APP_URL=https://os.grantandconsultants.com
+# GC_VERCEL_EXTERNAL=1
 
 npm run go:live
+```
+
+Or configure Neon + domain + env in the Vercel dashboard, then:
+
+```bash
+DATABASE_URL='postgresql://…' npm run db:migrate:production
+OWNER_SETUP_BASE_URL=https://os.grantandconsultants.com npm run owner:setup-link
 ```
 
 This runs: Neon install → migrate → Vercel deploy → domain inspect (exact DNS) → Commas webhook register → readiness 11/11 → smoke → desktop smoke.
@@ -25,7 +35,7 @@ Individual steps:
 |--------|---------|
 | `npm run deploy:production` | Link project, Neon, env upsert, migrate, deploy |
 | `npm run db:migrate:production` | `prisma db push` against Postgres schema |
-| `npm run domain:configure` | Add `os.grantsandco.com` + print **exact** Vercel DNS |
+| `npm run domain:configure` | Add `os.grantandconsultants.com` + print **exact** Vercel DNS |
 | `npm run commas:register-webhook` | Create webhook; store `COMMAS_WEBHOOK_SECRET` once |
 | `npm run launch:readiness` | Fixed **11/11** gate |
 | `npm run smoke:production` | Public SSL/health/login/webhook/cron smoke |
@@ -52,10 +62,14 @@ Individual steps:
 
 ## Domain
 
+Permanent hostname: **`os.grantandconsultants.com`** (Squarespace DNS on `grantandconsultants.com`).
+
 ```bash
 npm run domain:configure
-# Apply the printed records at your DNS host — do not guess CNAME targets
+# Apply the printed records at Squarespace DNS — do not guess CNAME targets
 ```
+
+See `docs/BUILDX_HANDOFF.md`.
 
 ## Desktop
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# One-shot go-live orchestrator. Runs every autonomous step once credentials exist.
+# One-shot go-live orchestrator. BUILDX may run this with VERCEL_TOKEN.
+# Cloud Agent sessions typically skip deploy and set GC_VERCEL_EXTERNAL=1 instead.
 # Fails closed with ACTION_REQUIRED — never invents Vercel/Commas/GHL secrets.
 set -euo pipefail
 
@@ -26,11 +27,12 @@ if [[ -z "${GC_CRON_SECRET:-}" && -f /tmp/gc_cron_secret.val ]]; then
   export GC_CRON_SECRET
 fi
 export CRON_SECRET="${CRON_SECRET:-${GC_CRON_SECRET:-}}"
-export NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-https://os.grantsandco.com}"
+export NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-https://os.grantandconsultants.com}"
 export PAYMENT_PROVIDER="${PAYMENT_PROVIDER:-commas}"
 export COMMAS_ENVIRONMENT="${COMMAS_ENVIRONMENT:-sandbox}"
 export GC_ENV="${GC_ENV:-production}"
-export GC_DESKTOP_URL="${GC_DESKTOP_URL:-https://os.grantsandco.com}"
+export GC_DESKTOP_URL="${GC_DESKTOP_URL:-https://os.grantandconsultants.com}"
+export GC_VERCEL_EXTERNAL="${GC_VERCEL_EXTERNAL:-1}"
 
 need VERCEL_TOKEN
 need AUTH_SECRET
@@ -43,7 +45,7 @@ echo "[1/6] Deploy production (Neon + migrate + Vercel)…"
 bash scripts/deploy-production.sh
 
 echo "[2/6] Configure domain + print DNS…"
-bash scripts/configure-domain.sh os.grantsandco.com || true
+bash scripts/configure-domain.sh os.grantandconsultants.com || true
 
 echo "[3/6] Register Commas webhook (needs public HTTPS)…"
 if [[ -n "${COMMAS_WEBHOOK_SECRET:-}" ]]; then
@@ -65,4 +67,4 @@ npm run desktop:smoke || true
 
 echo ""
 echo "Go-live script finished. Re-run after DNS/Commas webhook secret if any ACTION_REQUIRED remained."
-echo "Desktop Mac/Windows: tag desktop-v0.1.0 after web is live (Linux artifacts already buildable)."
+echo "Permanent origin: https://os.grantandconsultants.com"

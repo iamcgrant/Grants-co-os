@@ -1,34 +1,33 @@
 # GRANTS & CO OS — PRODUCTION HANDOFF
 
-**Date:** 2026-08-17  
+**Date:** 2026-08-18  
 **Branch:** `cursor/grants-co-os-completion-30e7`  
 **Repo:** `github.com/iamcgrant/Grants-co-os`  
-**Launch gate:** `npm run launch:readiness` → currently **3/11 PASS** (blocked only on Vercel/Commas/GHL write scope/public DNS)
+**Permanent origin:** `https://os.grantandconsultants.com`
 
 ## LIVE URL
 
-**Not live.** `os.grantsandco.com` does not resolve from this agent environment.
-
 | Surface | Status |
 |---------|--------|
-| Cloud Agent localhost | `http://localhost:3000` (verified build + local E2E) |
-| Public health | `GET /api/health` (local only until deploy) |
+| Permanent hostname | `https://os.grantandconsultants.com` (BUILDX attaches domain + Neon) |
+| Claimed Vercel project | `temporary-prompt-oboe-st5fuuv` · `prj_7k6wvDk7P2NziRrcYsw2yUlSpwCx` |
+| Current Vercel URL | https://temporary-prompt-oboe-st5fuuv.vercel.app |
+| Public health | `GET /api/health` (needs Postgres `DATABASE_URL` on Vercel) |
 | Owner system health | `/system-health` |
-| Target origin | `https://os.grantsandco.com` via `NEXT_PUBLIC_APP_URL` |
+| Do not use | `grantsandco.com` / `os.grantsandco.com` (no public DNS) |
 
-Deploy tooling ready: `Dockerfile`, `vercel.json`, `npm run deploy:production`, `docs/DEPLOYMENT.md`.
+BUILDX owns Vercel token, Neon, env, and custom domain. See `docs/BUILDX_HANDOFF.md`.
 
 ## DESKTOP DOWNLOADS
 
 | Platform | Status |
 |----------|--------|
-| Linux AppImage + `.deb` | **Built** in this environment — see `/opt/cursor/artifacts/desktop/` + `SHA256SUMS.txt` |
-| macOS `.dmg` | Blocked on Apple Developer ID + notarization (human) |
-| Windows installer | Blocked on Authenticode / Trusted Signing cert (human) |
+| Mac / Windows / Linux | Public unsigned assets on `desktop-v0.1.2` release |
+| Code signing | Human Apple Developer ID + Windows Authenticode (later) |
 
-See `docs/DESKTOP.md`. Rebuild Linux: `npm run desktop:linux`.
+See `docs/DESKTOP.md`. Defaults in `src/lib/desktop/downloads.ts` point at public GitHub release URLs.
 
-## OWNER / STAFF ACCESS (dev seed — rotate before prod)
+## OWNER / STAFF ACCESS
 
 | Role | Email |
 |------|-------|
@@ -36,45 +35,36 @@ See `docs/DESKTOP.md`. Rebuild Linux: `npm run desktop:linux`.
 | CUSTOMER_SERVICE | `simon@grantsandco.com` |
 | FILE_PREPARER | `jona@grantsandco.com` |
 
-Password: README seed only — **rotate before production**.
+First-time Owner password: `npm run owner:setup-link` with `OWNER_SETUP_BASE_URL=https://os.grantandconsultants.com` after migrate. Never commit passwords.
 
 ## INTEGRATIONS
 
 | System | Status |
 |--------|--------|
-| **Commas** | Adapter complete (checkout + HMAC webhooks + refunds + payment requests). **BLOCKED:** `COMMAS_API_KEY`, `COMMAS_WEBHOOK_SECRET`, `PAYMENT_PROVIDER=commas` |
-| **GHL inbound** | **Live** — contacts + conversations pull with current PIT |
-| **GHL outbound SMS/MMS/email** | Adapter fail-closed. Live probe: `POST /conversations/messages` → **401** missing `conversations/message.write` |
-| **GHL voice / browser dialer** | Adapter honest (`browserDialer: false`). Phone-system + voice-ai endpoints → **401** |
-| **DisputeFox** | Native `/setup` intake primary; optional intake URL template |
+| **Commas** | Adapter complete. BUILDX sets `COMMAS_API_KEY` + `PAYMENT_PROVIDER=commas` then `npm run commas:register-webhook` |
+| **GHL inbound** | Live with current PIT |
+| **GHL outbound** | Fail-closed until PIT has `conversations/message.write` |
+| **DisputeFox** | Native `/setup` intake primary |
 | **SmartCredit** | Sponsor URL optional |
 
 ## AUTOMATIONS
 
-| Flow | Status |
-|------|--------|
-| Payment request → link → email/SMS queue | Implemented (delivery provider-dependent) |
-| Payment → onboarding token → Simon/Jona assign | Implemented |
-| Intake completed → file prep | Implemented |
-| Friday Credit Pulse | Scheduler + `/api/automations/run` |
-| Exception tickets | On exhausted retries |
+Payment request → pay → onboarding → Simon/Jona assignment, Friday Credit Pulse, exception tickets — implemented. Cron: `/api/automations/run` every 5m via `vercel.json`.
 
-## TEST RESULTS
+## TEST / GATES
 
 | Suite | Result |
 |-------|--------|
-| Vitest | Run `npm test` on this branch |
-| Local `npm run e2e:production` | Harness ready; exits **NOT PRODUCTION-COMPLETE** while `PAYMENT_PROVIDER=mock` |
-| `npm run launch:readiness` | Fail-closed gate for Commas + public HTTPS + Postgres + GHL write |
-| `npm run build` | Production build verified previously on branch |
-| Desktop Linux | AppImage + deb artifacts produced |
+| Vitest | `npm test` |
+| `npm run launch:readiness` | 11 gates; `GC_VERCEL_EXTERNAL=1` satisfies Vercel gate when BUILDX owns deploy |
+| `npm run smoke:production` | Against `NEXT_PUBLIC_APP_URL` after domain+DB |
 
-## REMAINING EXTERNAL BLOCKERS (human only)
+## REMAINING (BUILDX / human — not Cloud Agent)
 
-1. **Commas** — sandbox API key + webhook secret → Cursor Secrets / Vercel env as `COMMAS_API_KEY`, `COMMAS_WEBHOOK_SECRET`; set `PAYMENT_PROVIDER=commas`, `COMMAS_ENVIRONMENT=sandbox`.
-2. **Vercel + Postgres + DNS** — `VERCEL_TOKEN`, production `DATABASE_URL` (`postgresql://…`), enable backups, point `os.grantsandco.com`, set `NEXT_PUBLIC_APP_URL=https://os.grantsandco.com`, `AUTH_SECRET`, `GC_CRON_SECRET`.
-3. **GHL Private Integration scopes** — add `conversations/message.write` (+ phone/voice scopes for dialer); replace/reissue PIT if needed.
-4. **Desktop signing** — Apple Developer ID + Windows code-signing cert.
-5. **Commas live charges** — only after sandbox QA: `COMMAS_LIVE_CHARGES=true`.
-
-Do **not** declare PRODUCTION COMPLETE while any money path, public origin, or outbound comms path is mock / localhost / degraded / unverified.
+1. Neon `DATABASE_URL` on Vercel Production + backups  
+2. Domain `os.grantandconsultants.com` + Squarespace CNAME from Vercel UI  
+3. Env from `.env.production.example`  
+4. Migrate + Owner setup link  
+5. Commas key + webhook register  
+6. GHL write scope (optional for first login)  
+7. Desktop code-signing certs (optional)

@@ -23,7 +23,7 @@ function record(name: string, ok: boolean, detail?: string) {
 
 async function main() {
   if (!base || base.includes("localhost") || !base.startsWith("https://")) {
-    console.error("ACTION_REQUIRED: set NEXT_PUBLIC_APP_URL to https://os.grantsandco.com");
+    console.error("ACTION_REQUIRED: set NEXT_PUBLIC_APP_URL to https://os.grantandconsultants.com");
     process.exit(2);
   }
 

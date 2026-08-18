@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Production deploy for Grants & Co OS → Vercel + Neon (Marketplace) Postgres.
+# Intended for BUILDX (owns VERCEL_TOKEN). Cloud Agent sets GC_VERCEL_EXTERNAL=1 instead.
 # Does not invent credentials. Fails closed with ACTION_REQUIRED when secrets missing.
 # Never prints secret values.
+# Permanent hostname: os.grantandconsultants.com
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -17,7 +19,7 @@ need() {
 
 need VERCEL_TOKEN
 
-export NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-https://os.grantsandco.com}"
+export NEXT_PUBLIC_APP_URL="${NEXT_PUBLIC_APP_URL:-https://os.grantandconsultants.com}"
 export PAYMENT_PROVIDER="${PAYMENT_PROVIDER:-commas}"
 export COMMAS_ENVIRONMENT="${COMMAS_ENVIRONMENT:-sandbox}"
 export COMMAS_LIVE_CHARGES="${COMMAS_LIVE_CHARGES:-false}"
@@ -128,12 +130,12 @@ npx vercel build --prod --token "$VERCEL_TOKEN"
 URL=$(npx vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}")
 echo "Deployed: $URL"
 
-echo "Adding domain os.grantsandco.com…"
-DOMAIN_OUT=$(npx vercel domains add os.grantsandco.com --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}" 2>&1 || true)
+echo "Adding domain os.grantandconsultants.com…"
+DOMAIN_OUT=$(npx vercel domains add os.grantandconsultants.com --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}" 2>&1 || true)
 echo "$DOMAIN_OUT"
-INSPECT=$(npx vercel domains inspect os.grantsandco.com --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}" 2>&1 || true)
+INSPECT=$(npx vercel domains inspect os.grantandconsultants.com --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}" 2>&1 || true)
 echo "$INSPECT"
 echo "ACTION_REQUIRED (DNS): apply the EXACT records printed above from Vercel (do not guess CNAME targets)."
 
-echo "Done. Next: npm run commas:register-webhook with NEXT_PUBLIC_APP_URL=https://os.grantsandco.com"
-echo "Then smoke-test https://os.grantsandco.com/api/health"
+echo "Done. Next: npm run commas:register-webhook with NEXT_PUBLIC_APP_URL=https://os.grantandconsultants.com"
+echo "Then smoke-test https://os.grantandconsultants.com/api/health"

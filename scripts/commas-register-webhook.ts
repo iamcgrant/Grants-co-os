@@ -4,7 +4,7 @@
  * Requires COMMAS_API_KEY. Prints secret_key ONCE when created — store in secrets, never commit.
  *
  * Usage:
- *   COMMAS_API_KEY=... NEXT_PUBLIC_APP_URL=https://os.grantsandco.com npx tsx scripts/commas-register-webhook.ts
+ *   COMMAS_API_KEY=... NEXT_PUBLIC_APP_URL=https://os.grantandconsultants.com npx tsx scripts/commas-register-webhook.ts
  */
 import "dotenv/config";
 import { commasBaseUrl, isCommasConfigured, resolveCommasEnvironment } from "../src/lib/payments/commas-config";
@@ -20,7 +20,7 @@ async function main() {
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
   if (!appUrl || appUrl.includes("localhost")) {
     console.error(
-      "ACTION_REQUIRED: set NEXT_PUBLIC_APP_URL to the public HTTPS origin (e.g. https://os.grantsandco.com).",
+      "ACTION_REQUIRED: set NEXT_PUBLIC_APP_URL to the public HTTPS origin (e.g. https://os.grantandconsultants.com).",
     );
     process.exit(2);
   }

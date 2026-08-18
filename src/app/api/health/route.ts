@@ -12,12 +12,15 @@ export async function GET() {
     database = "error";
   }
 
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "") || null;
+
   return NextResponse.json({
     ok: database === "ok",
     service: "grants-co-os",
     database,
     paymentProvider: getPaymentProvider().name,
     commasConfigured: isCommasConfigured(),
+    appUrl,
     time: new Date().toISOString(),
   });
 }
