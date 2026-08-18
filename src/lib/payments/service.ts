@@ -175,6 +175,21 @@ export async function chargeInvoice(input: ChargeInvoiceInput) {
       idempotencyKey: `payment:${input.idempotencyKey}`,
       metadata: { transactionId: transaction.id, invoiceId: invoice.id },
     });
+
+    const { queueAutomation } = await import("@/lib/automations/engine");
+    await queueAutomation({
+      kind: "PAYMENT_COMPLETED",
+      clientId: invoice.clientId,
+      entityType: "PaymentTransaction",
+      entityId: transaction.id,
+      idempotencyKey: `payment_completed:${transaction.id}`,
+      payload: {
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        transactionId: transaction.id,
+        serviceName: invoice.description,
+      },
+    });
   } else if (result.status === "FAILED") {
     await addTimelineEvent({
       clientId: invoice.clientId,
@@ -286,6 +301,8 @@ export async function refundTransaction(input: {
 
 /**
  * Process provider webhooks with full idempotency on providerEventId.
+ * Applies payment / refund / dispute mutations for Commas (and other hosted rails).
+ * Simulated mock charges still never count as production collected revenue when provider=mock.
  */
 export async function processWebhook(rawBody: string, headers: Record<string, string | string[] | undefined>) {
   const provider = getPaymentProvider();
@@ -318,11 +335,236 @@ export async function processWebhook(rawBody: string, headers: Record<string, st
         },
       });
 
-  // Mark processed — money mutations must key off provider transaction IDs + uniqueness
+  const applied = await applyWebhookMoneyEffects({
+    providerName: provider.name,
+    event,
+  });
+
   const processed = await prisma.webhookEvent.update({
     where: { id: webhook.id },
     data: { status: "PROCESSED", processedAt: new Date() },
   });
 
-  return { duplicate: false, event: processed, parsed: event };
+  return { duplicate: false, event: processed, parsed: event, applied };
+}
+
+async function applyWebhookMoneyEffects(input: {
+  providerName: string;
+  event: {
+    eventType: string;
+    providerEventId: string;
+    providerTransactionId?: string;
+    status?: string;
+    payload: Record<string, unknown>;
+  };
+}) {
+  const data = (
+    (input.event.payload.data as Record<string, unknown> | undefined) ||
+    input.event.payload
+  ) as Record<string, unknown>;
+
+  const metadata = (data.metadata as Record<string, unknown> | undefined) || {};
+  const invoiceId =
+    (typeof metadata.invoice_id === "string" && metadata.invoice_id) ||
+    (typeof metadata.invoiceId === "string" && metadata.invoiceId) ||
+    null;
+  const paymentRequestPublicId =
+    (typeof metadata.payment_request_public_id === "string" &&
+      metadata.payment_request_public_id) ||
+    null;
+
+  if (input.event.eventType === "payment.succeeded" || input.event.status === "SUCCEEDED") {
+    return applySucceededPaymentWebhook({
+      providerName: input.providerName,
+      providerTransactionId:
+        input.event.providerTransactionId ||
+        (data.transaction_id ? String(data.transaction_id) : null) ||
+        (data.id ? String(data.id) : null),
+      amountCents: Number(data.amount_cents ?? data.amountCents ?? 0) || null,
+      invoiceId,
+      paymentRequestPublicId,
+      providerEventId: input.event.providerEventId,
+    });
+  }
+
+  if (
+    input.event.eventType === "payment.failed" ||
+    input.event.status === "FAILED"
+  ) {
+    if (invoiceId) {
+      await prisma.invoice.update({
+        where: { id: invoiceId },
+        data: { status: "FAILED" },
+      });
+    }
+    if (paymentRequestPublicId) {
+      await prisma.paymentRequest.updateMany({
+        where: { publicId: paymentRequestPublicId },
+        data: { status: "FAILED" },
+      });
+    }
+    return { effect: "failed_recorded" };
+  }
+
+  if (
+    input.event.eventType.includes("chargeback") ||
+    input.event.eventType.includes("dispute")
+  ) {
+    if (invoiceId) {
+      await prisma.invoice.update({
+        where: { id: invoiceId },
+        data: { status: "DISPUTED" },
+      });
+    }
+    if (paymentRequestPublicId) {
+      await prisma.paymentRequest.updateMany({
+        where: { publicId: paymentRequestPublicId },
+        data: { status: "DISPUTED" },
+      });
+    }
+    return { effect: "dispute_recorded" };
+  }
+
+  return { effect: "none" };
+}
+
+async function applySucceededPaymentWebhook(input: {
+  providerName: string;
+  providerTransactionId: string | null;
+  amountCents: number | null;
+  invoiceId: string | null;
+  paymentRequestPublicId: string | null;
+  providerEventId: string;
+}) {
+  if (!input.providerTransactionId) {
+    return { effect: "missing_transaction_id" };
+  }
+
+  // Mock provider webhooks must never inflate collected revenue in production reporting.
+  const countsAsCollectedRevenue = input.providerName !== "mock";
+
+  const existingTxn = await prisma.paymentTransaction.findUnique({
+    where: {
+      provider_providerTransactionId: {
+        provider: input.providerName,
+        providerTransactionId: input.providerTransactionId,
+      },
+    },
+  });
+  if (existingTxn) {
+    return { effect: "duplicate_transaction", transactionId: existingTxn.id };
+  }
+
+  let invoice =
+    (input.invoiceId
+      ? await prisma.invoice.findUnique({
+          where: { id: input.invoiceId },
+          include: { client: true },
+        })
+      : null) ||
+    (input.paymentRequestPublicId
+      ? (
+          await prisma.paymentRequest.findUnique({
+            where: { publicId: input.paymentRequestPublicId },
+            include: { invoice: { include: { client: true } }, client: true },
+          })
+        )?.invoice
+      : null);
+
+  if (!invoice) {
+    return { effect: "invoice_not_found" };
+  }
+
+  const amountCents =
+    input.amountCents && input.amountCents > 0
+      ? input.amountCents
+      : invoice.amountCents - invoice.amountPaidCents;
+
+  const transaction = await prisma.$transaction(async (tx) => {
+    const txn = await tx.paymentTransaction.create({
+      data: {
+        clientId: invoice!.clientId,
+        invoiceId: invoice!.id,
+        provider: input.providerName,
+        providerTransactionId: input.providerTransactionId!,
+        idempotencyKey: `webhook:${input.providerName}:${input.providerEventId}`,
+        amountCents,
+        status: "SUCCEEDED",
+        settlementStatus: countsAsCollectedRevenue ? "PENDING" : "UNSETTLED",
+        settledAt: null,
+      },
+    });
+
+    const amountPaid = invoice!.amountPaidCents + amountCents;
+    const newStatus: InvoiceStatus =
+      amountPaid >= invoice!.amountCents ? "SUCCEEDED" : "DUE";
+
+    await tx.invoice.update({
+      where: { id: invoice!.id },
+      data: {
+        status: newStatus,
+        amountPaidCents: amountPaid,
+        paidAt: newStatus === "SUCCEEDED" ? new Date() : null,
+      },
+    });
+
+    if (input.paymentRequestPublicId) {
+      await tx.paymentRequest.updateMany({
+        where: { publicId: input.paymentRequestPublicId },
+        data: {
+          status: newStatus === "SUCCEEDED" ? "PAID" : "PARTIALLY_PAID",
+          amountPaidCents: amountPaid,
+          paidAt: newStatus === "SUCCEEDED" ? new Date() : null,
+        },
+      });
+    }
+
+    return txn;
+  });
+
+  await addTimelineEvent({
+    clientId: invoice.clientId,
+    eventType: "PAYMENT_RECEIVED",
+    title: "Payment Received",
+    description: `Webhook-confirmed payment of $${(amountCents / 100).toFixed(2)} for ${invoice.invoiceNumber}`,
+    idempotencyKey: `payment_webhook:${input.providerEventId}`,
+    metadata: {
+      transactionId: transaction.id,
+      invoiceId: invoice.id,
+      countsAsCollectedRevenue,
+    },
+  });
+
+  await writeAuditLog({
+    action: "PAYMENT_SUCCEEDED_WEBHOOK",
+    entityType: "PaymentTransaction",
+    entityId: transaction.id,
+    metadata: {
+      invoiceId: invoice.id,
+      amountCents,
+      provider: input.providerName,
+      countsAsCollectedRevenue,
+    },
+  });
+
+  const { queueAutomation } = await import("@/lib/automations/engine");
+  await queueAutomation({
+    kind: "PAYMENT_COMPLETED",
+    clientId: invoice.clientId,
+    entityType: "PaymentTransaction",
+    entityId: transaction.id,
+    idempotencyKey: `payment_completed:${transaction.id}`,
+    payload: {
+      invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      transactionId: transaction.id,
+      serviceName: invoice.description,
+    },
+  });
+
+  return {
+    effect: "payment_applied",
+    transactionId: transaction.id,
+    countsAsCollectedRevenue,
+  };
 }

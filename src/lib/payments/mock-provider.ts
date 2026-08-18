@@ -45,11 +45,21 @@ export class MockPaymentProvider implements PaymentProvider {
     successUrl: string;
     cancelUrl: string;
     metadata?: Record<string, string>;
+    title?: string;
+    description?: string;
+    type?: "onetime_non_reusable" | "onetime_reusable" | "subscription";
+    frequencyDays?: number;
   }) {
     const sessionId = `mock_cs_${randomUUID().slice(0, 8)}`;
+    const invoiceNumber = input.metadata?.invoice_number;
+    // Mock stays inside Grants Pay luxury checkout — never invents collected revenue.
+    const url = invoiceNumber
+      ? `/pay/${encodeURIComponent(invoiceNumber)}?session=${sessionId}`
+      : `${input.successUrl}?session=${sessionId}`;
     return {
       sessionId,
-      url: `${input.successUrl}?session=${sessionId}`,
+      url,
+      checkoutId: sessionId,
     };
   }
 

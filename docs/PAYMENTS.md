@@ -4,6 +4,20 @@
 
 Financial infrastructure is **Priority #1**. Do not connect production processors until explicitly approved. Live charges stay locked behind explicit env flags.
 
+## Approved primary: Commas
+
+**Commas (Fanbasis) is the approved payment platform for Grants & Co.**
+
+Grants Pay never collects or stores raw card numbers / CVV. Customers complete payment on Commas’ secure hosted checkout (`payment_link`). Grants & Co OS owns the branded concierge experience, invoices, master client identity, receipts, and post-payment intake.
+
+| Adapter | Status | Role |
+|---------|--------|------|
+| CommasPaymentProvider | **Primary** — hosted checkout + webhooks | Production path when `PAYMENT_PROVIDER=commas` + sandbox/live keys |
+| MockPaymentProvider | Active local default | Safe simulation (simulated payments **never** count as collected revenue) |
+| AuthorizeNetPaymentProvider | Secondary sandbox Accept.js | Optional proprietary card path; fail-closed without credentials |
+
+Set `PAYMENT_PROVIDER=mock|commas|authorize_net`.
+
 ## Provider interface
 
 `PaymentProvider` supports:
@@ -14,90 +28,64 @@ Financial infrastructure is **Priority #1**. Do not connect production processor
 - retrieveSettlementStatus, retrievePayout
 - verifyWebhook, handleWebhook
 
-Adapters:
+## Grants Pay workflow
 
-| Adapter | Status | Role |
-|---------|--------|------|
-| MockPaymentProvider | **Active (default)** | Safe simulation |
-| AuthorizeNetPaymentProvider | **Sandbox Accept.js wired** (fail-closed without credentials) | **Preferred primary** for proprietary Grants Pay |
-| CommasPaymentProvider | Scaffolded | Secondary / MoR / payment_link option |
+```
+CLIENT → PAYMENT REQUEST → GRANTS PAY (branded) → COMMAS SECURE CHECKOUT
+  → payment.succeeded webhook → MASTER CLIENT → CLIENT SETUP → ONBOARDING → STAFF
+```
 
-Set `PAYMENT_PROVIDER=mock|authorize_net|commas`.
+Staff APIs:
 
-Ecrypt and NMI were removed — they were placeholder stubs only and are not used by Grants & Co.
+- `POST /api/pay/requests` — create payment request + invoice + secure link
+- `GET /pay/[invoiceNumber]` — luxury client checkout
+- `POST /api/webhooks/payments` — Commas HMAC (`x-webhook-signature`)
+- `/setup/[token]` — native one-time client setup after payment
 
-## Why Authorize.Net is preferred primary
-
-Grants Pay needs a proprietary checkout that still feels like Grants & Co, with:
-
-- tokenized card capture (no raw PAN/CVV on our servers)
-- invoice-linked charges, refunds, webhooks
-- **immediate** post-success continuation into DisputeFox intake
-
-Authorize.Net Accept.js returns a synchronous charge result → OS can redirect immediately.  
-Commas is excellent as MoR/hosted `payment_link`, but that flow leaves Grants Pay UI for their hosted page and relies more on `success_url` + webhooks (Commas webhooks are at-most-once, no retry).
-
-## Post-payment → DisputeFox intake
-
-Flow:
-
-1. Payment SUCCEEDED (mock default; Authorize.Net Accept.js sandbox when configured)
-2. API returns `continuation.nextUrl` → `/pay/continue/[invoiceNumber]`
-3. Bridge page confirms transaction, then opens DisputeFox intake when `DISPUTEFOX_INTAKE_URL_TEMPLATE` is configured
-
-Both processors can support this:
-
-| Processor | Immediate continue | Mechanism |
-|-----------|--------------------|-----------|
-| Authorize.Net | **Best fit** | Accept.js sync success → redirect; also Accept Hosted continue URL + webhooks |
-| Commas | Supported | `success_url` on checkout-session + `payment.succeeded` webhook |
+Statuses tracked: Pending, Paid, Failed, Canceled, Refunded, Partially Refunded, Chargeback/Dispute.
 
 ## Safety
 
-- Idempotency keys on charges and refunds
-- Unique `(provider, providerTransactionId)`, `(provider, providerEventId)`, `idempotencyKey`
-- Invoice status separate from settlement status and payout status
+- Idempotency keys on charges, refunds, and webhook event IDs
+- Unique `(provider, providerTransactionId)`
+- Invoice status separate from settlement / payout
 - Never store raw PAN/CVV
 - Never put secret keys in browser, GitHub, logs, or screenshots
-- Webhook verification + duplicate event protection
-- Live charges require `AUTHORIZE_NET_LIVE_CHARGES=true` or `COMMAS_LIVE_CHARGES=true`
+- Webhook verification via HMAC-SHA256 (`COMMAS_WEBHOOK_SECRET`)
+- Live charges require `COMMAS_LIVE_CHARGES=true` (or Authorize.Net equivalent)
+- Mock / simulated payments are excluded from production collected-revenue semantics
 
 ## Credentials (sandbox first — do not activate live)
 
-### Authorize.Net (preferred)
+### Commas (primary)
 
-| Env var | Where to get it |
-|---------|-----------------|
-| `AUTHORIZE_NET_SANDBOX_API_LOGIN_ID` | Sandbox Merchant Interface → Account → Settings → Security Settings → **API Credentials & Keys** |
-| `AUTHORIZE_NET_SANDBOX_TRANSACTION_KEY` | Same page → New Transaction Key |
-| `AUTHORIZE_NET_SANDBOX_CLIENT_KEY` | Account → Settings → Security Settings → **Manage Public Client Key** (browser Accept.js only) |
-| `AUTHORIZE_NET_SIGNATURE_KEY` | API Credentials & Keys → New Signature Key (webhooks) |
-| `AUTHORIZE_NET_ENVIRONMENT` | `sandbox` (default) or `production` |
-
-Legacy aliases (`AUTHORIZE_NET_API_LOGIN_ID`, `AUTHORIZE_NET_TRANSACTION_KEY`, `AUTHORIZE_NET_PUBLIC_CLIENT_KEY`) still resolve; sandbox-prefixed names win.
-
-Missing sandbox login + transaction key **fails closed** (no processor HTTP, no invented success).  
-Then set `PAYMENT_PROVIDER=authorize_net` only when ready to test sandbox.  
-Live: also require `AUTHORIZE_NET_LIVE_CHARGES=true` after explicit approval. Do not set that flag until approved.
-
-### Commas
-
-| Env var | Where to get it |
-|---------|-----------------|
-| `COMMAS_API_KEY` | Commas dashboard → **API Keys** (header `x-api-key`). Scopes needed: `checkout-sessions`, `payments`, `refunds`, `webhooks`, `customers` |
-| `COMMAS_WEBHOOK_SECRET` | Returned as `secret_key` when creating a webhook subscription via API |
+| Env var | Purpose |
+|---------|---------|
+| `COMMAS_API_KEY` | Dashboard → API Keys (`x-api-key`). Scopes: `checkout-sessions`, `payments`, `refunds`, `webhooks`, `customers` |
+| `COMMAS_WEBHOOK_SECRET` | `secret_key` from webhook subscription create |
 | `COMMAS_ENVIRONMENT` | `sandbox` → `https://qa.dev-fan-basis.com` · `production` → `https://www.fanbasis.com` |
+| `COMMAS_CREATOR_HANDLE` | Optional — embedded checkout |
+| `COMMAS_LIVE_CHARGES` | Must be `true` for production charges |
 
-Then set `PAYMENT_PROVIDER=commas` for sandbox tests.  
-Live: also require `COMMAS_LIVE_CHARGES=true` after explicit approval.
+### Authorize.Net (optional secondary)
+
+| Env var | Purpose |
+|---------|---------|
+| `AUTHORIZE_NET_SANDBOX_API_LOGIN_ID` | Sandbox API login |
+| `AUTHORIZE_NET_SANDBOX_TRANSACTION_KEY` | Sandbox transaction key |
+| `AUTHORIZE_NET_SANDBOX_CLIENT_KEY` | Public Accept.js client key |
+| `AUTHORIZE_NET_LIVE_CHARGES` | Production lock |
 
 ### DisputeFox intake handoff
 
 | Env var | Purpose |
 |---------|---------|
-| `DISPUTEFOX_INTAKE_URL_TEMPLATE` | e.g. `https://app.example/intake/{externalId}?ref={grantsClientId}` |
+| `DISPUTEFOX_INTAKE_URL_TEMPLATE` | Fallback hosted form: `{externalId}` + `{grantsClientId}` |
 
-## Checkout
+Native `/setup/[token]` is the primary post-payment experience. Existing DisputeProcess intake remains as branded fallback when the template is set.
 
-Proprietary Grants Pay UI at `/pay/[invoiceNumber]`.  
-Post-success bridge at `/pay/continue/[invoiceNumber]`.
+## Checkout surfaces
+
+- Proprietary Grants Pay UI: `/pay/[invoiceNumber]`
+- Post-success bridge: `/pay/continue/[invoiceNumber]`
+- Native client setup: `/setup/[token]`

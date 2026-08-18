@@ -18,6 +18,15 @@ export const GHL_LOCATION_ID_ENV = "GHL_LOCATION_ID";
 export const GHL_CONVERSATIONS_READONLY_SCOPE = "conversations.readonly";
 export const GHL_CONVERSATIONS_MESSAGE_READONLY_SCOPE = "conversations/message.readonly";
 
+/**
+ * PIT scopes required for outbound SMS/email via POST /conversations/messages.
+ * Confirmed live: current PIT returns 401 "The token is not authorized for this scope."
+ * Do not invent wider scopes from application code — X1 adds them on the PIT.
+ */
+export const GHL_CONVERSATIONS_MESSAGE_WRITE_SCOPE = "conversations/message.write";
+/** Optional: create/update conversation threads before send when none exists. */
+export const GHL_CONVERSATIONS_WRITE_SCOPE = "conversations.write";
+
 export function resolveGhlLocationId(explicit?: string | null): string {
   const fromEnv = explicit?.trim() || process.env[GHL_LOCATION_ID_ENV]?.trim();
   return fromEnv || GHL_PRODUCTION_LOCATION_ID;

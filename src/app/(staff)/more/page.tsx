@@ -78,6 +78,27 @@ export default async function MorePage() {
             <p className="text-sm text-[var(--gc-muted)] mt-2">Settlement and payout visibility.</p>
           </Link>
         )}
+        <Link href="/system-health" className="gc-card hover:bg-white/[0.06] transition-colors">
+          <p className="gc-eyebrow mb-2">Ops</p>
+          <p className="text-xl display">System Health</p>
+          <p className="text-sm text-[var(--gc-muted)] mt-2">
+            Commas, GHL, DisputeFox, queues, webhooks, backups.
+          </p>
+        </Link>
+        <Link href="/automations" className="gc-card hover:bg-white/[0.06] transition-colors">
+          <p className="gc-eyebrow mb-2">Lifecycle</p>
+          <p className="text-xl display">Automations</p>
+          <p className="text-sm text-[var(--gc-muted)] mt-2">
+            Payment → intake → staffing · exceptions only when needed.
+          </p>
+        </Link>
+        <Link href="/downloads" className="gc-card hover:bg-white/[0.06] transition-colors">
+          <p className="gc-eyebrow mb-2">Desktop</p>
+          <p className="text-xl display">Download OS</p>
+          <p className="text-sm text-[var(--gc-muted)] mt-2">
+            Mac, Windows, and Linux installers when release URLs are configured.
+          </p>
+        </Link>
         <Link href="/dashboard" className="gc-card hover:bg-white/[0.06] transition-colors">
           <p className="gc-eyebrow mb-2">Legacy</p>
           <p className="text-xl display">Finance health</p>
@@ -107,8 +128,10 @@ export default async function MorePage() {
           ))}
           <div className="gc-card">
             <p className="text-[0.62rem] tracking-[0.14em] uppercase text-[var(--gc-muted)] mb-2">Payments</p>
-            <p className="font-medium mb-1">Abstraction ready</p>
-            <p className="text-xs text-[var(--gc-muted)]">Authorize.Net / Commas adapters · mock active in development</p>
+            <p className="font-medium mb-1">Commas primary · mock local</p>
+            <p className="text-xs text-[var(--gc-muted)]">
+              Hosted payment_link · webhooks · live charges locked
+            </p>
           </div>
           <div className="gc-card">
             <p className="text-[0.62rem] tracking-[0.14em] uppercase text-[var(--gc-muted)] mb-2">Communication</p>

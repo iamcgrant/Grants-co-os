@@ -50,6 +50,9 @@ skills-lock.json
 
 # vercel
 .vercel
+.env.vercel*
+.env.vercel.production
+.env.vercel.local
 
 # typescript
 *.tsbuildinfo
@@ -64,3 +67,13 @@ CLAUDE.md
 # Local CRC exports and recovery reports (real client PII — never commit)
 /local/crc-exports/
 /tmp/crc-*-report.json
+
+# Tauri build
+desktop/src-tauri/target
+desktop/node_modules
+desktop/public-desktop
+desktop/desktop/
+desktop/releases/
+desktop/src-tauri/target/
+desktop/src-tauri/icons/android/
+desktop/src-tauri/icons/ios/

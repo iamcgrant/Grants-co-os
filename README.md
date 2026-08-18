@@ -17,14 +17,14 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ### Development staff accounts
 
-Passwords are for local/dev only — never shown in the product UI.
+Local seed creates these emails. Set a password with `SEED_PASSWORD` before `npm run db:seed` (never commit real passwords). Rotate before any shared or production use.
 
-| Role | Email | Password |
-|------|-------|----------|
-| Charles (Owner) | owner@grantsandco.com | GrantsCo2026! |
-| Simon (Client Care) | simon@grantsandco.com | GrantsCo2026! |
-| Jona (File Prep) | jona@grantsandco.com | GrantsCo2026! |
-| Client portal | donna.james@example.com | GrantsCo2026! |
+| Role | Email |
+|------|-------|
+| Charles (Owner) | owner@grantsandco.com |
+| Simon (Client Care) | simon@grantsandco.com |
+| Jona (File Prep) | jona@grantsandco.com |
+| Client portal | donna.james@example.com |
 
 ### Grants Pay demo
 
@@ -32,15 +32,15 @@ Invoice **GC-1051** (Donna James) is due — open `/pay/GC-1051`.
 
 ## Priority
 
-**Payments and financial infrastructure are Priority #1.** Later modules must never compromise payment stability.
+**Payments and financial infrastructure are Priority #1.** Commas is the approved primary payment platform. Later modules must never compromise payment stability.
 
 ## Stack
 
 - Next.js (App Router) + React + TypeScript
 - Prisma + SQLite (local) → PostgreSQL/Supabase (production)
-- Adapter-based payment providers (Mock default / Authorize.Net sandbox Accept.js / Commas stub)
+- Adapter-based payment providers (**Commas primary** / Mock default / Authorize.Net sandbox optional)
 - Brand system inspired by grantandconsultants.com (Fraunces + Manrope, charcoal/gold) — see `docs/BRAND.md`
-- PWA (manifest + service worker)
+- PWA (manifest + service worker) + Tauri desktop scaffold (`/desktop`)
 - Vitest for critical financial/identity tests
 
 ## Scripts

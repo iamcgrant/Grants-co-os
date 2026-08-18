@@ -10,7 +10,7 @@ All integrations are adapters beneath Grants & Co OS.
 | SmartCredit | `MockSmartCreditProvider` | Mock — sponsored enrollment + scores |
 | Credit Karma | `MockCreditKarmaConnector` | Mock — **read only** |
 | Experian | `MockExperianConnector` | Mock — weekly score |
-| Payments | Mock default; Authorize.Net sandbox Accept.js fail-closed without credentials; Commas stub | Mock active · live charges locked |
+| Payments | `PAYMENT_PROVIDER=mock` default; Commas primary adapter when `COMMAS_API_KEY` set; Authorize.Net optional secondary | Mock until secrets · live charges locked (`COMMAS_LIVE_CHARGES`) |
 
 ## GHL → Grants Client → Client 360
 
@@ -18,8 +18,16 @@ All integrations are adapters beneath Grants & Co OS.
 2. Link onto **existing** Grants master clients only, match order **GHL id → email → normalized phone**. Unmatched GHL contacts are skipped — this path never creates a Grants Client.
 3. Attach `ClientIdentifier` provider `GHL` with metadata `{ source: "ghl_api", dataPlane, locationId }`.
 4. Client 360 shows Grants Client ID, GHL Contact ID, DisputeFox ID, stage, staff, next action, onboarding, docs, disputes, tasks, OS comms, credit/pay/timeline — or **Awaiting Integration** when a source is not connected.
-5. **Does not** send live messages. **Does not** create/update/delete GHL contacts. **Does not** replace DisputeFox → GHL / post-pay intake.
+5. Inbound sync **does not** create/update/delete GHL contacts. **Does not** replace DisputeFox → GHL / post-pay intake.
 6. Without `GHL_API_KEY` the live path **fails closed** (no GHL HTTP, no client writes).
+
+## GHL outbound SMS / email (fail-closed)
+
+1. Staff inbox client replies call `sendGhlOutboundMessage` (`src/lib/integrations/ghl/outbound.ts`) via `postMessage`.
+2. Requires a linked `ClientIdentifier` provider `GHL` and PIT scope **`conversations/message.write`** (recommended: `conversations.write`).
+3. Live probe with current key: `POST /conversations/messages` → **401** “token is not authorized for this scope” for SMS, Email, and MMS-shaped payloads.
+4. Phone / browser dialer: `LeadConnectorTelephonyAdapter` reports `browserDialer: false`; phone-system and voice-ai GETs also **401**. Softphone remains outside OS until scopes/API exist.
+5. Fail-closed: OS records `deliveryStatus=FAILED` + `ACTION_REQUIRED` metadata — never pretends SENT.
 
 ## GHL conversations → Grants OS inbox (linked masters only)
 
@@ -27,8 +35,8 @@ All integrations are adapters beneath Grants & Co OS.
 2. Only already-linked GHL identifiers are eligible. Unlinked GHL contacts are ignored — this path never creates a Grants Client and never creates a GHL contact.
 3. Messages are recorded on the client's OS `CLIENT` conversation with `deliveryStatus=RECORDED` and unique `(provider=GHL, externalId=GHL message id)`. Re-pulls skip duplicates.
 4. Opt-out / DND flags present on the conversation or message payload are stored on the GHL identifier metadata and on the imported message metadata. They are never used to send.
-5. **Does not** send SMS, email, or iMessage. **Does not** publish workflows. **Does not** change A2P/phone/Sendara.
-6. Without `GHL_API_KEY` the path **fails closed**. If the current PIT cannot list conversations/messages, it **fails closed** and reports the extra scope name: `conversations.readonly` (message bodies also need `conversations/message.readonly`). Do not widen scopes from application code — X1 can add those PIT scopes later.
+5. Inbound pull **does not** publish workflows or change A2P/phone/Sendara. Outbound send is a separate adapter (see above).
+6. Without `GHL_API_KEY` the path **fails closed**. If the current PIT cannot list conversations/messages, it **fails closed** and reports the extra scope name: `conversations.readonly` (message bodies also need `conversations/message.readonly`). Do not invent scopes — reissue the Private Integration with the required permissions.
 
 Known location: `[REDACTED]`  
 URL: https://app.gohighlevel.com/v2/location/[REDACTED]/

@@ -22,6 +22,15 @@ export async function POST(req: Request) {
     if (!user.isActive) {
       return NextResponse.json({ error: "Account disabled" }, { status: 403 });
     }
+    if (user.mustChangePassword) {
+      return NextResponse.json(
+        {
+          error:
+            "First-time password setup required. Open the Owner setup link you were sent, then sign in.",
+        },
+        { status: 403 },
+      );
+    }
 
     await createSession(user.id, {
       userAgent: req.headers.get("user-agent") || undefined,

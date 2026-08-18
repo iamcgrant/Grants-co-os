@@ -6,6 +6,8 @@ import { getFinanceDashboard, formatUsd } from "@/lib/payments/dashboard";
 import { prisma } from "@/lib/db/prisma";
 import { MetricTile, Panel } from "@/components/ui/density";
 import { getGcEnvironment } from "@/lib/integrations/env";
+import { CreatePaymentRequestForm } from "@/components/pay/CreatePaymentRequestForm";
+import { commasPublicStatus } from "@/lib/payments/commas-config";
 
 export default async function GrantsPayPage({
   searchParams,
@@ -28,6 +30,17 @@ export default async function GrantsPayPage({
   const finance = await getFinanceDashboard();
   const dataPlane = getGcEnvironment();
   const paymentProvider = process.env.PAYMENT_PROVIDER || "mock";
+  const commas = commasPublicStatus();
+
+  const paymentRequests = await prisma.paymentRequest.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 20,
+    include: {
+      client: { select: { grantsClientId: true, firstName: true, lastName: true } },
+      invoice: { select: { invoiceNumber: true } },
+      links: { take: 1, orderBy: { createdAt: "desc" } },
+    },
+  });
 
   const transactions = await prisma.paymentTransaction.findMany({
     where: filter === "failed" ? { status: "FAILED" } : undefined,
@@ -72,14 +85,52 @@ export default async function GrantsPayPage({
             {dataPlane} data plane
             {" · "}
             {paymentProvider === "mock"
-              ? "Mock processor · Awaiting Integration for live Authorize.Net/Commas"
-              : `Provider ${paymentProvider}`}
+              ? `Mock processor · Commas ${commas.configured ? "credentials present" : "ACTION REQUIRED (COMMAS_API_KEY)"}`
+              : `Provider ${paymentProvider}${commas.configured ? "" : " · Commas key missing"}`}
           </p>
         </div>
         <Link href="/home" className="gc-btn gc-btn-outline">
           Command Center
         </Link>
       </div>
+
+      {hasPermission(user.role, "MANAGE_PAYMENTS") ? (
+        <Panel title="Create payment request">
+          <CreatePaymentRequestForm />
+        </Panel>
+      ) : null}
+
+      <Panel title="Payment requests">
+        <div className="divide-y divide-[var(--gc-border)]">
+          {paymentRequests.length === 0 ? (
+            <p className="text-sm text-[var(--gc-muted)] py-3">No payment requests yet.</p>
+          ) : (
+            paymentRequests.map((pr) => (
+              <div key={pr.id} className="py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2 text-sm">
+                <div>
+                  <p className="font-medium">
+                    {pr.publicId} · {pr.client.firstName} {pr.client.lastName}
+                  </p>
+                  <p className="text-[var(--gc-muted)]">
+                    {pr.client.grantsClientId}
+                    {pr.invoice ? ` · ${pr.invoice.invoiceNumber}` : ""}
+                    {" · "}
+                    {pr.status}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span>{formatUsd(pr.amountCents)}</span>
+                  {pr.invoice ? (
+                    <Link href={`/pay/${pr.invoice.invoiceNumber}`} className="text-[var(--gc-gold)]">
+                      Open
+                    </Link>
+                  ) : null}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </Panel>
 
       <div className="gc-dash-grid gc-dash-grid-4">
         <MetricTile label="Collected today" value={formatUsd(finance.collectedTodayCents)} tone="ice" />

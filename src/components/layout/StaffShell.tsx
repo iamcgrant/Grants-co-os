@@ -80,11 +80,11 @@ export function StaffShell({
             <div className="md:hidden">
               <BrandLogo href="/home" size="sm" />
             </div>
-            <form action="/clients" className="gc-search-wrap" method="get">
+            <form action="/search" className="gc-search-wrap" method="get">
               <input
                 name="q"
                 className="gc-search"
-                placeholder="Search clients, tasks, invoices…"
+                placeholder="Search clients, invoices, payments, IDs…"
                 aria-label="Global search"
               />
             </form>

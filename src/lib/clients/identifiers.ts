@@ -13,6 +13,7 @@ export const CLIENT_IDENTIFIER_PROVIDER = {
   CREDIT_REPAIR_CLOUD: "CREDIT_REPAIR_CLOUD",
   SMARTCREDIT: "SMARTCREDIT",
   PAYMENT: "PAYMENT",
+  COMMAS: "COMMAS",
 } as const;
 
 export type ClientIdentifierProvider =

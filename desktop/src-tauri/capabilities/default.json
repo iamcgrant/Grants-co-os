@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default Grants & Co OS main window capability",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-show",
+    "core:window:allow-set-focus",
+    "notification:default",
+    "opener:default",
+    "dialog:default",
+    "deep-link:default",
+    "updater:default"
+  ]
+}
