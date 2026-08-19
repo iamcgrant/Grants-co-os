@@ -4,6 +4,10 @@
   "regions": ["iad1"],
   "crons": [
     {
+      "path": "/api/health",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/automations/run",
       "schedule": "*/5 * * * *"
     }

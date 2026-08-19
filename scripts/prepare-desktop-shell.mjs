@@ -13,9 +13,17 @@ fs.mkdirSync(outDir, { recursive: true });
 const iconScript = path.join(root, "scripts/generate-desktop-icons.mjs");
 spawnSync(process.execPath, [iconScript], { stdio: "inherit", cwd: root });
 
-const primaryUrl = process.env.GC_DESKTOP_URL || "https://os.grantandconsultants.com";
+const permanentReady = process.env.GC_PERMANENT_HOST_READY === "1";
+const primaryUrl =
+  process.env.GC_DESKTOP_URL ||
+  (permanentReady
+    ? "https://os.grantandconsultants.com"
+    : "https://temporary-prompt-oboe-st5fuuv.vercel.app");
 const fallbackUrl =
-  process.env.GC_DESKTOP_FALLBACK_URL || "https://temporary-prompt-oboe-st5fuuv.vercel.app";
+  process.env.GC_DESKTOP_FALLBACK_URL ||
+  (primaryUrl.includes("grantandconsultants.com")
+    ? "https://temporary-prompt-oboe-st5fuuv.vercel.app"
+    : "https://os.grantandconsultants.com");
 
 const html = `<!doctype html>
 <html lang="en">

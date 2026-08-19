@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { assertPermission } from "@/lib/rbac/permissions";
 import { inviteStaff } from "@/lib/staff/invite";
+import { getRequestOrigin } from "@/lib/access/origins";
 
 const schema = z.object({
   email: z.string().email(),
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
     const user = await requireUser();
     assertPermission(user.role, "MANAGE_STAFF");
     const body = schema.parse(await req.json());
-    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
+    const baseUrl = getRequestOrigin(req);
     const invited = await inviteStaff({
       actorId: user.id,
       actorRole: user.role,

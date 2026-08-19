@@ -11,6 +11,7 @@ import {
 } from "@/lib/clients/dossier";
 import { formatUsd } from "@/lib/payments/dashboard";
 import { ClientActions } from "@/components/clients/ClientActions";
+import { InvitePortalForm } from "@/components/clients/InvitePortalForm";
 import { ClientHandoffActions } from "@/components/clients/ClientHandoffActions";
 import { SyncGhlContactButton } from "@/components/integrations/SyncGhlContactButton";
 import { ScoreIntelligencePanel } from "@/components/credit/ScoreIntelligencePanel";
@@ -325,6 +326,10 @@ export default async function Client360Page({
               </div>
             </Panel>
           </div>
+
+          {hasPermission(user.role, "CREATE_CLIENT") ? (
+            <InvitePortalForm clientId={client.id} hasPortalUser={Boolean(client.userId)} />
+          ) : null}
 
           <ClientActions
             clientId={client.id}

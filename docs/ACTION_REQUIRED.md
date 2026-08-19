@@ -6,9 +6,9 @@ Vercel project is **already claimed**. Cloud Agent does not need `VERCEL_TOKEN`.
 
 ## Why login fails right now
 
-1. **`os.grantandconsultants.com` has no public DNS** (NXDOMAIN). Website and the published desktop build both try that host.
-2. **The live app is** `https://temporary-prompt-oboe-st5fuuv.vercel.app` — the login page renders, but sign-in cannot work until Production `DATABASE_URL` on **that** project is Neon `postgresql://…?sslmode=require` and the app is redeployed.
-3. After Neon is set: `npm run db:migrate:production`, then `OWNER_SETUP_BASE_URL=https://temporary-prompt-oboe-st5fuuv.vercel.app npm run owner:setup-link` (use the permanent origin only after the CNAME exists). Owner email: `owner@grantsandco.com`.
+1. **`os.grantandconsultants.com` has no public DNS** (NXDOMAIN). Code now treats `https://temporary-prompt-oboe-st5fuuv.vercel.app` as the everyday origin until `GC_PERMANENT_HOST_READY=1`.
+2. **The live app still has no Neon `DATABASE_URL`.** Sign-in cannot succeed until Production `DATABASE_URL` on project `temporary-prompt-oboe-st5fuuv` is `postgresql://…?sslmode=require` and this branch is deployed.
+3. After Neon is set: `npm run website:online` (needs `VERCEL_TOKEN` + `DATABASE_URL` + `OWNER_BOOTSTRAP_PASSWORD`) or `npm run db:migrate:production` then `npm run owner:bootstrap`. Owner email: `owner@grantsandco.com`.
 
 ## BUILDX checklist
 

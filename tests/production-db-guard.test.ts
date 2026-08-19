@@ -7,6 +7,7 @@ import {
   PERMANENT_OS_ORIGIN,
   getDesktopFallbackOrigin,
   getDesktopPrimaryOrigin,
+  getRequestOrigin,
 } from "../src/lib/access/origins";
 import {
   LOGIN_DATABASE_UNAVAILABLE_MESSAGE,
@@ -114,11 +115,29 @@ describe("public access origins", () => {
     vi.unstubAllEnvs();
   });
 
-  it("defaults desktop primary and fallback to the known live hosts", () => {
+  it("keeps the live Vercel origin until the permanent host is marked ready", () => {
     delete process.env.GC_DESKTOP_URL;
     delete process.env.GC_DESKTOP_FALLBACK_URL;
-    expect(getDesktopPrimaryOrigin()).toBe(PERMANENT_OS_ORIGIN);
-    expect(getDesktopFallbackOrigin()).toBe(LIVE_VERCEL_APP_ORIGIN);
+    delete process.env.NEXT_PUBLIC_APP_URL;
+    delete process.env.GC_PERMANENT_HOST_READY;
+    expect(getDesktopPrimaryOrigin()).toBe(LIVE_VERCEL_APP_ORIGIN);
+    expect(getDesktopFallbackOrigin()).toBe(PERMANENT_OS_ORIGIN);
+  });
+
+  it("only uses os.grantandconsultants.com when GC_PERMANENT_HOST_READY=1", async () => {
+    vi.stubEnv("GC_PERMANENT_HOST_READY", "1");
+    vi.resetModules();
+    const origins = await import("../src/lib/access/origins");
+    expect(origins.getCanonicalOnlineOrigin()).toBe(PERMANENT_OS_ORIGIN);
+    expect(origins.getDesktopPrimaryOrigin()).toBe(PERMANENT_OS_ORIGIN);
+  });
+
+  it("rewrites a request to the NXDOMAIN host back to the live origin", () => {
+    delete process.env.GC_PERMANENT_HOST_READY;
+    const req = new Request("https://os.grantandconsultants.com/login", {
+      headers: { host: "os.grantandconsultants.com", "x-forwarded-proto": "https" },
+    });
+    expect(getRequestOrigin(req)).toBe(LIVE_VERCEL_APP_ORIGIN);
   });
 
   it("keeps prepare-desktop-shell literals aligned with origins.ts", () => {

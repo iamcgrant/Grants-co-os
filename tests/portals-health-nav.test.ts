@@ -27,6 +27,7 @@ describe("credit & disputes nav", () => {
     expect(getDesktopNav("OWNER").some((n) => n.href === "/credit")).toBe(true);
     expect(getDesktopNav("FILE_PREPARER").some((n) => n.href === "/credit")).toBe(true);
     expect(getStaffNav("OWNER").some((n) => n.href === "/credit")).toBe(true);
+    expect(getDesktopNav("OWNER").some((n) => n.href === "/team")).toBe(true);
   });
 });
 

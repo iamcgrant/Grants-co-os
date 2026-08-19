@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
-import { LIVE_VERCEL_APP_ORIGIN, PERMANENT_OS_ORIGIN } from "@/lib/access/origins";
+import { getCanonicalOnlineOrigin } from "@/lib/access/origins";
 import { getDesktopDownloadLinks } from "@/lib/desktop/downloads";
 
 export default function PublicDesktopDownloadPage() {
@@ -20,10 +20,11 @@ export default function PublicDesktopDownloadPage() {
         <p className="gc-section-sub mb-8 max-w-2xl">
           Native shell for the same production app. No server secrets are bundled. After install,
           sign in at{" "}
-          <a href={`${LIVE_VERCEL_APP_ORIGIN}/login`} className="text-[var(--gc-gold)]">
-            the live Vercel login
-          </a>{" "}
-          until {PERMANENT_OS_ORIGIN.replace("https://", "")} has DNS.
+          <a href={`${getCanonicalOnlineOrigin()}/login`} className="text-[var(--gc-gold)]">
+            {getCanonicalOnlineOrigin().replace("https://", "")}/login
+          </a>
+          . The splash opens that live origin first so a missing custom-domain CNAME cannot
+          take the desktop app offline.
         </p>
         <div className="grid gap-4 md:grid-cols-3 mb-10">
           {platforms.map((p) => (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LIVE_VERCEL_APP_ORIGIN, PERMANENT_OS_ORIGIN } from "@/lib/access/origins";
+import { LIVE_VERCEL_APP_ORIGIN } from "@/lib/access/origins";
 
 type HealthPayload = {
   ok?: boolean;
@@ -27,7 +27,7 @@ export function LoginAccessBanner() {
   }, []);
 
   const blocked = health !== null && health.ok === false;
-  const onVercelFallback =
+  const onLiveOrigin =
     typeof window !== "undefined" && window.location.origin === LIVE_VERCEL_APP_ORIGIN;
 
   return (
@@ -42,22 +42,23 @@ export function LoginAccessBanner() {
         </p>
       ) : null}
       <p className="text-center text-[var(--gc-muted)]">
-        Permanent address:{" "}
-        <a href={`${PERMANENT_OS_ORIGIN}/login`} className="text-[var(--gc-gold)]">
-          os.grantandconsultants.com
-        </a>
-        {!onVercelFallback ? (
+        {onLiveOrigin ? (
+          <>This is the live OS login.</>
+        ) : (
           <>
-            {" "}
-            · If that page does not open, use{" "}
+            If this page does not stay up, use{" "}
             <a href={`${LIVE_VERCEL_APP_ORIGIN}/login`} className="text-[var(--gc-gold)]">
               the live Vercel login
             </a>
+            .
           </>
-        ) : null}
-        .{" "}
+        )}{" "}
         <a href="/access" className="text-[var(--gc-gold)]">
           Access help
+        </a>
+        {" · "}
+        <a href="/get" className="text-[var(--gc-gold)]">
+          Desktop
         </a>
       </p>
     </div>

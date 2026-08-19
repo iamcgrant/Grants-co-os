@@ -73,6 +73,7 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/acquisition", label: "Acquisition", group: "finance" },
       { href: "/automations", label: "Automations", group: "system" },
       { href: "/system-health", label: "System Health", group: "system" },
+      { href: "/team", label: "Team logins", group: "system" },
       { href: "/team-chat", label: "Team Chat", group: "system" },
       { href: "/agents", label: "Agent Hub", group: "system" },
       { href: "/more", label: "Settings", group: "system" },

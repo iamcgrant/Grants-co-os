@@ -4,6 +4,11 @@ export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (getProductionDatabaseRefusal()) return;
 
+  if (process.env.OWNER_BOOTSTRAP_PASSWORD) {
+    const { ensureOwnerPasswordFromEnv } = await import("./lib/auth/owner-bootstrap");
+    await ensureOwnerPasswordFromEnv().catch(() => undefined);
+  }
+
   const { startCursorReturnPoller } = await import("./lib/agent-hub/cursor-poller");
   startCursorReturnPoller();
 

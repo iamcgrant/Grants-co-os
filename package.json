@@ -33,7 +33,9 @@
     "smoke:production": "tsx scripts/production-smoke.ts",
     "launch:readiness": "tsx scripts/launch-readiness.ts",
     "desktop:linux": "node scripts/prepare-desktop-shell.mjs && cd desktop && npm install && npm run build",
-    "owner:setup-link": "tsx scripts/owner-setup-link.ts"
+    "owner:setup-link": "tsx scripts/owner-setup-link.ts",
+    "owner:bootstrap": "tsx scripts/owner-bootstrap.ts",
+    "website:online": "bash scripts/website-online.sh"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

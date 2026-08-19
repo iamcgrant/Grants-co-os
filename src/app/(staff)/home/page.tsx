@@ -50,6 +50,9 @@ export default async function HomePage() {
             <Link href="/work" className="gc-btn gc-btn-outline text-xs">
               Work board
             </Link>
+            <Link href="/team" className="gc-btn gc-btn-ice text-xs">
+              Invite team
+            </Link>
             <Link href="/team-chat" className="gc-btn gc-btn-ice text-xs">
               Team chat
             </Link>
