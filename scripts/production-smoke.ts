@@ -5,7 +5,11 @@
  */
 import "dotenv/config";
 
-const base = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "");
+const base = (
+  process.env.NEXT_PUBLIC_APP_URL ||
+  process.env.SMOKE_BASE_URL ||
+  "https://temporary-prompt-oboe-st5fuuv.vercel.app"
+).replace(/\/$/, "");
 const ownerEmail = process.env.E2E_OWNER_EMAIL || "owner@grantsandco.com";
 const ownerPassword = process.env.E2E_OWNER_PASSWORD || "";
 if (!ownerPassword) {
@@ -23,7 +27,7 @@ function record(name: string, ok: boolean, detail?: string) {
 
 async function main() {
   if (!base || base.includes("localhost") || !base.startsWith("https://")) {
-    console.error("ACTION_REQUIRED: set NEXT_PUBLIC_APP_URL to https://os.grantandconsultants.com");
+    console.error("ACTION_REQUIRED: set NEXT_PUBLIC_APP_URL or SMOKE_BASE_URL to the live https origin");
     process.exit(2);
   }
 

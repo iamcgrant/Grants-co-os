@@ -20,7 +20,7 @@ fi
 
 if [[ ! -f .vercel/project.json ]]; then
   echo "Linking project first…"
-  npx vercel link --yes --project "${VERCEL_PROJECT_NAME:-grants-co-os}" --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}"
+  npx vercel link --yes --project "${VERCEL_PROJECT_NAME:-temporary-prompt-oboe-st5fuuv}" --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}"
 fi
 
 echo "Adding domain ${DOMAIN} (idempotent)…"

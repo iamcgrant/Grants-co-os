@@ -74,6 +74,11 @@ Unsigned `desktop-v0.1.2` assets are public on GitHub Releases.
 
 ## Owner access after DB + domain
 
-1. `npm run owner:setup-link` with `OWNER_SETUP_BASE_URL=https://os.grantandconsultants.com`
-2. Open SET_PASSWORD_URL → choose password
-3. Login: `https://os.grantandconsultants.com/login` · `owner@grantsandco.com`
+Until Squarespace CNAME `os` exists, open **`https://temporary-prompt-oboe-st5fuuv.vercel.app/login`** — not the permanent hostname.
+
+1. Production `DATABASE_URL` must be Neon `postgresql://…?sslmode=require` on project `temporary-prompt-oboe-st5fuuv`
+2. Redeploy after the env change (and after this access-fix lands so Vercel never loads SQLite)
+3. `npm run db:migrate:production`
+4. `OWNER_SETUP_BASE_URL=https://temporary-prompt-oboe-st5fuuv.vercel.app npm run owner:setup-link` (switch the base URL to `https://os.grantandconsultants.com` after DNS)
+5. Open SET_PASSWORD_URL → choose password
+6. Login: live Vercel `/login` or `https://os.grantandconsultants.com/login` · `owner@grantsandco.com`

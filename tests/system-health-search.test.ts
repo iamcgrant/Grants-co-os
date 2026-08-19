@@ -35,6 +35,9 @@ describe("system health + universal search", () => {
     expect(["CONNECTED", "DEGRADED", "ACTION_REQUIRED", "OFFLINE"]).toContain(health.overall);
     expect(health.components.some((c) => c.component === "commas")).toBe(true);
     expect(health.components.some((c) => c.component === "database")).toBe(true);
+    expect(health.components.some((c) => c.component === "ghl_auth")).toBe(true);
+    expect(health.components.some((c) => c.component === "ghl_inbound")).toBe(true);
+    expect(health.components.some((c) => c.component === "ghl_outbound")).toBe(true);
     const blob = JSON.stringify(health);
     expect(blob.toLowerCase()).not.toContain("whsk_");
   });

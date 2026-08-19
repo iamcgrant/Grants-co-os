@@ -1,0 +1,34 @@
+name: Website online
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Deploy website when Vercel token is present
+        if: ${{ secrets.VERCEL_TOKEN != '' && secrets.DATABASE_URL != '' }}
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          AUTH_SECRET: ${{ secrets.AUTH_SECRET }}
+          GC_CRON_SECRET: ${{ secrets.GC_CRON_SECRET }}
+          OWNER_BOOTSTRAP_PASSWORD: ${{ secrets.OWNER_BOOTSTRAP_PASSWORD }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_PROJECT_NAME: temporary-prompt-oboe-st5fuuv
+        run: bash scripts/website-online.sh

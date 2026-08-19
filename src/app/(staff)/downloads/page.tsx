@@ -96,9 +96,14 @@ export default async function DownloadsPage() {
           <li>Deep links use the <code className="text-[var(--gc-gold)]">grantscoos://</code> scheme.</li>
           <li>Production backend remains https://os.grantandconsultants.com — one shared database.</li>
         </ul>
-        <Link href="/more" className="inline-block mt-5 text-sm text-[var(--gc-gold)]">
-          ← Back to More
-        </Link>
+        <div className="mt-5 flex flex-wrap gap-4 text-sm">
+          <Link href="/get" className="text-[var(--gc-gold)]">
+            Public download page
+          </Link>
+          <Link href="/more" className="text-[var(--gc-gold)]">
+            ← Back to More
+          </Link>
+        </div>
       </div>
     </div>
   );

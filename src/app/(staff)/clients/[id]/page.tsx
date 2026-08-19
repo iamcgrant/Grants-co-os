@@ -11,6 +11,7 @@ import {
 } from "@/lib/clients/dossier";
 import { formatUsd } from "@/lib/payments/dashboard";
 import { ClientActions } from "@/components/clients/ClientActions";
+import { InvitePortalForm } from "@/components/clients/InvitePortalForm";
 import { ClientHandoffActions } from "@/components/clients/ClientHandoffActions";
 import { SyncGhlContactButton } from "@/components/integrations/SyncGhlContactButton";
 import { ScoreIntelligencePanel } from "@/components/credit/ScoreIntelligencePanel";
@@ -82,6 +83,20 @@ export default async function Client360Page({
   if (!client) notFound();
 
   const timeline = await getClientTimeline(client.id);
+  const auditLogs = await prisma.auditLog.findMany({
+    where: {
+      OR: [{ entityType: "Client", entityId: client.id }, { entityId: client.id }],
+    },
+    orderBy: { createdAt: "desc" },
+    take: 40,
+    include: { actor: { select: { firstName: true, lastName: true, role: true } } },
+  });
+  const portalSessions = await prisma.portalWorkspaceSession.findMany({
+    where: { clientId: client.id },
+    orderBy: { openedAt: "desc" },
+    take: 20,
+    include: { openedBy: { select: { firstName: true, lastName: true } } },
+  });
   const showFinance = canAccessFinancialData(user.role);
   const scoreIntel = buildScoreIntelligence(client.creditScores);
   const base = `/clients/${client.grantsClientId}`;
@@ -124,6 +139,7 @@ export default async function Client360Page({
     { id: "tasks", label: "Tasks", count: client.tasks.length },
     { id: "comms", label: "Comms" },
     { id: "timeline", label: "Timeline", count: timeline.length },
+    { id: "audit", label: "Audit", count: auditLogs.length + portalSessions.length },
     ...(showFinance ? [{ id: "pay", label: "Pay", count: invoices.length }] : []),
   ];
 
@@ -311,6 +327,10 @@ export default async function Client360Page({
             </Panel>
           </div>
 
+          {hasPermission(user.role, "CREATE_CLIENT") ? (
+            <InvitePortalForm clientId={client.id} hasPortalUser={Boolean(client.userId)} />
+          ) : null}
+
           <ClientActions
             clientId={client.id}
             grantsClientId={client.grantsClientId}
@@ -386,9 +406,9 @@ export default async function Client360Page({
 
       {tab === "disputes" && (
         <Panel title="Dispute process" action={
-          <a className="gc-btn gc-btn-outline text-xs" href="https://app.disputefox.com/" target="_blank" rel="noreferrer">
-            Open dispute workspace
-          </a>
+          <Link className="gc-btn gc-btn-outline text-xs" href="/credit/disputefox">
+            DisputeFox workspace
+          </Link>
         }>
           <div className="mb-3 text-sm">
             <span className="text-[var(--gc-muted)]">DisputeFox Client ID · </span>
@@ -504,11 +524,55 @@ export default async function Client360Page({
                 {e.description && <p className="text-sm text-[var(--gc-muted)]">{e.description}</p>}
                 <p className="text-[0.65rem] tracking-[0.12em] uppercase text-[var(--gc-muted)] mt-1">
                   {e.eventType} · {e.createdAt.toLocaleString()}
+                  {e.actor ? ` · ${e.actor.firstName} ${e.actor.lastName}` : " · system"}
                 </p>
               </div>
             ))}
           </div>
         </Panel>
+      )}
+
+      {tab === "audit" && (
+        <div className="space-y-4">
+          <Panel title="Audit log" eyebrow="Attributed actions">
+            {auditLogs.length === 0 ? (
+              <p className="text-sm text-[var(--gc-muted)]">No audit rows for this master yet.</p>
+            ) : (
+              auditLogs.map((log) => (
+                <div key={log.id} className="gc-card mb-2">
+                  <p className="font-medium">{log.action.replaceAll("_", " ")}</p>
+                  <p className="text-xs text-[var(--gc-muted)] mt-1">
+                    {log.actor ? `${log.actor.firstName} ${log.actor.lastName}` : "system"} ·{" "}
+                    {log.createdAt.toLocaleString()} · {log.entityType}
+                  </p>
+                </div>
+              ))
+            )}
+          </Panel>
+          <Panel title="Portal visits" eyebrow="Experian · CFPB · DisputeFox · CK">
+            {portalSessions.length === 0 ? (
+              <p className="text-sm text-[var(--gc-muted)]">
+                No portal sessions. Open them from{" "}
+                <Link href="/credit" className="text-[var(--gc-gold)]">
+                  Credit & Disputes
+                </Link>
+                .
+              </p>
+            ) : (
+              portalSessions.map((s) => (
+                <div key={s.id} className="gc-card mb-2">
+                  <p className="font-medium">
+                    {s.provider.replaceAll("_", " ")} · {s.resultStatus.replaceAll("_", " ")}
+                  </p>
+                  <p className="text-xs text-[var(--gc-muted)] mt-1">
+                    {s.openedBy.firstName} {s.openedBy.lastName} · {s.openedAt.toLocaleString()}
+                    {s.externalRef ? ` · ${s.externalRef}` : ""}
+                  </p>
+                </div>
+              ))
+            )}
+          </Panel>
+        </div>
       )}
 
       {tab === "pay" && showFinance && (

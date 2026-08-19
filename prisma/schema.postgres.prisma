@@ -115,6 +115,7 @@ model User {
   conversationParts  ConversationParticipant[]
   messagesSent       Message[]            @relation("MessageSender")
   teamMentions       MessageMention[]
+  portalSessionsOpened PortalWorkspaceSession[] @relation("PortalOpenedBy")
 }
 
 model Session {
@@ -209,6 +210,7 @@ model Client {
   leadAttributions    LeadAttribution[]
   automationRuns      AutomationRun[]
   exceptionTickets    ExceptionTicket[]
+  portalSessions      PortalWorkspaceSession[]
   referredByPartner   Partner?              @relation("PartnerReferredClients", fields: [referredByPartnerId], references: [id], onDelete: SetNull)
   partnerReferrals    PartnerReferral[]
 
@@ -1516,7 +1518,7 @@ model ExceptionTicket {
 
 model SystemHealthCheck {
   id              String   @id @default(cuid())
-  component       String   @unique // commas | ghl | disputefox | smartcredit | email | sms | voice | database | queues | webhooks | jobs
+  component       String   @unique // commas | ghl_auth | ghl_inbound | ghl_outbound | disputefox | smartcredit | email | sms | voice | database | queues | webhooks | jobs
   status          String   // CONNECTED | DEGRADED | ACTION_REQUIRED | OFFLINE
   detail          String?
   lastSuccessAt   DateTime?
@@ -1526,4 +1528,29 @@ model SystemHealthCheck {
   updatedAt       DateTime @updatedAt
 
   @@index([status])
+}
+
+/// Staff-assisted third-party portal visit. No vendor API and no scraping.
+/// iframe only when the catalog marks the host as allowlisted; otherwise new tab.
+model PortalWorkspaceSession {
+  id           String    @id @default(cuid())
+  provider     String // DISPUTEFOX | EXPERIAN | SMARTCREDIT | CREDIT_KARMA | CFPB
+  clientId     String?
+  openedById   String
+  portalUrl    String
+  launchMode   String    @default("NEW_TAB") // NEW_TAB | IFRAME
+  resultStatus String    @default("OPENED") // OPENED | IN_PROGRESS | FILED | COMPLETED | NO_ACTION | BLOCKED
+  externalRef  String?
+  notes        String?
+  openedAt     DateTime  @default(now())
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  openedBy User    @relation("PortalOpenedBy", fields: [openedById], references: [id])
+
+  @@index([provider, openedAt])
+  @@index([clientId])
+  @@index([openedById])
 }

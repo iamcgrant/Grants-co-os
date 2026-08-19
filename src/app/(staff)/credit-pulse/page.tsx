@@ -8,6 +8,7 @@ import { ScoreIntelligencePanel } from "@/components/credit/ScoreIntelligencePan
 import { buildScoreIntelligence } from "@/lib/credit/score-intelligence";
 import { getGcEnvironment } from "@/lib/integrations/env";
 import { integrationCredentialStatus } from "@/lib/integrations/credentials";
+import { CreditSubnav } from "@/components/credit/CreditSubnav";
 
 export default async function CreditPulsePage() {
   const user = await getCurrentUser();
@@ -72,6 +73,9 @@ export default async function CreditPulsePage() {
           {" · "}
           {creditLabel}
         </p>
+        <div className="mt-6">
+          <CreditSubnav current="/credit-pulse" />
+        </div>
       </div>
 
       {pulseStats && (

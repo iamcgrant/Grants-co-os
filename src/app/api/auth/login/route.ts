@@ -3,6 +3,11 @@ import { z } from "zod";
 import { verifyPassword, createSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { writeAuditLog } from "@/lib/audit/log";
+import {
+  getProductionDatabaseRefusal,
+  isProductionDatabaseNotConfigured,
+  productionDatabaseErrorBody,
+} from "@/lib/db/production-guard";
 
 const schema = z.object({
   email: z.string().email(),
@@ -10,6 +15,10 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
+  if (getProductionDatabaseRefusal()) {
+    return NextResponse.json(productionDatabaseErrorBody(), { status: 503 });
+  }
+
   try {
     const body = schema.parse(await req.json());
     const user = await prisma.user.findUnique({
@@ -53,6 +62,9 @@ export async function POST(req: Request) {
       },
     });
   } catch (e) {
+    if (isProductionDatabaseNotConfigured(e)) {
+      return NextResponse.json(productionDatabaseErrorBody(), { status: 503 });
+    }
     const message = e instanceof Error ? e.message : "Login failed";
     return NextResponse.json({ error: message }, { status: 400 });
   }
