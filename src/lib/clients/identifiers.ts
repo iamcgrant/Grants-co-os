@@ -12,6 +12,9 @@ export const CLIENT_IDENTIFIER_PROVIDER = {
   DISPUTEFOX: "DISPUTEFOX",
   CREDIT_REPAIR_CLOUD: "CREDIT_REPAIR_CLOUD",
   SMARTCREDIT: "SMARTCREDIT",
+  CLOUD_TAX_OFFICE: "CLOUD_TAX_OFFICE",
+  COGNITO: "COGNITO",
+  SBTPG: "SBTPG",
   PAYMENT: "PAYMENT",
   COMMAS: "COMMAS",
 } as const;
@@ -28,6 +31,9 @@ export type MasterIdentityIds = {
   disputeFoxClientId?: string | null;
   crcClientId?: string | null;
   smartCreditId?: string | null;
+  cloudTaxOfficeId?: string | null;
+  cognitoEntryId?: string | null;
+  sbtpgId?: string | null;
 };
 
 export function collectProviderIds(ids: MasterIdentityIds): {
@@ -44,5 +50,8 @@ export function collectProviderIds(ids: MasterIdentityIds): {
   push(CLIENT_IDENTIFIER_PROVIDER.DISPUTEFOX, ids.disputeFoxClientId);
   push(CLIENT_IDENTIFIER_PROVIDER.CREDIT_REPAIR_CLOUD, ids.crcClientId);
   push(CLIENT_IDENTIFIER_PROVIDER.SMARTCREDIT, ids.smartCreditId);
+  push(CLIENT_IDENTIFIER_PROVIDER.CLOUD_TAX_OFFICE, ids.cloudTaxOfficeId);
+  push(CLIENT_IDENTIFIER_PROVIDER.COGNITO, ids.cognitoEntryId);
+  push(CLIENT_IDENTIFIER_PROVIDER.SBTPG, ids.sbtpgId);
   return out;
 }

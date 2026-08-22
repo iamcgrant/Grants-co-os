@@ -10,7 +10,10 @@ All integrations are adapters beneath Grants & Co OS.
 | SmartCredit | Native OS workspace (`/credit/smartcredit`) | **In-OS desk** — attach, session, packet/results. No public score API. Sponsor URL is attribution only. |
 | Credit Karma | `MockCreditKarmaConnector` | Mock — **read only** |
 | Experian | `MockExperianConnector` | Mock — weekly score |
-| Payments | `PAYMENT_PROVIDER=mock` default; Commas primary adapter when `COMMAS_API_KEY` set; Authorize.Net optional secondary | Mock until secrets · live charges locked (`COMMAS_LIVE_CHARGES`) |
+| Payments | `PAYMENT_PROVIDER=mock` default; Commas primary adapter when `COMMAS_API_KEY` set; Authorize.Net optional secondary | Mock until secrets · live charges locked (`COMMAS_LIVE_CHARGES`). Client 360 creates/sends payment request links. |
+| Cloud Tax Office | Native OS workspace (`/tax/cloud-tax-office`) | **In-OS desk** — client/return list, status, next actions. No supported ProAvalon list API. Official portal last-step only. No scrape. |
+| Cognito Forms | Official API (`COGNITO_API_KEY`) | **In-OS submissions list.** Fail-closed without key. Never commit the key. No scrape. |
+| SBTPG | Native OS workspace (`/tax/sbtpg`) | **In-OS refund/payout tracker.** No supported list API. Official portal last-step only. No scrape. |
 
 ## GHL → Grants Client → Client 360
 
@@ -103,3 +106,28 @@ Optional future partner API (not required for the desk):
 - `SMARTCREDIT_API_PROBE_URL` (https GET only)
 
 The OS keeps your `pid` (or other affiliate params) intact and appends `gc_ref=<GrantsClientId>` for internal tracking.
+
+## Cloud Tax Office (native workspace)
+
+Staff work returns in Grants OS at `/tax/cloud-tax-office`. Cloud Tax Office (ProAvalon) at `grantandco.cloudtaxoffice.com` is the background platform — not a bookmark page.
+
+There is **no supported Cloud Tax Office list/read API**. Do not scrape. Official portal is the last login/file step only.
+
+**Health:** `CONNECTED` only after a recorded OS attach/session. Portal presence is never `CONNECTED`.
+
+## Cognito Forms (official API)
+
+1. Store **`COGNITO_API_KEY`** in host env / Cursor Secrets — never commit.
+2. Staff pull via `POST /api/tax/cognito/pull` (official `GET https://www.cognitoforms.com/api/forms` + entries).
+3. Entries match onto existing Grants masters by normalized email. Unmatched rows stay on the Cognito desk until a master exists.
+4. Health is `CONNECTED` only after a successful official API pull. Key presence is never `CONNECTED`. No scrape.
+
+## SBTPG refunds / payouts (native workspace)
+
+Staff track tax-client refunds in Grants OS at `/tax/sbtpg`. Official `pro.sbtpg.com` is last-step login only. No supported list API. No scrape.
+
+**Health:** `CONNECTED` only after a recorded OS attach/session.
+
+## Commas payment request from Client 360
+
+Staff with `MANAGE_PAYMENTS` create/send a Commas (or mock) payment request link on Client 360 → Pay. `COMMAS_API_KEY` stays server-side. Health is honest: key presence is never `CONNECTED`; `CONNECTED` only after a processed Commas webhook or recorded Commas checkout. GHL remains the only phone/SMS/email backend.

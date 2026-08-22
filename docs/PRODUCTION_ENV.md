@@ -62,6 +62,14 @@ Outbound SMS/email also needs PIT **scopes** `conversations/message.write` (requ
 
 Set `SMARTCREDIT_SPONSOR_URL` in Vercel Production (and preview if enroll is tested there). Runtime reads env only.
 
+## Tax desks (optional until staff use them)
+
+| Name | Required? | Notes |
+|------|-----------|-------|
+| `COGNITO_API_KEY` | Yes for Cognito submissions | Official Cognito Forms API. Never commit. Key presence is never CONNECTED. |
+| Cloud Tax Office | No API key | Native `/tax/cloud-tax-office` desk. Official portal last-step only. No scrape. |
+| SBTPG | No API key | Native `/tax/sbtpg` desk. Official portal last-step only. No scrape. |
+
 ## Not required to start production web (optional adapters)
 
 `DISPUTEFOX_*`, `CRC_*`, `AUTHORIZE_NET_*`, `AGENT_HUB_*`, `CURSOR_API_KEY` (already present for Agent Hub / Cursor — not a Vercel runtime requirement for core OS). `SMARTCREDIT_SPONSOR_URL` is documented above.

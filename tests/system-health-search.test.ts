@@ -15,6 +15,7 @@ const ENV_KEYS = [
   "SMARTCREDIT_API_KEY",
   "SMARTCREDIT_API_PROBE_URL",
   "COMMAS_API_KEY",
+  "COGNITO_API_KEY",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_TEAM_CHAT_IDS",
 ] as const;
@@ -126,6 +127,9 @@ describe("system health + universal search", () => {
       "smartcredit",
       "credit_karma",
       "imessage",
+      "cloud_tax_office",
+      "cognito",
+      "sbtpg",
     ]));
     expect(ids).not.toContain("ghl");
 
@@ -164,6 +168,11 @@ describe("system health + universal search", () => {
     expect(component(health, "credit_karma").status).toBe("DEGRADED");
     expect(component(health, "credit_karma").detail).toMatch(/client-assisted/i);
     expect(component(health, "imessage").status).toBe("DEGRADED");
+    expect(component(health, "cloud_tax_office").status).toBe("DEGRADED");
+    expect(component(health, "sbtpg").status).toBe("DEGRADED");
+    expect(component(health, "cognito").status).toBe("ACTION_REQUIRED");
+    expect(component(health, "commas").status).not.toBe("CONNECTED");
+    expect(component(health, "commas").detail).toMatch(/COMMAS_API_KEY|never CONNECTED/i);
   });
 
   it("records lastSuccessAt only from real pull / send / webhook rows; DisputeFox stays probe-only", async () => {

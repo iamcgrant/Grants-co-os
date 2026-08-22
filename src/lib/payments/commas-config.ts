@@ -55,6 +55,8 @@ export function getCommasConfig(): CommasConfig {
   };
 }
 
+export type CommasHealthStatus = "CONNECTED" | "DEGRADED" | "ACTION_REQUIRED" | "OFFLINE";
+
 export function commasPublicStatus(): {
   configured: boolean;
   environment: CommasEnvironment;
@@ -66,5 +68,70 @@ export function commasPublicStatus(): {
     environment: resolveCommasEnvironment(),
     liveChargesEnabled: process.env.COMMAS_LIVE_CHARGES === "true",
     creatorHandleConfigured: Boolean(process.env.COMMAS_CREATOR_HANDLE?.trim()),
+  };
+}
+
+/**
+ * Honest Commas health. Key presence is never CONNECTED.
+ * CONNECTED only after a processed Commas webhook or a recorded Commas checkout.
+ */
+export function commasHonestHealth(input?: {
+  lastWebhookAt?: string | null;
+  lastCheckoutAt?: string | null;
+  paymentProvider?: string;
+}): {
+  status: CommasHealthStatus;
+  detail: string;
+  lastSuccessAt: string | null;
+  configured: boolean;
+  environment: CommasEnvironment;
+  liveChargesEnabled: boolean;
+} {
+  const publicStatus = commasPublicStatus();
+  const lastSuccessAt = input?.lastWebhookAt || input?.lastCheckoutAt || null;
+
+  if (!publicStatus.configured) {
+    return {
+      status: "ACTION_REQUIRED",
+      detail: "COMMAS_API_KEY required — sandbox first. Key presence is never CONNECTED.",
+      lastSuccessAt: null,
+      ...publicStatus,
+    };
+  }
+
+  if (lastSuccessAt) {
+    return {
+      status: "CONNECTED",
+      detail: input?.lastWebhookAt
+        ? `Commas webhook processed · env=${publicStatus.environment} · live=${publicStatus.liveChargesEnabled ? "on" : "locked"}`
+        : `Commas checkout recorded · env=${publicStatus.environment} · live=${publicStatus.liveChargesEnabled ? "on" : "locked"}`,
+      lastSuccessAt,
+      ...publicStatus,
+    };
+  }
+
+  if (publicStatus.environment === "production" && !publicStatus.liveChargesEnabled) {
+    return {
+      status: "DEGRADED",
+      detail: "COMMAS_API_KEY present · live charges locked · no successful Commas webhook or checkout yet",
+      lastSuccessAt: null,
+      ...publicStatus,
+    };
+  }
+
+  if (input?.paymentProvider && input.paymentProvider !== "commas") {
+    return {
+      status: "DEGRADED",
+      detail: `COMMAS_API_KEY present · PAYMENT_PROVIDER=${input.paymentProvider} · no Commas checkout yet. Key presence is never CONNECTED.`,
+      lastSuccessAt: null,
+      ...publicStatus,
+    };
+  }
+
+  return {
+    status: "DEGRADED",
+    detail: "COMMAS_API_KEY present · no successful Commas webhook or checkout yet. Key presence is never CONNECTED.",
+    lastSuccessAt: null,
+    ...publicStatus,
   };
 }

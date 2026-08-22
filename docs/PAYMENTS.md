@@ -38,6 +38,7 @@ CLIENT → PAYMENT REQUEST → GRANTS PAY (branded) → COMMAS SECURE CHECKOUT
 Staff APIs:
 
 - `POST /api/pay/requests` — create payment request + invoice + secure link
+- Client 360 → Pay — same create/send flow for the open Grants client (`COMMAS_API_KEY` from env)
 - `GET /pay/[invoiceNumber]` — luxury client checkout
 - `POST /api/webhooks/payments` — Commas HMAC (`x-webhook-signature`)
 - `/setup/[token]` — native one-time client setup after payment
