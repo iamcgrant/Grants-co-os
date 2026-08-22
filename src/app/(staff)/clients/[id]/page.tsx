@@ -395,9 +395,9 @@ export default async function Client360Page({
 
       {tab === "disputes" && (
         <Panel title="Dispute process" action={
-          <a className="gc-btn gc-btn-outline text-xs" href="https://app.disputefox.com/" target="_blank" rel="noreferrer">
-            Open dispute workspace
-          </a>
+          <Link href={`/credit/disputefox/${client.grantsClientId}`} className="gc-btn gc-btn-outline text-xs">
+            DisputeFox OS workspace
+          </Link>
         }>
           <div className="mb-3 text-sm">
             <span className="text-[var(--gc-muted)]">DisputeFox Client ID · </span>

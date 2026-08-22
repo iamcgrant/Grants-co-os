@@ -9,6 +9,7 @@ const ENV_KEYS = [
   "GHL_API_KEY",
   "GHL_LOCATION_ID",
   "DISPUTEFOX_API_KEY",
+  "DISPUTEFOX_API_PROBE_URL",
   "SMARTCREDIT_SPONSOR_URL",
   "SMARTCREDIT_SPONSOR_CODE",
   "COMMAS_API_KEY",
@@ -146,7 +147,8 @@ describe("system health + universal search", () => {
     expect(component(health, "ghl_webhook").lastSuccessAt).toBeNull();
 
     expect(component(health, "disputefox").status).toBe("DEGRADED");
-    expect(component(health, "disputefox").detail).toMatch(/no successful inbound attach/);
+    expect(component(health, "disputefox").status).not.toBe("CONNECTED");
+    expect(component(health, "disputefox").detail).toMatch(/probe URL|key presence|not CONNECTED|Live list stays off/i);
     expect(component(health, "disputefox").lastSuccessAt).toBeNull();
 
     expect(component(health, "smartcredit").status).toBe("DEGRADED");
@@ -158,7 +160,7 @@ describe("system health + universal search", () => {
     expect(component(health, "imessage").status).toBe("DEGRADED");
   });
 
-  it("records lastSuccessAt only from real pull / send / webhook / attach rows", async () => {
+  it("records lastSuccessAt only from real pull / send / webhook rows; DisputeFox stays probe-only", async () => {
     const pulledAt = new Date("2026-03-01T15:00:00.000Z");
     const sentSmsAt = new Date("2026-03-02T16:00:00.000Z");
     const sentEmailAt = new Date("2026-03-03T17:00:00.000Z");
@@ -255,8 +257,8 @@ describe("system health + universal search", () => {
     expect(component(health, "ghl_webhook").lastSuccessAt).toBe(ghlWebhookAt.toISOString());
     expect(component(health, "ghl_webhook").detail).toMatch(/InboundMessage/);
 
-    expect(component(health, "disputefox").status).toBe("CONNECTED");
-    expect(component(health, "disputefox").lastSuccessAt).toBe(dfAttachedAt.toISOString());
+    expect(component(health, "disputefox").status).not.toBe("CONNECTED");
+    expect(component(health, "disputefox").lastSuccessAt).toBeNull();
 
     expect(component(health, "voice").status).toBe("ACTION_REQUIRED");
     expect(component(health, "voice").lastSuccessAt).toBeNull();

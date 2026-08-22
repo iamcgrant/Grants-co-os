@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
-import { getDesktopNav, getStaffNav, roleDisplayName } from "@/lib/nav/role-nav";
+import { getDesktopNav, getStaffNav, navSectionLabel, roleDisplayName } from "@/lib/nav/role-nav";
 import type { AuthUserView } from "@/lib/auth/types";
-import type { StaffRole, NavItem } from "@/lib/nav/role-nav";
+import type { NavItem, StaffRole } from "@/lib/nav/role-nav";
 
 function withSectionLabels(nav: NavItem[]) {
   let lastGroup = "";
   return nav.map((item) => {
-    const showSection = Boolean(item.group && item.group !== "primary" && item.group !== lastGroup);
+    const section = navSectionLabel(item.group);
+    const showSection = Boolean(section && item.group && item.group !== lastGroup);
     if (item.group) lastGroup = item.group;
-    return { item, showSection };
+    return { item, showSection, section };
   });
 }
 
@@ -33,6 +34,15 @@ export function StaffShell({
     if (href.includes("view=jona") && pathname.includes("view=jona")) return true;
     if (base === "/team-chat" && (pathBase === "/team-chat" || pathname.includes("tab=team"))) return true;
     if (base === "/home") return pathBase === "/home";
+    if (base === "/credit") {
+      return (
+        pathBase === "/credit" ||
+        pathBase.startsWith("/credit/") ||
+        pathBase === "/credit-pulse" ||
+        pathBase === "/escalations/cfpb" ||
+        pathBase.startsWith("/escalations/")
+      );
+    }
     return pathBase === base || pathBase.startsWith(`${base}/`);
   }
 
@@ -47,13 +57,9 @@ export function StaffShell({
           <BrandLogo href="/home" size="sm" />
         </div>
         <nav className="gc-sidebar-nav">
-          {desktopNav.map(({ item, showSection }) => (
+          {desktopNav.map(({ item, showSection, section }) => (
             <div key={`${item.href}-${item.label}`}>
-              {showSection ? (
-                <p className="gc-sidebar-section">
-                  {item.group === "ops" ? "Operations" : item.group === "finance" ? "Finance" : "System"}
-                </p>
-              ) : null}
+              {showSection && section ? <p className="gc-sidebar-section">{section}</p> : null}
               <Link
                 href={item.href}
                 className={`gc-sidebar-link ${isActive(item.href) ? "is-active" : ""}`}

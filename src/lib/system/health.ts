@@ -4,8 +4,8 @@ import { commasPublicStatus, isCommasConfigured } from "@/lib/payments/commas-co
 import { isGhlApiReady } from "@/lib/integrations/ghl/http";
 import { probeGhlSmsEmailPath, probeGhlVoiceHealth } from "@/lib/integrations/ghl/probes";
 import { probeTelegramTeam } from "@/lib/integrations/telegram/workspace";
-import { integrationCredentialStatus } from "@/lib/integrations/credentials";
 import { getGcEnvironment } from "@/lib/integrations/env";
+import { probeDisputeFoxApi } from "@/lib/integrations/disputefox/probe";
 
 export type HealthStatus = "CONNECTED" | "DEGRADED" | "ACTION_REQUIRED" | "OFFLINE";
 export type DatabaseEngine = "Postgres" | "SQLite";
@@ -24,7 +24,6 @@ const NON_LAUNCH_COMPONENTS = new Set(["imessage"]);
 
 const GHL_WEBHOOK_PROVIDERS = ["ghl", "gohighlevel", "leadconnector", "GHL"] as const;
 const GHL_INBOUND_SYNC_STATUSES = ["IMPORTED", "UPDATED", "LINKED"] as const;
-const DF_SUCCESS_SYNC_STATUSES = ["UPDATED", "LINKED"] as const;
 
 export function resolveDatabaseEngine(url = process.env.DATABASE_URL): DatabaseEngine {
   const value = url?.trim() ?? "";
@@ -67,7 +66,7 @@ function isoOrNull(date: Date | null | undefined): string | null {
 
 /**
  * System Health — live probe of integrations, DB, queues, and jobs.
- * CONNECTED only after a real operational check (query, pull, send, or webhook row).
+ * CONNECTED only after a real operational check (query, pull, send, webhook, or HTTPS probe).
  * Never leaks secrets. Never invents lastSuccessAt.
  */
 export async function collectSystemHealth(): Promise<{
@@ -78,7 +77,6 @@ export async function collectSystemHealth(): Promise<{
 }> {
   const now = new Date();
   const checkedAt = now.toISOString();
-  const creds = integrationCredentialStatus();
   const commas = commasPublicStatus();
   const provider = getPaymentProvider();
   const ghlReady = isGhlApiReady();
@@ -92,12 +90,11 @@ export async function collectSystemHealth(): Promise<{
     lastGhlOutboundEmail,
     lastGhlInboundSync,
     lastGhlLiveIdentifier,
-    lastDfIdentifier,
-    lastDfSuccessSync,
     queuedAutomations,
     failedAutomations,
     openExceptions,
     lastPulse,
+    disputeFoxProbe,
   ] = await Promise.all([
     prisma.webhookEvent.findFirst({
       where: { status: "PROCESSED" },
@@ -131,22 +128,11 @@ export async function collectSystemHealth(): Promise<{
       where: { provider: "GHL", metadataJson: { contains: '"source":"ghl_api"' } },
       orderBy: { updatedAt: "desc" },
     }),
-    prisma.clientIdentifier.findFirst({
-      where: { provider: "DISPUTEFOX" },
-      orderBy: { updatedAt: "desc" },
-    }),
-    prisma.integrationSyncEvent.findFirst({
-      where: {
-        direction: "inbound",
-        status: { in: [...DF_SUCCESS_SYNC_STATUSES] },
-        connection: { provider: "disputefox" },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
     prisma.automationRun.count({ where: { status: "QUEUED" } }),
     prisma.automationRun.count({ where: { status: "FAILED" } }),
     prisma.exceptionTicket.count({ where: { status: "OPEN" } }),
     prisma.fridayPulseRun.findFirst({ orderBy: { createdAt: "desc" } }),
+    probeDisputeFoxApi(),
   ]);
 
   let databaseStatus: HealthStatus = "CONNECTED";
@@ -168,7 +154,6 @@ export async function collectSystemHealth(): Promise<{
   const outboundSmsAt = isoOrNull(lastGhlOutboundSms?.createdAt);
   const outboundEmailAt = isoOrNull(lastGhlOutboundEmail?.createdAt);
   const ghlWebhookAt = isoOrNull(lastGhlWebhook?.processedAt);
-  const dfSuccessAt = latestIso(lastDfIdentifier?.updatedAt, lastDfSuccessSync?.createdAt);
 
   const [smsEmailProbe, voiceProbe, telegramProbe] = await Promise.all([
     probeGhlSmsEmailPath(),
@@ -183,7 +168,13 @@ export async function collectSystemHealth(): Promise<{
   const voice = ghlVoiceHealth(voiceProbe);
   const telegram = telegramHealth(telegramProbe);
   const ghlWebhook = ghlWebhookHealth(lastGhlWebhook?.eventType ?? null, ghlWebhookAt);
-  const disputeFox = disputeFoxHealth(creds.disputeFoxApi, dfSuccessAt);
+  const disputeFox = {
+    component: "disputefox",
+    label: "DisputeFox",
+    status: disputeFoxProbe.status,
+    detail: disputeFoxProbe.detail,
+    lastSuccessAt: disputeFoxProbe.lastSuccessAt,
+  } as const;
   const smartCredit = smartCreditHealth(
     Boolean(process.env.SMARTCREDIT_SPONSOR_URL?.trim() || process.env.SMARTCREDIT_SPONSOR_CODE?.trim()),
   );
@@ -470,37 +461,6 @@ function ghlWebhookHealth(
     label: "GHL webhook",
     status: "ACTION_REQUIRED",
     detail: "No processed GHL webhook — inbound is pull-only",
-    lastSuccessAt: null,
-  };
-}
-
-function disputeFoxHealth(
-  apiKeyPresent: boolean,
-  lastSuccessAt: string | null,
-): Omit<HealthComponent, "lastCheckedAt"> {
-  if (lastSuccessAt) {
-    return {
-      component: "disputefox",
-      label: "DisputeFox",
-      status: "CONNECTED",
-      detail: "Inbound attach recorded onto an existing master client",
-      lastSuccessAt,
-    };
-  }
-  if (apiKeyPresent) {
-    return {
-      component: "disputefox",
-      label: "DisputeFox",
-      status: "DEGRADED",
-      detail: "API key present · live list disabled · no successful inbound attach recorded",
-      lastSuccessAt: null,
-    };
-  }
-  return {
-    component: "disputefox",
-    label: "DisputeFox",
-    status: "ACTION_REQUIRED",
-    detail: "DISPUTEFOX_API_KEY / intake URL template optional until live attach",
     lastSuccessAt: null,
   };
 }
