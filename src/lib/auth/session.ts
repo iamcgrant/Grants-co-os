@@ -6,7 +6,10 @@ import { prisma } from "@/lib/db/prisma";
 import type { Role, User } from "@/generated/prisma/client";
 
 const SESSION_COOKIE = "gc_session";
-const SESSION_DAYS = 14;
+/** Brief OS session when staff uncheck Stay signed in. */
+export const SESSION_DAYS_BRIEF = 14;
+/** Stay-signed-in OS session so staff do not re-enter Grants & Co every morning. */
+export const SESSION_DAYS_REMEMBER = 90;
 
 function getSecret() {
   const secret = process.env.AUTH_SECRET || "grants-co-dev-secret-change-me";
@@ -28,10 +31,14 @@ export async function verifyPassword(
   return bcrypt.compare(password, hash);
 }
 
-export async function createSession(userId: string, meta?: { userAgent?: string; ip?: string }) {
+export async function createSession(
+  userId: string,
+  meta?: { userAgent?: string; ip?: string; rememberMe?: boolean },
+) {
   const rawToken = randomBytes(32).toString("hex");
   const tokenHash = hashToken(rawToken);
-  const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
+  const days = meta?.rememberMe === false ? SESSION_DAYS_BRIEF : SESSION_DAYS_REMEMBER;
+  const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 
   await prisma.session.create({
     data: {
@@ -45,7 +52,7 @@ export async function createSession(userId: string, meta?: { userAgent?: string;
 
   const jwt = await new SignJWT({ sid: tokenHash, uid: userId })
     .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime(`${SESSION_DAYS}d`)
+    .setExpirationTime(`${days}d`)
     .sign(getSecret());
 
   const cookieStore = await cookies();

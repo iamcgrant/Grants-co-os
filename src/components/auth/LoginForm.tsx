@@ -10,6 +10,7 @@ export function LoginForm({ returnTo }: { returnTo: string | null }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -21,7 +22,7 @@ export function LoginForm({ returnTo }: { returnTo: string | null }) {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, rememberMe }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unable to sign in");
@@ -93,6 +94,15 @@ export function LoginForm({ returnTo }: { returnTo: string | null }) {
                 required
               />
             </div>
+            <label className="flex items-center gap-3 text-sm text-[var(--gc-muted)] pt-1">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="size-4 accent-[var(--gc-gold)]"
+              />
+              Stay signed in
+            </label>
             {error && <p className="text-sm text-[var(--gc-danger)]">{error}</p>}
             <button type="submit" className="gc-btn gc-btn-primary w-full mt-2" disabled={loading}>
               {loading ? "Signing in…" : "Enter OS"}

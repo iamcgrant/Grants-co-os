@@ -52,6 +52,7 @@ export function PortalDesk({ deskId }: { deskId: PortalDeskId }) {
             className="gc-portal-desk-frame"
             src={desk.officialUrl}
             title={desk.title}
+            data-browser-profile="shared"
             onError={() => setBlocked(true)}
           />
         ) : (
@@ -61,6 +62,7 @@ export function PortalDesk({ deskId }: { deskId: PortalDeskId }) {
             method="get"
             target="_self"
             data-portal-stage="refused-embed"
+            data-browser-profile="shared"
           >
             <p className="gc-eyebrow">Official login</p>
             <p className="gc-portal-stage-copy">
