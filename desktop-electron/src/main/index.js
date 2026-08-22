@@ -95,13 +95,15 @@ function snapshot() {
   }
 
   return {
-    spike: true,
     activeDeskId,
     desks: DESKS.map((desk) => ({
       id: desk.id,
       title: desk.title,
       startUrl: desk.startUrl,
       allowedHosts: [...desk.allowedHosts],
+      group: desk.group ?? null,
+      kind: desk.kind,
+      href: desk.href,
       open: deskViews.has(desk.id),
     })),
     openIds,
@@ -129,7 +131,7 @@ function authReturnMessage(desk, host) {
   return (
     `${desk.title} left the exact allowlist (${host || "unknown host"}). ` +
     `The official login stays available here. If sign-in needs another host, ` +
-    `use Open securely in browser, finish there, then return to this spike. ` +
+    `use Open securely in browser, finish there, then return. ` +
     `There is no grantscoos:// return — no provider documents that redirect.`
   );
 }
@@ -139,6 +141,7 @@ function handleUnknownNavigation(desk, decision, { openExternal }) {
     setNotice({
       kind: "error",
       message: `Blocked navigation for ${desk.title} (${decision.reason}).`,
+      allowBrowser: false,
     });
     return;
   }
@@ -148,6 +151,7 @@ function handleUnknownNavigation(desk, decision, { openExternal }) {
   setNotice({
     kind: "warn",
     message: authReturnMessage(desk, decision.host),
+    allowBrowser: true,
   });
 }
 
@@ -198,6 +202,7 @@ function attachNavigationGuards(contents, desk) {
     setNotice({
       kind: "error",
       message: `${desk.title} failed to load: ${desc || "unknown error"}`,
+      allowBrowser: desk.kind === "vendor",
     });
   });
 }
@@ -209,7 +214,8 @@ function preparePartition(desk) {
     callback(false);
     setNotice({
       kind: "warn",
-      message: `Denied “${permission}” on ${desk.title}. This spike does not grant vendor-page permissions.`,
+      message: `Denied “${permission}” on ${desk.title}.`,
+      allowBrowser: false,
     });
   });
   ses.setPermissionCheckHandler(() => false);
@@ -337,8 +343,9 @@ async function openOfficialInBrowser(id) {
   setNotice({
     kind: opened ? "info" : "error",
     message: opened
-      ? `Opened the official ${desk.title} login in your system browser. This spike stays open. Return here after sign-in. No grantscoos:// return exists.`
+      ? `Opened the official ${desk.title} login in your browser. Return here after sign-in.`
       : `Could not open the official ${desk.title} URL.`,
+    allowBrowser: false,
   });
   return snapshot();
 }
@@ -364,7 +371,7 @@ function createWindow() {
     height: 900,
     minWidth: 1100,
     minHeight: 720,
-    title: "Grants & Co OS — Electron spike",
+    title: "Grant & Co OS",
     backgroundColor: "#16161a",
     show: false,
   });

@@ -45,11 +45,17 @@ export function StaffShell({
   user,
   children,
   pathname = "/home",
+  desktopShell = false,
 }: {
   user: AuthUserView;
   children: React.ReactNode;
   pathname?: string;
+  desktopShell?: boolean;
 }) {
+  if (desktopShell) {
+    return children;
+  }
+
   const mobileNav = getStaffNav(user.role as StaffRole);
   const desktopNav = withSectionLabels(getDesktopNav(user.role as StaffRole));
   const cols = Math.min(Math.max(mobileNav.length, 4), 7);

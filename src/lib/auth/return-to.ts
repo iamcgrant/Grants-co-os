@@ -3,6 +3,12 @@
  * Only same-origin app paths. Never an external portal.
  */
 
+import {
+  hasDesktopShellFlag,
+  stripDesktopShellQuery,
+  withDesktopShellQuery,
+} from "@/lib/nav/desktop-shell";
+
 const BLOCKED_PREFIXES = ["/login", "/portal", "/api", "/setup", "/pay/"];
 
 export function safeStaffReturnTo(value: string | null | undefined): string | null {
@@ -25,10 +31,24 @@ export function safeStaffReturnTo(value: string | null | undefined): string | nu
 
 export function loginHref(returnTo?: string | null): string {
   const safe = safeStaffReturnTo(returnTo);
-  return safe ? `/login?returnTo=${encodeURIComponent(safe)}` : "/login";
+  const shell = hasDesktopShellFlag(returnTo) || hasDesktopShellFlag(safe);
+  const dest = safe ? stripDesktopShellQuery(safe) : null;
+  const params = new URLSearchParams();
+  if (shell) params.set("gc_shell", "app");
+  if (dest) params.set("returnTo", dest);
+  const qs = params.toString();
+  return qs ? `/login?${qs}` : "/login";
 }
 
-export function pathAfterLogin(role: string, returnTo?: string | null): string {
+export function pathAfterLogin(
+  role: string,
+  returnTo?: string | null,
+  desktopShell?: boolean,
+): string {
   if (role === "CLIENT") return "/portal";
-  return safeStaffReturnTo(returnTo) ?? "/home";
+  const path = safeStaffReturnTo(returnTo) ?? "/home";
+  if (desktopShell || hasDesktopShellFlag(returnTo) || hasDesktopShellFlag(path)) {
+    return withDesktopShellQuery(path);
+  }
+  return path;
 }

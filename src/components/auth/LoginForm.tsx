@@ -6,7 +6,13 @@ import Image from "next/image";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { pathAfterLogin } from "@/lib/auth/return-to";
 
-export function LoginForm({ returnTo }: { returnTo: string | null }) {
+export function LoginForm({
+  returnTo,
+  desktopShell = false,
+}: {
+  returnTo: string | null;
+  desktopShell?: boolean;
+}) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,7 +32,7 @@ export function LoginForm({ returnTo }: { returnTo: string | null }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unable to sign in");
-      router.push(pathAfterLogin(data.user.role, returnTo));
+      router.push(pathAfterLogin(data.user.role, returnTo, desktopShell));
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to sign in");

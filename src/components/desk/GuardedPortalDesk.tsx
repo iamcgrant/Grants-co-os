@@ -1,8 +1,11 @@
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
+import { loginHref } from "@/lib/auth/return-to";
 import { requireCreditStaff } from "@/lib/disputes/access";
 import { requireTaxStaff } from "@/lib/tax/access";
 import { PortalDesk } from "@/components/desk/PortalDesk";
+import { DESKTOP_SHELL_COOKIE, resolveDesktopShellMode } from "@/lib/nav/desktop-shell";
 import type { PortalDeskId } from "@/lib/nav/portal-desks";
 
 export async function GuardedPortalDesk({
@@ -25,7 +28,10 @@ export async function GuardedPortalDesk({
     }
     case "staff": {
       const user = await getCurrentUser();
-      if (!user) redirect("/login");
+      if (!user) {
+        const headerStore = await headers();
+        redirect(loginHref(headerStore.get("x-gc-pathname")));
+      }
       break;
     }
     default: {
@@ -33,5 +39,16 @@ export async function GuardedPortalDesk({
       return _exhaustive;
     }
   }
-  return <PortalDesk deskId={deskId} />;
+  let desktopShell = false;
+  try {
+    const cookieStore = await cookies();
+    const headerStore = await headers();
+    desktopShell = resolveDesktopShellMode({
+      cookieValue: cookieStore.get(DESKTOP_SHELL_COOKIE)?.value,
+      pathWithSearch: headerStore.get("x-gc-pathname"),
+    });
+  } catch {
+    desktopShell = false;
+  }
+  return <PortalDesk deskId={deskId} desktopShell={desktopShell} />;
 }

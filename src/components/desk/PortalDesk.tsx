@@ -16,7 +16,13 @@ const RETURN_TO_OS_HREF = "/home";
  * the official login in a new tab. Never auto-navigate, never send this OS
  * tab to a vendor origin, never restore a refused iframe, never invent a proxy.
  */
-export function PortalDesk({ deskId }: { deskId: PortalDeskId }) {
+export function PortalDesk({
+  deskId,
+  desktopShell = false,
+}: {
+  deskId: PortalDeskId;
+  desktopShell?: boolean;
+}) {
   const desk = portalDeskById(deskId);
   const showFrame = portalDeskCanEmbed(desk);
 
@@ -27,13 +33,16 @@ export function PortalDesk({ deskId }: { deskId: PortalDeskId }) {
       data-official-url={desk.officialUrl}
       data-embed-policy={showFrame ? "pane" : "desk"}
       data-os-href={desk.osHref}
+      data-desktop-shell={desktopShell || undefined}
     >
-      <header className="gc-portal-desk-title">
-        <h1>{desk.title}</h1>
-        <Link href={RETURN_TO_OS_HREF} className="gc-portal-return" data-return-to-os="home">
-          Return to OS
-        </Link>
-      </header>
+      {desktopShell ? null : (
+        <header className="gc-portal-desk-title">
+          <h1>{desk.title}</h1>
+          <Link href={RETURN_TO_OS_HREF} className="gc-portal-return" data-return-to-os="home">
+            Return to OS
+          </Link>
+        </header>
+      )}
       <div className="gc-portal-desk-stage">
         {showFrame ? (
           <iframe
