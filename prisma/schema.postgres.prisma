@@ -115,6 +115,7 @@ model User {
   conversationParts  ConversationParticipant[]
   messagesSent       Message[]            @relation("MessageSender")
   teamMentions       MessageMention[]
+  disputeCases       DisputeCase[]        @relation("DisputeCaseActor")
 }
 
 model Session {
@@ -181,6 +182,7 @@ model Client {
   conversations       Conversation[]
   onboardingChecklist OnboardingItem[]
   disputeRounds       DisputeRound[]
+  disputeCases        DisputeCase[]
   fridayPulseItems    FridayPulseItem[]
   identifiers         ClientIdentifier[]
   addresses           Address[]
@@ -1157,6 +1159,70 @@ model DisputeRound {
 
   @@unique([clientId, roundNumber])
   @@index([clientId, status])
+}
+
+/** In-OS dispute / bureau / CFPB case file. Official portals are a last submit step only. */
+model DisputeCase {
+  id            String    @id @default(cuid())
+  clientId      String
+  channel       String
+  status        String    @default("INTAKE")
+  title         String
+  packetNotes   String?
+  externalRef   String?
+  outcome       String?
+  outcomeNote   String?
+  openedAt      DateTime  @default(now())
+  packetReadyAt DateTime?
+  readyAt       DateTime?
+  submittedAt   DateTime?
+  resultsAt     DateTime?
+  closedAt      DateTime?
+  actorId       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  client    Client                @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  actor     User?                 @relation("DisputeCaseActor", fields: [actorId], references: [id])
+  items     DisputeCaseItem[]
+  checklist DisputeCaseCheckItem[]
+
+  @@index([channel, status])
+  @@index([clientId, channel])
+}
+
+model DisputeCaseItem {
+  id         String   @id @default(cuid())
+  caseId     String
+  label      String
+  bureau     String?
+  accountRef String?
+  reason     String?
+  status     String   @default("OPEN")
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  case DisputeCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+}
+
+model DisputeCaseCheckItem {
+  id        String    @id @default(cuid())
+  caseId    String
+  key       String
+  label     String
+  required  Boolean   @default(true)
+  done      Boolean   @default(false)
+  doneAt    DateTime?
+  doneById  String?
+  sortOrder Int       @default(0)
+
+  case DisputeCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, key])
+  @@index([caseId])
 }
 
 model FridayPulseRun {

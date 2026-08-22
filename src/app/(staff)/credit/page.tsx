@@ -1,20 +1,16 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/session";
-import { hasPermission } from "@/lib/rbac/permissions";
 import {
   CREDIT_DISPUTES_NAV,
   ESCALATIONS_NAV,
   getCreditDisputesNav,
   getEscalationsNav,
 } from "@/lib/nav/role-nav";
+import { requireCreditStaff } from "@/lib/disputes/access";
+import { DISPUTE_CHANNELS } from "@/lib/disputes/channels";
 
 export default async function CreditDisputesHubPage() {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  if (!hasPermission(user.role, "MANAGE_CREDIT") && !hasPermission(user.role, "VIEW_CREDIT_DOCS")) {
-    return <p>Access denied.</p>;
-  }
+  const { user, denied } = await requireCreditStaff();
+  if (denied || !user) return <p>Access denied.</p>;
 
   const creditItems = getCreditDisputesNav();
   const escalationItems = getEscalationsNav();
@@ -24,8 +20,8 @@ export default async function CreditDisputesHubPage() {
       <p className="gc-eyebrow mb-2">{CREDIT_DISPUTES_NAV.hub.label}</p>
       <h1 className="text-4xl md:text-5xl mb-2">Workspaces</h1>
       <p className="gc-section-sub mb-10 max-w-2xl">
-        DisputeFox opens existing Client 360 and Jona surfaces. SmartCredit is Friday Pulse.
-        Experian, Credit Karma, and CFPB are route shells only — no vendor APIs and no scraping.
+        Native Grants OS case files. Official portals are a last submit step only. Credit Karma stays
+        client-assisted. No scraping.
       </p>
 
       <section className="mb-10">
@@ -48,7 +44,7 @@ export default async function CreditDisputesHubPage() {
               <p className="text-xl display">{item.label}</p>
               <p className="text-sm text-[var(--gc-muted)] mt-2">
                 {item.label === ESCALATIONS_NAV.cfpb.label
-                  ? "CFPB escalation shell. Portal workspace is a later slice. No CFPB API."
+                  ? DISPUTE_CHANNELS.CFPB.honesty
                   : item.label}
               </p>
             </Link>
@@ -62,13 +58,19 @@ export default async function CreditDisputesHubPage() {
 function creditHubBlurb(href: string): string {
   switch (href) {
     case CREDIT_DISPUTES_NAV.disputeFox.href:
-      return "Existing Client 360 Disputes tab and Jona board. Not a new DisputeFox API workspace.";
+      return DISPUTE_CHANNELS.DISPUTEFOX.honesty;
     case CREDIT_DISPUTES_NAV.experian.href:
-      return "Route shell for a later Experian portal workspace. No Experian API.";
+      return DISPUTE_CHANNELS.EXPERIAN.honesty;
+    case CREDIT_DISPUTES_NAV.equifax.href:
+      return DISPUTE_CHANNELS.EQUIFAX.honesty;
+    case CREDIT_DISPUTES_NAV.transunion.href:
+      return DISPUTE_CHANNELS.TRANSUNION.honesty;
+    case CREDIT_DISPUTES_NAV.innovis.href:
+      return DISPUTE_CHANNELS.INNOVIS.honesty;
     case CREDIT_DISPUTES_NAV.smartCredit.href:
       return "Existing SmartCredit / Friday Pulse workflow.";
     case CREDIT_DISPUTES_NAV.creditKarma.href:
-      return "Client-assisted score entry shell. No Credit Karma scrape.";
+      return "Client-assisted score entry. No Credit Karma scrape.";
     default:
       return "Credit & Disputes workspace.";
   }

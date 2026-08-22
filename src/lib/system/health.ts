@@ -3,8 +3,8 @@ import { getPaymentProvider } from "@/lib/payments/provider";
 import { commasPublicStatus, isCommasConfigured } from "@/lib/payments/commas-config";
 import { isGhlApiReady } from "@/lib/integrations/ghl/http";
 import { GHL_CONVERSATIONS_MESSAGE_WRITE_SCOPE } from "@/lib/integrations/ghl/location";
-import { integrationCredentialStatus } from "@/lib/integrations/credentials";
 import { getGcEnvironment } from "@/lib/integrations/env";
+import { probeDisputeFoxApi } from "@/lib/integrations/disputefox/probe";
 
 export type HealthStatus = "CONNECTED" | "DEGRADED" | "ACTION_REQUIRED" | "OFFLINE";
 
@@ -32,7 +32,6 @@ export async function collectSystemHealth(): Promise<{
   checkedAt: string;
 }> {
   const now = new Date();
-  const creds = integrationCredentialStatus();
   const commas = commasPublicStatus();
   const provider = getPaymentProvider();
 
@@ -52,6 +51,7 @@ export async function collectSystemHealth(): Promise<{
   const lastPulse = await prisma.fridayPulseRun.findFirst({
     orderBy: { createdAt: "desc" },
   });
+  const disputeFoxProbe = await probeDisputeFoxApi();
 
   let databaseStatus: HealthStatus = "CONNECTED";
   let databaseDetail = "SQLite/Prisma responding";
@@ -100,11 +100,9 @@ export async function collectSystemHealth(): Promise<{
     {
       component: "disputefox",
       label: "DisputeFox",
-      status: creds.disputeFoxApi ? "CONNECTED" : "ACTION_REQUIRED",
-      detail: creds.disputeFoxApi
-        ? "API key present"
-        : "DISPUTEFOX_API_KEY / intake URL template optional until live attach",
-      lastSuccessAt: null,
+      status: disputeFoxProbe.status,
+      detail: disputeFoxProbe.detail,
+      lastSuccessAt: disputeFoxProbe.lastSuccessAt,
       lastCheckedAt: now.toISOString(),
     },
     {

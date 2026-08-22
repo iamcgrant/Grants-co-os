@@ -16,11 +16,14 @@ export type NavItem = {
   group?: NavGroup;
 };
 
-/** Credit & Disputes destinations — wire existing surfaces; shells only for later portals. */
+/** Credit & Disputes destinations — native OS workspaces. */
 export const CREDIT_DISPUTES_NAV = {
   hub: { href: "/credit", label: "Credit & Disputes", short: "Credit" },
   disputeFox: { href: "/credit/disputefox", label: "DisputeFox" },
   experian: { href: "/credit/experian", label: "Experian" },
+  equifax: { href: "/credit/equifax", label: "Equifax" },
+  transunion: { href: "/credit/transunion", label: "TransUnion" },
+  innovis: { href: "/credit/innovis", label: "Innovis" },
   smartCredit: { href: "/credit-pulse", label: "SmartCredit" },
   creditKarma: { href: "/credit/credit-karma", label: "Credit Karma" },
 } as const;
@@ -51,6 +54,9 @@ export function getCreditDisputesNav(): NavItem[] {
   return [
     { href: CREDIT_DISPUTES_NAV.disputeFox.href, label: CREDIT_DISPUTES_NAV.disputeFox.label, group: "credit" },
     { href: CREDIT_DISPUTES_NAV.experian.href, label: CREDIT_DISPUTES_NAV.experian.label, group: "credit" },
+    { href: CREDIT_DISPUTES_NAV.equifax.href, label: CREDIT_DISPUTES_NAV.equifax.label, group: "credit" },
+    { href: CREDIT_DISPUTES_NAV.transunion.href, label: CREDIT_DISPUTES_NAV.transunion.label, group: "credit" },
+    { href: CREDIT_DISPUTES_NAV.innovis.href, label: CREDIT_DISPUTES_NAV.innovis.label, group: "credit" },
     { href: CREDIT_DISPUTES_NAV.smartCredit.href, label: CREDIT_DISPUTES_NAV.smartCredit.label, group: "credit" },
     { href: CREDIT_DISPUTES_NAV.creditKarma.href, label: CREDIT_DISPUTES_NAV.creditKarma.label, group: "credit" },
   ];
