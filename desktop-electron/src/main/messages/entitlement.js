@@ -53,15 +53,22 @@ function parseEntitlementResponse(body, now = Date.now()) {
   };
 }
 
+function sessionUser(body) {
+  if (!body || typeof body !== "object") return null;
+  if (body.user && typeof body.user === "object") return body.user;
+  if (body.role) return body;
+  return null;
+}
+
 function parseSessionEntitlement(body, now = Date.now()) {
-  const user = body && typeof body === "object" ? body.user : null;
-  if (!user || typeof user !== "object") {
+  const user = sessionUser(body);
+  if (!user) {
     return { entitled: false, reason: "unauthenticated" };
   }
-  if (user.isActive !== true) {
+  if (user.isActive === false) {
     return { entitled: false, reason: "inactive" };
   }
-  if (user.role !== "OWNER") {
+  if (String(user.role || "").toUpperCase() !== "OWNER") {
     return { entitled: false, reason: "not-owner" };
   }
   return {
@@ -159,6 +166,7 @@ module.exports = {
   isOsHomeLoginUrl,
   parseEntitlementResponse,
   parseSessionEntitlement,
+  sessionUser,
   createEntitlementStore,
   fetchOwnerEntitlement,
 };

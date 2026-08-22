@@ -27,6 +27,7 @@ const {
 const { chromeBounds, vendorBounds } = require("./layout");
 const { attachDownloadHandler } = require("./downloads");
 const { createEntitlementStore, fetchOwnerEntitlement, isOsHomeLoginUrl } = require("./messages/entitlement");
+const { shouldInjectOsHomeChrome, injectOsHomeChrome } = require("./home-chrome");
 const { isMessagesDeskKilled } = require("./messages/kill-switch");
 const { createHelper } = require("./messages/helper");
 const { readPermissionStatus, settingsTarget } = require("./messages/permissions");
@@ -244,23 +245,38 @@ function attachNavigationGuards(contents, desk) {
     officialAttempted.add(desk.id);
     pushState();
   });
+  const restyleOsHome = () => {
+    if (!shouldInjectOsHomeChrome(desk)) return;
+    injectOsHomeChrome(contents).catch(() => {});
+  };
+  const checkOwnerSession = (url) => {
+    if (desk.id !== "os" || SMOKE) return;
+    refreshEntitlement().catch(() => {});
+    if (!isOsHomeLoginUrl(url || contents.getURL())) {
+      setTimeout(() => {
+        refreshEntitlement().catch(() => {});
+      }, 750);
+    }
+  };
+  contents.on("dom-ready", () => restyleOsHome());
+  contents.on("did-finish-load", () => {
+    restyleOsHome();
+    checkOwnerSession(contents.getURL());
+  });
   contents.on("did-stop-loading", () => {
     pushState();
-    if (desk.id === "os" && !SMOKE && !isOsHomeLoginUrl(contents.getURL())) {
-      refreshEntitlement().catch(() => {});
-    }
+    restyleOsHome();
+    checkOwnerSession(contents.getURL());
   });
   contents.on("did-navigate", (_event, url) => {
     pushState();
-    if (desk.id === "os" && !SMOKE && !isOsHomeLoginUrl(url || contents.getURL())) {
-      refreshEntitlement().catch(() => {});
-    }
+    restyleOsHome();
+    checkOwnerSession(url || contents.getURL());
   });
   contents.on("did-navigate-in-page", (_event, url) => {
     pushState();
-    if (desk.id === "os" && !SMOKE && !isOsHomeLoginUrl(url || contents.getURL())) {
-      refreshEntitlement().catch(() => {});
-    }
+    restyleOsHome();
+    checkOwnerSession(url || contents.getURL());
   });
   contents.on("page-title-updated", () => pushState());
   contents.on("did-fail-load", (_event, code, desc, _url, isMainFrame) => {

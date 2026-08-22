@@ -213,6 +213,9 @@ describe("Messages helper and entitlement", () => {
 
     const inactive = parseSessionEntitlement({ user: { role: "OWNER", isActive: false } });
     assert.equal(inactive.entitled, false);
+    const ownerWithoutFlag = parseSessionEntitlement({ user: { role: "OWNER" } });
+    assert.equal(ownerWithoutFlag.entitled, true);
+    assert.equal(ownerWithoutFlag.source, "session-fallback");
     assert.equal(isOsHomeLoginUrl("https://os.grantandconsultants.com/login?gc_shell=app"), true);
     assert.equal(isOsHomeLoginUrl("https://os.grantandconsultants.com/home"), false);
   });
