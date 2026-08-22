@@ -49,7 +49,8 @@ describe("official Cognito Forms workspace", () => {
     expect(page).not.toMatch(/cheerio|puppeteer|playwright/i);
     expect(page).not.toMatch(/Open portal|open portal/i);
     const client = fs.readFileSync(path.join(process.cwd(), "src/lib/integrations/cognito/client.ts"), "utf8");
-    expect(client).toMatch(/www\.cognitoforms\.com\/api/);
+    const config = fs.readFileSync(path.join(process.cwd(), "src/lib/integrations/cognito/config.ts"), "utf8");
+    expect(config).toMatch(/www\.cognitoforms\.com\/api/);
     expect(client).toMatch(/Authorization: `Bearer/);
   });
 

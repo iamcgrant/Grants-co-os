@@ -1,8 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { presentIncomingCall, getTelephonyProvider } from "@/lib/communications/telephony";
 
 describe("telephony adapter honesty", () => {
+  const prevGhlKey = process.env.GHL_API_KEY;
+
+  afterEach(() => {
+    if (prevGhlKey === undefined) delete process.env.GHL_API_KEY;
+    else process.env.GHL_API_KEY = prevGhlKey;
+  });
+
   it("exposes an in-OS dialer and fails closed without a GHL voice session", async () => {
+    delete process.env.GHL_API_KEY;
     const provider = getTelephonyProvider();
     expect(provider.capabilities().browserDialer).toBe(true);
     const started = await provider.startOutboundSession({
