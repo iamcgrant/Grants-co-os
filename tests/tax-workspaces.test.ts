@@ -54,27 +54,21 @@ describe("native Cloud Tax Office + SBTPG desks", () => {
     });
   }
 
-  it("does not treat official portals as the product UI", () => {
-    const files = [
-      "src/app/(staff)/tax/cloud-tax-office/page.tsx",
-      "src/app/(staff)/tax/sbtpg/page.tsx",
-      "src/app/(staff)/tax/cognito/page.tsx",
-    ];
-    for (const file of files) {
-      const src = fs.readFileSync(path.join(process.cwd(), file), "utf8");
-      expect(src, file).toMatch(/Access denied/);
-      expect(src, file).not.toMatch(/cheerio|puppeteer|playwright/i);
-      expect(src, file).not.toMatch(/Open portal|open portal/i);
-      expect(src, file).not.toMatch(/<iframe/i);
-    }
+  it("Cloud Tax and Cognito desks are in-OS portals; SBTPG stays a native payout desk", () => {
     const tax = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/cloud-tax-office/page.tsx"), "utf8");
-    expect(tax).toMatch(/listTaxDeskBoard/);
-    expect(tax).toMatch(/TaxDeskAttachForm/);
-    expect(tax).toMatch(/TaxDeskSessionForm/);
+    const cognito = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/cognito/page.tsx"), "utf8");
     const sbtpg = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/sbtpg/page.tsx"), "utf8");
+    expect(tax).toMatch(/GuardedPortalDesk/);
+    expect(tax).toMatch(/deskId: "cloud-tax-office"/);
+    expect(tax).not.toMatch(/cheerio|puppeteer|playwright/i);
+    expect(tax).not.toMatch(/listTaxDeskBoard|API health|COGNITO_API_KEY/);
+    expect(cognito).toMatch(/GuardedPortalDesk/);
+    expect(cognito).toMatch(/deskId: "cognito"/);
+    expect(sbtpg).toMatch(/Access denied/);
     expect(sbtpg).toMatch(/loadSbtpgDesk/);
     expect(sbtpg).toMatch(/TaxDeskAttachForm/);
     expect(sbtpg).toMatch(/SbtpgPayoutForm/);
+    expect(sbtpg).not.toMatch(/cheerio|puppeteer|playwright/i);
   });
 
   it("attaches a Cloud Tax Office return without inventing an id", async () => {

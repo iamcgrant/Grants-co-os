@@ -1,8 +1,5 @@
-import { ChannelCasesView } from "@/components/disputes/ChannelCasesView";
-import { requireCreditStaff } from "@/lib/disputes/access";
+import { GuardedPortalDesk } from "@/components/desk/GuardedPortalDesk";
 
 export default async function CfpbCasesPage() {
-  const { user, denied } = await requireCreditStaff();
-  if (denied || !user) return <p>Access denied.</p>;
-  return ChannelCasesView({ channel: "CFPB", user });
+  return GuardedPortalDesk({ deskId: "cfpb", gate: "credit" });
 }

@@ -1,13 +1,13 @@
 /**
- * Official last-step product logins. Sidebar click opens these https URLs in a
- * new tab so staff land in the real portal. Native OS routes stay available
- * for case work. Never iframe portals that set X-Frame-Options. No scrape.
+ * Official last-step product logins. Sidebar click stays on the in-OS portal
+ * route; PortalDesk loads the official https login/home in the desk.
+ * No scrape. No new-tab primary UX.
  */
 
 import { DISPUTE_CHANNELS } from "@/lib/disputes/channels";
 import { TAX_DESK_CATALOG } from "@/lib/tax/catalog";
-import { COGNITO_OFFICIAL_LOGIN_URL } from "@/lib/integrations/cognito/config";
 import {
+  COGNITO_OFFICIAL_LOGIN_URL,
   experianOfficialClickUrl,
   OFFICIAL_GHL_LOGIN_URL,
   OFFICIAL_GMAIL_LOGIN_URL,
@@ -15,9 +15,12 @@ import {
 } from "@/lib/nav/official-login-urls";
 
 export {
+  COGNITO_OFFICIAL_LOGIN_URL,
   EXPERIAN_BACKDOOR_SUBMIT_PORTAL_URL,
   EXPERIAN_OFFICIAL_CONSUMER_DISPUTE_URL,
   GMAIL_WORK_MAILBOX,
+  OFFICIAL_CLOUD_TAX_OFFICE_URL,
+  OFFICIAL_DISPUTEFOX_LOGIN_URL,
   OFFICIAL_GHL_LOGIN_URL,
   OFFICIAL_GMAIL_LOGIN_URL,
   OFFICIAL_TELEGRAM_LOGIN_URL,
@@ -34,10 +37,12 @@ export function isOfficialHttpsHref(href: string): boolean {
   return href.startsWith("https://");
 }
 
-/** URL the sidebar <a> uses on click — official https portal when catalogued. */
+export function isInOsNavHref(href: string): boolean {
+  return href.startsWith("/") && !href.startsWith("//");
+}
+
+/** Sidebar <a> always stays inside Grants & Co OS. Official URL loads on the desk. */
 export function sidebarClickHref(item: { href: string; officialLastStepUrl?: string }): string {
-  const official = item.officialLastStepUrl?.trim();
-  if (official && isOfficialHttpsHref(official)) return official;
   return item.href;
 }
 

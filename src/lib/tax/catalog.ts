@@ -3,6 +3,8 @@
  * Official portals are last-step only. No scrape.
  */
 
+import { OFFICIAL_CLOUD_TAX_OFFICE_URL } from "@/lib/nav/official-login-urls";
+
 export const TAX_DESKS = ["CLOUD_TAX_OFFICE", "SBTPG"] as const;
 export type TaxDesk = (typeof TAX_DESKS)[number];
 
@@ -64,7 +66,7 @@ export const TAX_DESK_CATALOG: Record<TaxDesk, TaxDeskCatalog> = {
     integration: "cloud_tax_office",
     hasOfficialSubmitApi: false,
     hasOfficialPortal: true,
-    officialLastStepUrl: "https://grantandco.cloudtaxoffice.com/proavalon/",
+    officialLastStepUrl: OFFICIAL_CLOUD_TAX_OFFICE_URL,
     scrape: false,
     honesty:
       "No supported Cloud Tax Office (ProAvalon) list/read API. This workspace is the OS staff desk: client/return list, status, and next actions. Official Cloud Tax Office is a last login/file step only. No scrape.",

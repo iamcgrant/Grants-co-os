@@ -153,7 +153,6 @@ describe("credit / escalation desk pages", () => {
     expect(form).not.toMatch(/detailHref/);
     for (const file of [
       "src/components/disputes/ChannelCasesView.tsx",
-      "src/app/(staff)/credit/disputefox/page.tsx",
       "src/app/(staff)/credit/smartcredit/page.tsx",
     ]) {
       const src = fs.readFileSync(path.join(process.cwd(), file), "utf8");
@@ -174,7 +173,7 @@ describe("credit / escalation desk pages", () => {
     const { SmartCreditAttachForm } = await import("../src/components/credit/SmartCreditAttachForm");
     const { SmartCreditSessionForm } = await import("../src/components/credit/SmartCreditSessionForm");
     const { CreditDeskUnavailable } = await import("../src/components/disputes/CreditDeskUnavailable");
-    const { OpenPortalLaunch } = await import("../src/components/desk/OpenPortalLaunch");
+    const { PortalDesk } = await import("../src/components/desk/PortalDesk");
     const Page = (await importPage()).default;
     const tree = await resolveAsyncServerTree(await Page());
     assertNoFunctionPropsToClientComponents(tree, [
@@ -182,20 +181,23 @@ describe("credit / escalation desk pages", () => {
       SmartCreditAttachForm,
       SmartCreditSessionForm,
       CreditDeskUnavailable,
-      OpenPortalLaunch,
+      PortalDesk,
     ]);
     const html = renderToStaticMarkup(createElement("div", null, tree));
     expect(html, href).not.toMatch(/This page couldn't load|A server error occurred/i);
-    expect(html, href).toMatch(/Open login/);
-    expect(html, href).toMatch(/Honest empty desk|Open OS case|Open a case/);
-    expect(html, href).not.toMatch(/<iframe/i);
-    if (channel) {
+    if (channel && channel !== "SMARTCREDIT" && channel !== "INNOVIS") {
+      expect(html, href).not.toMatch(/GHL_API_KEY|API health|DEGRADED/);
+    }
+    if (href === "/credit/smartcredit" || href === "/credit/innovis") {
+      expect(html, href).toMatch(/Open login|Honest empty desk|Open a case|SmartCredit|Innovis/);
+    }
+    if (channel && channel !== "SMARTCREDIT" && channel !== "INNOVIS") {
       expect(html, href).toContain(DISPUTE_CHANNELS[channel].label);
       const official = DISPUTE_CHANNELS[channel].officialSubmitUrl;
       expect(official, href).toBeTruthy();
       expect(official?.startsWith("https://"), href).toBe(true);
       expect(html, href).toContain(official as string);
-      expect(html, href).toMatch(/Open portal/);
+      expect(html, href).toMatch(/data-portal-desk/);
     }
   });
 
@@ -230,8 +232,8 @@ describe("credit / escalation desk pages", () => {
     const foxHtml = renderToStaticMarkup(createElement("div", null, foxTree));
     const scHtml = renderToStaticMarkup(createElement("div", null, scTree));
     expect(foxHtml).toMatch(/DisputeFox/);
-    expect(foxHtml).toMatch(/Open login/);
-    expect(foxHtml).toMatch(/could not load/);
+    expect(foxHtml).toMatch(/data-portal-desk="disputefox"/);
+    expect(foxHtml).not.toMatch(/could not load|API health|DEGRADED/);
     expect(scHtml).toMatch(/SmartCredit/);
     expect(scHtml).toMatch(/Open login/);
     expect(scHtml).toMatch(/could not load/);
@@ -273,27 +275,23 @@ describe("credit / escalation desk pages", () => {
     assertNoFunctionPropsToClientComponents(tree, [NewCaseForm]);
     const html = renderToStaticMarkup(createElement("div", null, tree));
     expect(html).toMatch(/DisputeFox/);
-    expect(html).toMatch(/Ann Fox/);
+    expect(html).toMatch(/data-portal-desk="disputefox"/);
     expect(html).not.toMatch(/This page couldn't load|A server error occurred/i);
   });
 
   it("keeps Equifax and TransUnion on an empty desk when the view throws", async () => {
     forceChannelLoadThrow = true;
     const { CreditDeskUnavailable } = await import("../src/components/disputes/CreditDeskUnavailable");
-    const Equifax = (await import("../src/app/(staff)/credit/equifax/page")).default;
-    const TransUnion = (await import("../src/app/(staff)/credit/transunion/page")).default;
-    for (const [label, Page] of [
-      ["Equifax", Equifax],
-      ["TransUnion", TransUnion],
-    ] as const) {
-      const tree = await resolveAsyncServerTree(await Page());
+    const { renderChannelDeskSafe } = await import("../src/components/disputes/ChannelCasesView");
+    for (const channel of ["EQUIFAX", "TRANSUNION"] as const) {
+      const tree = await resolveAsyncServerTree(await renderChannelDeskSafe(channel, owner));
       assertNoFunctionPropsToClientComponents(tree, [CreditDeskUnavailable]);
       const html = renderToStaticMarkup(createElement("div", null, tree));
-      expect(html, label).toContain(label);
-      expect(html, label).toMatch(/Honest empty desk/);
-      expect(html, label).toMatch(/Open login/);
-      expect(html, label).toMatch(/Back to Command Center/);
-      expect(html, label).not.toMatch(/This page couldn't load|A server error occurred/i);
+      expect(html, channel).toContain(DISPUTE_CHANNELS[channel].label);
+      expect(html, channel).toMatch(/Honest empty desk/);
+      expect(html, channel).toMatch(/Open login/);
+      expect(html, channel).toMatch(/Back to Command Center/);
+      expect(html, channel).not.toMatch(/This page couldn't load|A server error occurred/i);
     }
   });
 
@@ -307,13 +305,13 @@ describe("credit / escalation desk pages", () => {
     expect(fallback).toMatch(/\/home/);
     expect(fallback).toMatch(/Back to Command Center/);
     expect(fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/equifax/page.tsx"), "utf8")).toMatch(
-      /renderChannelDeskSafe\("EQUIFAX"/,
+      /deskId: "equifax"/,
     );
     expect(fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/transunion/page.tsx"), "utf8")).toMatch(
-      /renderChannelDeskSafe\("TRANSUNION"/,
+      /deskId: "transunion"/,
     );
     expect(fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/disputefox/page.tsx"), "utf8")).toMatch(
-      /CreditDeskUnavailable/,
+      /deskId: "disputefox"/,
     );
   });
 });

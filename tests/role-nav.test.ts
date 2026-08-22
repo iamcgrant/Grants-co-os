@@ -22,7 +22,6 @@ import {
 } from "@/lib/nav/role-nav";
 import {
   EXPERIAN_BACKDOOR_SUBMIT_PORTAL_URL,
-  EXPERIAN_OFFICIAL_CONSUMER_DISPUTE_URL,
   GMAIL_WORK_MAILBOX,
   OFFICIAL_GHL_LOGIN_URL,
   OFFICIAL_GMAIL_LOGIN_URL,
@@ -180,7 +179,7 @@ describe("Credit & Disputes navigation", () => {
     expect(byLabel.Dialer.officialLastStepUrl).toBe(OFFICIAL_GHL_LOGIN_URL);
     expect(byLabel.Telegram.officialLastStepUrl).toBe(OFFICIAL_TELEGRAM_LOGIN_URL);
     expect(byLabel.DisputeFox.officialLastStepUrl).toBe(DISPUTE_CHANNELS.DISPUTEFOX.officialSubmitUrl);
-    expect(byLabel.Experian.officialLastStepUrl).toBe(DISPUTE_CHANNELS.EXPERIAN.officialSubmitUrl);
+    expect(byLabel.Experian.officialLastStepUrl).toBe(experianOfficialClickUrl());
     expect(byLabel.Equifax.officialLastStepUrl).toBe(DISPUTE_CHANNELS.EQUIFAX.officialSubmitUrl);
     expect(byLabel.TransUnion.officialLastStepUrl).toBe(DISPUTE_CHANNELS.TRANSUNION.officialSubmitUrl);
     expect(byLabel.Innovis.officialLastStepUrl).toBe(DISPUTE_CHANNELS.INNOVIS.officialSubmitUrl);
@@ -193,11 +192,13 @@ describe("Credit & Disputes navigation", () => {
       "https://grantandco.cloudtaxoffice.com/proavalon/",
     );
     expect(TAX_DESK_CATALOG.SBTPG.officialLastStepUrl).toBe("https://pro.sbtpg.com/login");
-    expect(DISPUTE_CHANNELS.DISPUTEFOX.officialSubmitUrl).toBe("https://pulse.disputeprocess.com");
-    expect(EXPERIAN_BACKDOOR_SUBMIT_PORTAL_URL).toBeNull();
-    expect(experianOfficialClickUrl()).toBe(EXPERIAN_OFFICIAL_CONSUMER_DISPUTE_URL);
-    expect(DISPUTE_CHANNELS.EXPERIAN.officialSubmitUrl).toBe(EXPERIAN_OFFICIAL_CONSUMER_DISPUTE_URL);
-    expect(COGNITO_OFFICIAL_LOGIN_URL).toBe("https://www.cognitoforms.com/login");
+    expect(DISPUTE_CHANNELS.DISPUTEFOX.officialSubmitUrl).toBe(
+      "https://pulse.disputeprocess.com/jsp/client/login.jsp",
+    );
+    expect(EXPERIAN_BACKDOOR_SUBMIT_PORTAL_URL).toBe("https://www.experian.com/consumer/upload/");
+    expect(experianOfficialClickUrl()).toBe(EXPERIAN_BACKDOOR_SUBMIT_PORTAL_URL);
+    expect(DISPUTE_CHANNELS.EXPERIAN.officialSubmitUrl).toBe(EXPERIAN_BACKDOOR_SUBMIT_PORTAL_URL);
+    expect(COGNITO_OFFICIAL_LOGIN_URL).toBe("https://www.cognitoforms.com/grantcoconsultants/home");
     expect(GMAIL_WORK_MAILBOX).toBe("cgrant@grantandconsultants.com");
     expect(officialLoginForHref("/credit/credit-karma")).toBeUndefined();
     for (const item of nav) {
@@ -207,18 +208,18 @@ describe("Credit & Disputes navigation", () => {
     }
   });
 
-  it("uses a real https official href on click for required sidebar labels", () => {
+  it("routes required sidebar labels to in-OS portal hrefs, not a raw external-only link", () => {
     const nav = getDesktopNav("OWNER");
-    const required: Array<[string, string]> = [
-      ["TransUnion", DISPUTE_CHANNELS.TRANSUNION.officialSubmitUrl as string],
-      ["Equifax", DISPUTE_CHANNELS.EQUIFAX.officialSubmitUrl as string],
-      ["Experian", experianOfficialClickUrl()],
-      ["CFPB", DISPUTE_CHANNELS.CFPB.officialSubmitUrl as string],
-      ["DisputeFox", DISPUTE_CHANNELS.DISPUTEFOX.officialSubmitUrl as string],
-      ["GHL", OFFICIAL_GHL_LOGIN_URL],
-      ["Inbox", OFFICIAL_GHL_LOGIN_URL],
-      ["Dialer", OFFICIAL_GHL_LOGIN_URL],
-      ["Telegram", OFFICIAL_TELEGRAM_LOGIN_URL],
+    const required: Array<[string, string, string]> = [
+      ["TransUnion", "/credit/transunion", DISPUTE_CHANNELS.TRANSUNION.officialSubmitUrl as string],
+      ["Equifax", "/credit/equifax", DISPUTE_CHANNELS.EQUIFAX.officialSubmitUrl as string],
+      ["Experian", "/credit/experian", experianOfficialClickUrl()],
+      ["CFPB", "/escalations/cfpb", DISPUTE_CHANNELS.CFPB.officialSubmitUrl as string],
+      ["DisputeFox", "/credit/disputefox", DISPUTE_CHANNELS.DISPUTEFOX.officialSubmitUrl as string],
+      ["GHL", "/inbox?tab=ghl", OFFICIAL_GHL_LOGIN_URL],
+      ["Inbox", "/inbox", OFFICIAL_GHL_LOGIN_URL],
+      ["Dialer", "/dialer", OFFICIAL_GHL_LOGIN_URL],
+      ["Telegram", "/team-chat", OFFICIAL_TELEGRAM_LOGIN_URL],
     ];
     const html = renderToStaticMarkup(
       createElement(
@@ -238,18 +239,19 @@ describe("Credit & Disputes navigation", () => {
         createElement("div"),
       ),
     );
-    expect(html).not.toMatch(/<iframe/i);
-    for (const [label, official] of required) {
+    expect(html).not.toMatch(/target="_blank"/);
+    for (const [label, osHref, official] of required) {
       const item = nav.find((row) => row.label === label);
       expect(item, label).toBeTruthy();
       expect(isOfficialHttpsHref(official), label).toBe(true);
-      expect(sidebarClickHref(item!), official).toBe(official);
+      expect(sidebarClickHref(item!), osHref).toBe(osHref);
       expect(html).toContain(`data-nav="${label}"`);
-      expect(html).toContain(`data-nav-href="${official}"`);
-      expect(html).toContain(`href="${official}"`);
+      expect(html).toContain(`data-nav-href="${osHref}"`);
+      expect(html).toContain(`href="${osHref}"`);
+      expect(html).not.toContain(`data-nav-href="${official}"`);
     }
-    expect(EXPERIAN_BACKDOOR_SUBMIT_PORTAL_URL).toBeNull();
-    expect(html).not.toMatch(/iframe/);
+    expect(EXPERIAN_BACKDOOR_SUBMIT_PORTAL_URL).toBe("https://www.experian.com/consumer/upload/");
+    expect(html).not.toMatch(/<iframe/i);
   });
 
   it("keeps mobile bottom nav lean", () => {
@@ -279,30 +281,33 @@ describe("Credit & Disputes navigation", () => {
     }
   });
 
-  it("workspace pages are native OS screens and do not scrape", () => {
-    const files = [
+  it("vendor desks are in-OS portal screens and do not scrape", () => {
+    const portalPages = [
       "src/app/(staff)/credit/disputefox/page.tsx",
       "src/app/(staff)/credit/experian/page.tsx",
       "src/app/(staff)/credit/equifax/page.tsx",
       "src/app/(staff)/credit/transunion/page.tsx",
-      "src/app/(staff)/credit/innovis/page.tsx",
-      "src/app/(staff)/credit/smartcredit/page.tsx",
       "src/app/(staff)/escalations/cfpb/page.tsx",
-      "src/app/(staff)/credit/credit-karma/page.tsx",
       "src/app/(staff)/tax/cloud-tax-office/page.tsx",
       "src/app/(staff)/tax/cognito/page.tsx",
+    ];
+    for (const file of portalPages) {
+      const src = fs.readFileSync(path.join(process.cwd(), file), "utf8");
+      expect(src, file).toMatch(/GuardedPortalDesk/);
+      expect(src, file).not.toMatch(/cheerio|puppeteer|playwright/i);
+      expect(src, file).not.toMatch(/GHL_API_KEY|COGNITO_API_KEY|DISPUTEFOX_API_KEY/);
+    }
+    const native = [
+      "src/app/(staff)/credit/innovis/page.tsx",
+      "src/app/(staff)/credit/smartcredit/page.tsx",
+      "src/app/(staff)/credit/credit-karma/page.tsx",
       "src/app/(staff)/tax/sbtpg/page.tsx",
     ];
-    for (const file of files) {
+    for (const file of native) {
       const src = fs.readFileSync(path.join(process.cwd(), file), "utf8");
       expect(src, file).toMatch(/Access denied/);
       expect(src, file).not.toMatch(/cheerio|puppeteer|playwright/i);
-      expect(src, file).not.toMatch(/<iframe/i);
-      expect(src, file).not.toMatch(/Open portal|open portal/i);
     }
-    const df = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/disputefox/page.tsx"), "utf8");
-    expect(df).toMatch(/Clients/);
-    expect(df).toMatch(/loadDisputeFoxDeskSafe/);
     const sc = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/smartcredit/page.tsx"), "utf8");
     expect(sc).toMatch(/Clients/);
     expect(sc).toMatch(/loadSmartCreditDeskSafe/);
@@ -310,32 +315,25 @@ describe("Credit & Disputes navigation", () => {
     expect(sc).toMatch(/SmartCreditSessionForm/);
     const ck = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/credit-karma/page.tsx"), "utf8");
     expect(ck).toMatch(/Client-assisted/);
-    const tax = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/cloud-tax-office/page.tsx"), "utf8");
-    expect(tax).toMatch(/listTaxDeskBoard/);
-    expect(tax).toMatch(/TaxDeskAttachForm/);
-    const cognito = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/cognito/page.tsx"), "utf8");
-    expect(cognito).toMatch(/CognitoPullForm/);
     const sbtpg = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/sbtpg/page.tsx"), "utf8");
     expect(sbtpg).toMatch(/loadSbtpgDesk/);
     expect(sbtpg).toMatch(/data-sbtpg-desk/);
     expect(sbtpg).toMatch(/data-sbtpg-paid/);
     expect(sbtpg).not.toMatch(/coming soon/i);
-    expect(sbtpg).toMatch(/loginUrl=\{catalog\.officialLastStepUrl\}/);
-    expect(tax).toMatch(/loginUrl=\{catalog\.officialLastStepUrl\}/);
-    expect(cognito).toMatch(/loginUrl=\{COGNITO_OFFICIAL_LOGIN_URL\}/);
     const empty = fs.readFileSync(path.join(process.cwd(), "src/components/desk/DeskEmptyState.tsx"), "utf8");
     const login = fs.readFileSync(path.join(process.cwd(), "src/components/desk/OfficialLoginLink.tsx"), "utf8");
     const launch = fs.readFileSync(path.join(process.cwd(), "src/components/desk/OpenPortalLaunch.tsx"), "utf8");
-    const channelView = fs.readFileSync(path.join(process.cwd(), "src/components/disputes/ChannelCasesView.tsx"), "utf8");
+    const desk = fs.readFileSync(path.join(process.cwd(), "src/components/desk/PortalDesk.tsx"), "utf8");
     expect(empty).toMatch(/OfficialLoginLink/);
     expect(login).toMatch(/Open login/);
+    expect(login).not.toMatch(/target="_blank"/);
     expect(launch).toMatch(/Open portal/);
-    expect(launch).toMatch(/window\.open/);
-    expect(channelView).toMatch(/OpenPortalLaunch/);
-    expect(df).toMatch(/OpenPortalLaunch/);
+    expect(launch).not.toMatch(/window\.open/);
+    expect(launch).not.toMatch(/target="_blank"/);
+    expect(desk).toMatch(/gc-portal-desk/);
+    expect(desk).toMatch(/<iframe/);
+    expect(desk).toMatch(/target="_self"/);
     expect(empty).not.toMatch(/iframe/i);
     expect(login).not.toMatch(/iframe/i);
-    expect(launch).not.toMatch(/<iframe/i);
-    expect(channelView).not.toMatch(/<iframe/i);
   });
 });

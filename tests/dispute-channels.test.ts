@@ -26,13 +26,15 @@ describe("official bureau / CFPB / DisputeFox catalog", () => {
   });
 
   it("documents official last-step portals without making them the product", () => {
-    expect(DISPUTE_CHANNELS.EXPERIAN.officialSubmitUrl).toBe("https://www.experian.com/disputes/main.html");
+    expect(DISPUTE_CHANNELS.EXPERIAN.officialSubmitUrl).toBe("https://www.experian.com/consumer/upload/");
     expect(DISPUTE_CHANNELS.CFPB.officialSubmitUrl).toMatch(/consumerfinance\.gov\/complaint/);
     expect(DISPUTE_CHANNELS.EQUIFAX.officialSubmitUrl).toMatch(/equifax\.com/);
     expect(DISPUTE_CHANNELS.TRANSUNION.officialSubmitUrl).toMatch(/transunion\.com/);
     expect(DISPUTE_CHANNELS.INNOVIS.officialSubmitUrl).toMatch(/innovis\.com/);
     expect(DISPUTE_CHANNELS.DISPUTEFOX.hasOfficialSubmitApi).toBe(false);
-    expect(DISPUTE_CHANNELS.DISPUTEFOX.officialSubmitUrl).toBe("https://pulse.disputeprocess.com");
+    expect(DISPUTE_CHANNELS.DISPUTEFOX.officialSubmitUrl).toBe(
+      "https://pulse.disputeprocess.com/jsp/client/login.jsp",
+    );
     expect(DISPUTE_CHANNELS.SMARTCREDIT.hasOfficialSubmitApi).toBe(false);
     expect(DISPUTE_CHANNELS.SMARTCREDIT.officialSubmitUrl).toMatch(/smartcredit\.com/);
     expect(DISPUTE_CHANNELS.SMARTCREDIT.href).toBe("/credit/smartcredit");
