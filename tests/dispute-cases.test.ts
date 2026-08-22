@@ -106,6 +106,29 @@ describe("in-OS dispute cases", () => {
     expect(open?.id).toBe(first.id);
   });
 
+  it("opens a SmartCredit case with packet, checklist, and results", async () => {
+    const client = await seedClient();
+    const opened = await createCase({ clientId: client.id, channel: "SMARTCREDIT" });
+    expect(opened.status).toBe("INTAKE");
+    expect(opened.checklist.some((row) => row.key === "attached")).toBe(true);
+
+    await addCaseItem({ caseId: opened.id, label: "Experian score freeze", bureau: "EXPERIAN" });
+    await updatePacketNotes({ caseId: opened.id, packetNotes: "Member attached · session notes" });
+    let current = await advanceCase({ caseId: opened.id });
+    expect(current.status).toBe("PACKET");
+
+    for (const row of current.checklist.filter((c) => c.required)) {
+      current = await setChecklistItem({ caseId: opened.id, key: row.key, done: true });
+    }
+    current = await advanceCase({ caseId: opened.id });
+    expect(current.status).toBe("READY");
+    current = await advanceCase({ caseId: opened.id, externalRef: "SC-SESS-1" });
+    expect(current.status).toBe("SUBMITTED");
+    current = await advanceCase({ caseId: opened.id, outcome: "Scores recorded" });
+    expect(current.status).toBe("RESULTS");
+    expect(current.resultsAt).toBeTruthy();
+  });
+
   it("lists DisputeFox board from OS-attached clients, not a live DF list", async () => {
     const client = await seedClient();
     await prisma.clientIdentifier.create({

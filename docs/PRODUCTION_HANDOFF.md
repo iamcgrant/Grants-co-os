@@ -45,7 +45,7 @@ First-time Owner password: `npm run owner:setup-link` with `OWNER_SETUP_BASE_URL
 | **GHL inbound** | Live with current PIT |
 | **GHL outbound** | Fail-closed until PIT has `conversations/message.write` |
 | **DisputeFox** | Native `/setup` intake primary |
-| **SmartCredit** | Sponsor URL optional |
+| **SmartCredit** | Native `/credit/smartcredit` workspace. `SMARTCREDIT_SPONSOR_URL` still required for affiliate enroll attribution. Optional `SMARTCREDIT_API_KEY` + `SMARTCREDIT_API_PROBE_URL` if a partner API appears. CONNECTED only after a probe or recorded OS operation. |
 
 ## AUTOMATIONS
 

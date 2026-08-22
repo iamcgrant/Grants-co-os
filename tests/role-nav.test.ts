@@ -38,7 +38,7 @@ describe("Credit & Disputes navigation", () => {
     expect(getEscalationsNav()).toEqual([
       { href: ESCALATIONS_NAV.cfpb.href, label: ESCALATIONS_NAV.cfpb.label, group: "escalations" },
     ]);
-    expect(CREDIT_DISPUTES_NAV.smartCredit.href).toBe("/credit-pulse");
+    expect(CREDIT_DISPUTES_NAV.smartCredit.href).toBe("/credit/smartcredit");
   });
 
   it("labels Credit & Disputes and Escalations sections", () => {
@@ -66,7 +66,7 @@ describe("Credit & Disputes navigation", () => {
         ESCALATIONS_NAV.cfpb.href,
       ]),
     );
-    expect(nav.find((item) => item.label === "SmartCredit")?.href).toBe("/credit-pulse");
+    expect(nav.find((item) => item.label === "SmartCredit")?.href).toBe("/credit/smartcredit");
   });
 
   it("keeps mobile bottom nav lean", () => {
@@ -91,6 +91,7 @@ describe("Credit & Disputes navigation", () => {
       "src/app/(staff)/credit/equifax/page.tsx",
       "src/app/(staff)/credit/transunion/page.tsx",
       "src/app/(staff)/credit/innovis/page.tsx",
+      "src/app/(staff)/credit/smartcredit/page.tsx",
       "src/app/(staff)/escalations/cfpb/page.tsx",
       "src/app/(staff)/credit/credit-karma/page.tsx",
     ];
@@ -104,6 +105,11 @@ describe("Credit & Disputes navigation", () => {
     const df = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/disputefox/page.tsx"), "utf8");
     expect(df).toMatch(/Clients/);
     expect(df).toMatch(/listDisputeFoxBoard/);
+    const sc = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/smartcredit/page.tsx"), "utf8");
+    expect(sc).toMatch(/Clients/);
+    expect(sc).toMatch(/listSmartCreditBoard/);
+    expect(sc).toMatch(/SmartCreditAttachForm/);
+    expect(sc).toMatch(/SmartCreditSessionForm/);
     const ck = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/credit-karma/page.tsx"), "utf8");
     expect(ck).toMatch(/Client-assisted/);
   });

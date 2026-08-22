@@ -245,6 +245,10 @@ export default async function Client360Page({
                   <IntegrationValue field={integrations.disputeFoxClientId} />
                 </div>
                 <div className="flex justify-between gap-2">
+                  <span className="text-[var(--gc-muted)]">SmartCredit ID</span>
+                  <IntegrationValue field={integrations.smartCreditClientId} />
+                </div>
+                <div className="flex justify-between gap-2">
                   <span className="text-[var(--gc-muted)]">Intake Status</span>
                   <IntegrationValue field={integrations.intakeStatus} />
                 </div>
@@ -364,6 +368,11 @@ export default async function Client360Page({
               <p className="text-xs text-[var(--gc-muted)] mt-1">
                 Live credit providers are not connected for this data plane yet.
               </p>
+              <p className="mt-3">
+                <Link href={`/credit/smartcredit/${client.grantsClientId}`} className="gc-btn gc-btn-outline text-xs">
+                  SmartCredit OS workspace
+                </Link>
+              </p>
             </Panel>
           ) : (
             <>
@@ -387,6 +396,9 @@ export default async function Client360Page({
                     {c.needsReauth ? " · reconnect" : ""}
                   </span>
                 ))}
+                <Link href={`/credit/smartcredit/${client.grantsClientId}`} className="gc-btn gc-btn-outline text-xs">
+                  SmartCredit OS workspace
+                </Link>
               </div>
             </>
           )}
@@ -395,9 +407,14 @@ export default async function Client360Page({
 
       {tab === "disputes" && (
         <Panel title="Dispute process" action={
-          <Link href={`/credit/disputefox/${client.grantsClientId}`} className="gc-btn gc-btn-outline text-xs">
-            DisputeFox OS workspace
-          </Link>
+          <span className="flex flex-wrap gap-2">
+            <Link href={`/credit/disputefox/${client.grantsClientId}`} className="gc-btn gc-btn-outline text-xs">
+              DisputeFox OS workspace
+            </Link>
+            <Link href={`/credit/smartcredit/${client.grantsClientId}`} className="gc-btn gc-btn-outline text-xs">
+              SmartCredit OS workspace
+            </Link>
+          </span>
         }>
           <div className="mb-3 text-sm">
             <span className="text-[var(--gc-muted)]">DisputeFox Client ID · </span>
