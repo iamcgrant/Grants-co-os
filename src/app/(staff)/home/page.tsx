@@ -81,7 +81,7 @@ export default async function HomePage() {
             value={formatUsd(data.finance.totalRevenueCents)}
             href={COMMAND_CENTER_TOTAL_REVENUE_HREF}
             spark={sparkCollect.slice(-7)}
-            hint={STAFF_REVENUE_ATTRIBUTION}
+            hint={STAFF_REVENUE_FIRM}
             trend="SEASON-TO-DATE"
             tone="ok"
           />
@@ -147,7 +147,7 @@ export default async function HomePage() {
           </Panel>
 
           <Panel
-            title="Total Company Revenue"
+            title="Revenue trend"
             eyebrow={`${STAFF_REVENUE_FIRM} · SEASON-TO-DATE`}
             className="gc-span-7"
             action={
@@ -158,13 +158,16 @@ export default async function HomePage() {
               />
             }
           >
-            <p className="text-xs text-[var(--gc-muted)] mb-3">
-              Revenue trend is season-to-date and matches Total Revenue. Today and this week stay empty
-              without a dated Grants Pay charge. Unfunded is pending only and is not added.
+            <p className="text-[0.62rem] tracking-[0.14em] uppercase text-[var(--gc-muted)]">
+              Total Company Revenue
             </p>
-            <p className="display text-xl text-[var(--gc-ice)] mb-3">{monthLabel}</p>
+            <p className="display text-2xl text-[var(--gc-ice)] mb-3">{monthLabel}</p>
+            <p className="text-xs text-[var(--gc-muted)] mb-3">
+              Revenue trend matches Total Revenue. Today and this week stay empty without a dated
+              Grants Pay charge. Unfunded is pending only and is not added.
+            </p>
             <LineChart
-              series={[{ name: "Total Company Revenue", color: "#b2d4ff", values: data.revenueTrend.values }]}
+              series={[{ name: "Revenue trend", color: "#b2d4ff", values: data.revenueTrend.values }]}
               labels={data.revenueTrend.labels}
             />
             <div className="gc-dash-grid gc-dash-grid-4 mt-4">

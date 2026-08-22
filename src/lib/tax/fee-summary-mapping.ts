@@ -160,16 +160,28 @@ export function officialSummaryFromFeeSummaryPayouts(
   };
 }
 
-/** Season-to-date chart uses the official total on every point — no invented daily split. */
+export const COMMAND_CENTER_SEASON_LABEL = "SEASON-TO-DATE";
+
+/** Season-to-date chart is a flat official total — no invented daily split. */
 export function commandCenterRevenueSeries(
   officialTotalCents: number | null,
   labels: string[],
   datedValues: number[],
 ): { labels: string[]; values: number[] } {
   if (officialTotalCents != null && officialTotalCents > 0) {
-    return { labels, values: labels.map(() => officialTotalCents) };
+    return {
+      labels: [COMMAND_CENTER_SEASON_LABEL, COMMAND_CENTER_SEASON_LABEL],
+      values: [officialTotalCents, officialTotalCents],
+    };
   }
   return { labels, values: datedValues };
+}
+
+export function commandCenterChartMatchesTotal(
+  totalRevenueCents: number,
+  series: { values: number[] },
+): boolean {
+  return series.values.length > 0 && series.values.every((value) => value === totalRevenueCents);
 }
 
 export function officialFeeSummaryFromCaptureKey(key: string): OfficialSbtpgFeeSummary {

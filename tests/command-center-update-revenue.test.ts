@@ -94,6 +94,10 @@ describe("staff-facing revenue attribution", () => {
       expect(src).not.toMatch(/via SBTPG/);
     }
     expect(home).toMatch(/STAFF_REVENUE_ATTRIBUTION/);
+    expect(home).toMatch(/title="Revenue trend"/);
+    expect(home).toMatch(/Total Company Revenue/);
+    expect(home).toMatch(/STAFF_REVENUE_FIRM/);
+    expect(home).toMatch(/SEASON-TO-DATE/);
     expect(home).not.toMatch(/SBTPG/);
     expect(finance).toMatch(/STAFF_REVENUE_ATTRIBUTION/);
     expect(desk).toMatch(/staffAttribution/);
