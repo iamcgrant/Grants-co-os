@@ -22,6 +22,7 @@ export const SBTPG_STATUSES = [
   "APPROVED",
   "FUNDED",
   "PAID",
+  "UNFUNDED",
   "HOLD",
   "REJECTED",
   "CLOSED",
@@ -162,6 +163,8 @@ export function taxStatusLabel(status: TaxDeskStatus): string {
       return "Funded";
     case "PAID":
       return "Paid";
+    case "UNFUNDED":
+      return "Unfunded";
     case "HOLD":
       return "Hold";
     default: {

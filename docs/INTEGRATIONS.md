@@ -141,7 +141,7 @@ There is **no supported Cloud Tax Office list/read API**. Do not scrape. Officia
 
 Staff track tax-client refunds in Grants OS at `/tax/sbtpg`. Official `pro.sbtpg.com` is last-step login only. No supported list API. No scrape.
 
-Record or import official payout totals (`SbtpgPayout` / `POST /api/tax/sbtpg/payouts`). Command Center **Collected today / this week / month** includes OS-recorded **PAID** and **FUNDED** SBTPG amounts plus Grants Pay succeeded charges.
+Record official Fee Summary (`SbtpgFeeSummarySnapshot` + `SbtpgPayout`) via `npm run sbtpg:ingest-fee-summary` or `POST /api/tax/sbtpg/fee-summary`. Command Center **Total Revenue** is official **Fee Summary PAID** (season-to-date). **UNFUNDED** is pending and is not added. Today/week stay empty unless a dated payout or Grants Pay charge exists — no invented daily split. No scrape.
 
 **Health:** `CONNECTED` only after a recorded OS attach/session/payout. Empty desk is `ACTION_REQUIRED`.
 

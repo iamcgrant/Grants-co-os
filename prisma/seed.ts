@@ -70,6 +70,8 @@ async function main() {
   await prisma.service.deleteMany();
   await prisma.address.deleteMany();
   await prisma.clientIdentifier.deleteMany();
+  await prisma.sbtpgPayout.deleteMany();
+  await prisma.sbtpgFeeSummarySnapshot.deleteMany();
   await prisma.client.deleteMany();
   await prisma.staffProfile.deleteMany();
   await prisma.session.deleteMany();

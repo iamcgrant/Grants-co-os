@@ -1,6 +1,7 @@
 import { startOfDay, startOfWeek, startOfMonth } from "date-fns";
 import { prisma } from "@/lib/db/prisma";
 import { getSbtpgCollectedTotals } from "@/lib/tax/payouts";
+import { getLatestOfficialFeeSummary, mapCommandCenterRevenue } from "@/lib/tax/official-fee-summary";
 
 function moneySum(
   rows: { amountCents: number }[],
@@ -84,14 +85,32 @@ export async function getFinanceDashboard() {
   const grantsPayTodayCents = moneySum(collectedToday);
   const grantsPayWeekCents = moneySum(collectedWeek);
   const grantsPayMonthCents = moneySum(collectedMonth);
-  const sbtpg = await getSbtpgCollectedTotals(now, {
-    today: todayStart,
-    week: weekStart,
-    month: monthStart,
-  });
-  const collectedTodayCents = grantsPayTodayCents + sbtpg.collectedTodayCents;
-  const collectedWeekCents = grantsPayWeekCents + sbtpg.collectedWeekCents;
-  const collectedMonthCents = grantsPayMonthCents + sbtpg.collectedMonthCents;
+  const [sbtpg, official] = await Promise.all([
+    getSbtpgCollectedTotals(now, {
+      today: todayStart,
+      week: weekStart,
+      month: monthStart,
+    }),
+    getLatestOfficialFeeSummary(),
+  ]);
+  const revenue = mapCommandCenterRevenue(
+    official,
+    {
+      todayCents: sbtpg.collectedTodayCents,
+      weekCents: sbtpg.collectedWeekCents,
+      monthCents: sbtpg.collectedMonthCents,
+      allCents: sbtpg.collectedAllCents,
+      count: sbtpg.payoutCount,
+    },
+    {
+      todayCents: grantsPayTodayCents,
+      weekCents: grantsPayWeekCents,
+      monthCents: grantsPayMonthCents,
+    },
+  );
+  const collectedTodayCents = revenue.collectedTodayCents;
+  const collectedWeekCents = revenue.collectedWeekCents;
+  const collectedMonthCents = revenue.collectedMonthCents;
   const refundsMonthCents = moneySum(refunds);
   const netProcessed = collectedMonthCents - refundsMonthCents;
 
@@ -102,11 +121,22 @@ export async function getFinanceDashboard() {
     grantsPayTodayCents,
     grantsPayWeekCents,
     grantsPayMonthCents,
+    totalRevenueCents: revenue.totalRevenueCents,
+    totalRevenueTaxpayerCount: revenue.totalRevenueTaxpayerCount,
+    totalRevenueSource: revenue.totalRevenueSource,
+    totalRevenueWindow: revenue.totalRevenueWindow,
+    unfundedCents: revenue.unfundedCents,
+    unfundedTaxpayerCount: revenue.unfundedTaxpayerCount,
+    fcaCents: revenue.fcaCents,
+    fcaTaxpayerCount: revenue.fcaTaxpayerCount,
+    autoCollectCents: revenue.autoCollectCents,
+    hasOfficialDailySplit: revenue.hasOfficialDailySplit,
+    todayWeekEmpty: revenue.todayWeekEmpty,
     sbtpgCollectedTodayCents: sbtpg.collectedTodayCents,
     sbtpgCollectedWeekCents: sbtpg.collectedWeekCents,
     sbtpgCollectedMonthCents: sbtpg.collectedMonthCents,
-    sbtpgCollectedAllCents: sbtpg.collectedAllCents,
-    sbtpgPayoutCount: sbtpg.payoutCount,
+    sbtpgCollectedAllCents: revenue.totalRevenueCents,
+    sbtpgPayoutCount: revenue.totalRevenueTaxpayerCount,
     outstandingCents,
     failedPaymentsCents: moneySum(failed),
     pendingSettlementCents: moneySum(pendingSettlement),
@@ -121,11 +151,12 @@ export async function getFinanceDashboard() {
     asOf: now.toISOString(),
     notes: {
       collected:
-        "Grants Pay succeeded charges plus OS-recorded SBTPG PAID/FUNDED payouts (not a portal scrape).",
+        "Total Revenue is official SBTPG Fee Summary PAID when a snapshot exists. Today/week stay empty unless a dated payout or Grants Pay charge exists. No invented daily split. No portal scrape.",
       settled: "Settlement confirmed by processor.",
       payout: "Payout to merchant account — separate from settlement.",
       deposited: "Bank deposit confirmation requires processor payout reconciliation.",
-      sbtpg: "SBTPG collected is OS-recorded official payout totals only. No scrape of pro.sbtpg.com.",
+      sbtpg:
+        "Total Revenue = SBTPG Fee Summary PAID (season-to-date). UNFUNDED is pending and is not added. FCA and Auto Collect are official snapshot fields only. No scrape of pro.sbtpg.com.",
     },
   };
 }

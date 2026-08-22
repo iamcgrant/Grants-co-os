@@ -11,8 +11,18 @@ import { isSbtpgStatus, type SbtpgStatus } from "@/lib/tax/catalog";
 
 export const SBTPG_COLLECTED_STATUSES = ["PAID", "FUNDED"] as const;
 export const SBTPG_PAYOUT_SOURCES = ["staff_recorded", "official_import"] as const;
+export const SBTPG_WINDOW_KINDS = ["dated", "season_to_date"] as const;
+export const SBTPG_PAYOUT_BUCKETS = [
+  "PAYOUT",
+  "FEE_SUMMARY_PAID",
+  "FEE_SUMMARY_UNFUNDED",
+  "FCA",
+  "AUTO_COLLECT",
+] as const;
 
 export type SbtpgPayoutSource = (typeof SBTPG_PAYOUT_SOURCES)[number];
+export type SbtpgWindowKind = (typeof SBTPG_WINDOW_KINDS)[number];
+export type SbtpgPayoutBucket = (typeof SBTPG_PAYOUT_BUCKETS)[number];
 
 export class SbtpgPayoutError extends Error {
   constructor(
@@ -34,6 +44,9 @@ export type RecordSbtpgPayoutInput = {
   periodStart?: Date | string | null;
   periodEnd?: Date | string | null;
   source?: SbtpgPayoutSource;
+  windowKind?: SbtpgWindowKind;
+  bucket?: SbtpgPayoutBucket;
+  taxpayerCount?: number | null;
   notes?: string | null;
   recordedById?: string;
 };
@@ -44,6 +57,7 @@ export type SbtpgCollectedTotals = {
   collectedMonthCents: number;
   collectedAllCents: number;
   payoutCount: number;
+  seasonToDatePayoutCount: number;
   asOf: string;
 };
 
@@ -89,6 +103,15 @@ export async function recordSbtpgPayout(input: RecordSbtpgPayoutInput) {
     throw new SbtpgPayoutError("Unknown SBTPG payout status");
   }
   const source: SbtpgPayoutSource = input.source === "official_import" ? "official_import" : "staff_recorded";
+  const windowKind: SbtpgWindowKind = input.windowKind === "season_to_date" ? "season_to_date" : "dated";
+  const bucket: SbtpgPayoutBucket =
+    input.bucket && (SBTPG_PAYOUT_BUCKETS as readonly string[]).includes(input.bucket)
+      ? input.bucket
+      : "PAYOUT";
+  const taxpayerCount =
+    typeof input.taxpayerCount === "number" && Number.isFinite(input.taxpayerCount)
+      ? Math.round(input.taxpayerCount)
+      : null;
   const client = await findOptionalClient(input.clientId);
   const externalId = input.externalId?.trim() || null;
   const paidAt = parseDate(input.paidAt);
@@ -118,6 +141,9 @@ export async function recordSbtpgPayout(input: RecordSbtpgPayoutInput) {
           periodStart,
           periodEnd,
           source,
+          windowKind,
+          bucket,
+          taxpayerCount,
           notes,
           recordedById: input.recordedById ?? existing.recordedById,
         },
@@ -137,6 +163,9 @@ export async function recordSbtpgPayout(input: RecordSbtpgPayoutInput) {
         periodStart,
         periodEnd,
         source,
+        windowKind,
+        bucket,
+        taxpayerCount,
         notes,
         recordedById: input.recordedById,
       },
@@ -164,6 +193,9 @@ export async function recordSbtpgPayout(input: RecordSbtpgPayoutInput) {
       amountCents,
       status,
       source,
+      windowKind,
+      bucket,
+      taxpayerCount,
       grantsClientId: client?.grantsClientId ?? null,
       externalId,
     },
@@ -292,16 +324,19 @@ export async function getSbtpgCollectedTotals(
   };
   const payouts = await prisma.sbtpgPayout.findMany({
     where: { status: { in: [...SBTPG_COLLECTED_STATUSES] } },
-    select: { amountCents: true, paidAt: true, createdAt: true },
+    select: { amountCents: true, paidAt: true, createdAt: true, windowKind: true },
   });
 
   let collectedTodayCents = 0;
   let collectedWeekCents = 0;
   let collectedMonthCents = 0;
   let collectedAllCents = 0;
+  let datedPayoutCount = 0;
 
   for (const row of payouts) {
     collectedAllCents += row.amountCents;
+    if (row.windowKind === "season_to_date") continue;
+    datedPayoutCount += 1;
     const at = collectedAt(row);
     if (at >= bounds.today) collectedTodayCents += row.amountCents;
     if (at >= bounds.week) collectedWeekCents += row.amountCents;
@@ -313,14 +348,18 @@ export async function getSbtpgCollectedTotals(
     collectedWeekCents,
     collectedMonthCents,
     collectedAllCents,
-    payoutCount: payouts.length,
+    payoutCount: datedPayoutCount,
+    seasonToDatePayoutCount: payouts.filter((row) => row.windowKind === "season_to_date").length,
     asOf: now.toISOString(),
   };
 }
 
 export async function listSbtpgCollectedByDay(from: Date) {
   const payouts = await prisma.sbtpgPayout.findMany({
-    where: { status: { in: [...SBTPG_COLLECTED_STATUSES] } },
+    where: {
+      status: { in: [...SBTPG_COLLECTED_STATUSES] },
+      windowKind: { not: "season_to_date" },
+    },
     select: { amountCents: true, paidAt: true, createdAt: true },
   });
   return payouts

@@ -99,7 +99,7 @@ export function SbtpgPayoutForm({
           required
         />
         <select className="gc-input w-full" value={status} onChange={(e) => setStatus(e.target.value)}>
-          {["PAID", "FUNDED", "APPROVED", "PENDING", "HOLD", "REJECTED", "CLOSED"].map((row) => (
+          {["PAID", "FUNDED", "UNFUNDED", "APPROVED", "PENDING", "HOLD", "REJECTED", "CLOSED"].map((row) => (
             <option key={row} value={row}>
               {row}
             </option>
