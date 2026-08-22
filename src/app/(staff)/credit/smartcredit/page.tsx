@@ -8,6 +8,7 @@ import { DISPUTE_CASE_STATUSES, channelCatalog, statusLabel } from "@/lib/disput
 import { NewCaseForm } from "@/components/disputes/NewCaseForm";
 import { SmartCreditAttachForm } from "@/components/credit/SmartCreditAttachForm";
 import { SmartCreditSessionForm } from "@/components/credit/SmartCreditSessionForm";
+import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
 
 export default async function SmartCreditWorkspacePage() {
   const { user, denied } = await requireCreditStaff();
@@ -59,6 +60,13 @@ export default async function SmartCreditWorkspacePage() {
         ) : null}
       </div>
 
+      {board.length === 0 ? (
+        <DeskEmptyState
+          detail={catalog.honesty}
+          nextAction="Attach a Grants client, record a session, or open a SmartCredit case. No scrape."
+        />
+      ) : null}
+
       {canManage ? (
         <div className="mb-10 grid gap-6 lg:grid-cols-2">
           <SmartCreditAttachForm clients={clients} />
@@ -75,7 +83,7 @@ export default async function SmartCreditWorkspacePage() {
         <p className="text-sm text-[var(--gc-muted)] mb-10">View only — processing can record attach and sessions.</p>
       )}
 
-      {DISPUTE_CASE_STATUSES.map((status) => {
+      {(board.length > 0 ? DISPUTE_CASE_STATUSES : []).map((status) => {
         const rows = board.filter((row) => row.case?.status === status);
         return (
           <section key={status} className="mb-8">

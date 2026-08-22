@@ -10,6 +10,7 @@ import {
 } from "@/lib/disputes/channels";
 import { listCasesForChannel } from "@/lib/disputes/cases";
 import { NewCaseForm } from "@/components/disputes/NewCaseForm";
+import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
 import type { AuthUser } from "@/lib/auth/session";
 
 export async function ChannelCasesView({
@@ -53,6 +54,17 @@ export async function ChannelCasesView({
         ))}
       </div>
 
+      {cases.length === 0 ? (
+        <DeskEmptyState
+          detail={catalog.honesty}
+          nextAction={
+            canManage
+              ? "Open a case for a Grants client below. Official portal is a last submit step only — this desk does not scrape."
+              : "Ask processing to open a case. Official portal is last-step only."
+          }
+        />
+      ) : null}
+
       {canManage ? (
         <div className="mb-10">
           <NewCaseForm
@@ -63,7 +75,7 @@ export async function ChannelCasesView({
         </div>
       ) : null}
 
-      {DISPUTE_CASE_STATUSES.map((status) => {
+      {(cases.length > 0 ? DISPUTE_CASE_STATUSES : []).map((status) => {
         const rows = cases.filter((row) => row.status === status);
         return (
           <section key={status} className="mb-8">

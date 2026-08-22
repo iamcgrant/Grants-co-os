@@ -122,6 +122,7 @@ describe("system health + universal search", () => {
       "email",
       "voice",
       "telegram",
+      "gmail",
       "ghl_webhook",
       "disputefox",
       "smartcredit",
@@ -168,8 +169,10 @@ describe("system health + universal search", () => {
     expect(component(health, "credit_karma").status).toBe("DEGRADED");
     expect(component(health, "credit_karma").detail).toMatch(/client-assisted/i);
     expect(component(health, "imessage").status).toBe("DEGRADED");
-    expect(component(health, "cloud_tax_office").status).toBe("DEGRADED");
-    expect(component(health, "sbtpg").status).toBe("DEGRADED");
+    expect(component(health, "cloud_tax_office").status).toBe("ACTION_REQUIRED");
+    expect(component(health, "sbtpg").status).toBe("ACTION_REQUIRED");
+    expect(component(health, "gmail").status).toBe("ACTION_REQUIRED");
+    expect(component(health, "gmail").detail).toMatch(/GMAIL_/);
     expect(component(health, "cognito").status).toBe("ACTION_REQUIRED");
     expect(component(health, "commas").status).not.toBe("CONNECTED");
     expect(component(health, "commas").detail).toMatch(/COMMAS_API_KEY|never CONNECTED/i);

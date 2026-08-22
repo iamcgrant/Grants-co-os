@@ -33,8 +33,8 @@ export async function probeTaxDeskHealth(desk: TaxDesk): Promise<TaxDeskHealthRe
   }
 
   return {
-    status: "DEGRADED",
-    detail: `${catalog.label} OS desk ready · no supported list API · official portal last-step only · no scrape`,
+    status: "ACTION_REQUIRED",
+    detail: `ACTION_REQUIRED: ${catalog.label} has no recorded OS operation yet. Attach a client or record an official payout/session. Official portal is last-step only · no scrape.`,
     lastSuccessAt: null,
     probed: false,
   };

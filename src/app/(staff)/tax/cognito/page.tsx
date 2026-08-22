@@ -5,6 +5,7 @@ import { listCachedCognitoBoard } from "@/lib/integrations/cognito/workspace";
 import { probeCognitoHealth } from "@/lib/integrations/cognito/health";
 import { cognitoPublicStatus } from "@/lib/integrations/cognito/config";
 import { CognitoPullForm } from "@/components/tax/CognitoPullForm";
+import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
 
 export default async function CognitoWorkspacePage() {
   const { user, denied } = await requireTaxStaff();
@@ -48,6 +49,17 @@ export default async function CognitoWorkspacePage() {
           </p>
         ) : null}
       </div>
+
+      {board.length === 0 ? (
+        <DeskEmptyState
+          detail={
+            publicStatus.configured
+              ? "Official Cognito API key is set. No matched submissions are in OS yet."
+              : "ACTION_REQUIRED: set COGNITO_API_KEY, then pull official submissions. No scrape."
+          }
+          nextAction="Use Pull submissions. Entries match existing Grants masters by email."
+        />
+      ) : null}
 
       {canManage ? (
         <div className="mb-10">
