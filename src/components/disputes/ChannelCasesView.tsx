@@ -11,6 +11,7 @@ import { loadChannelDeskSafe } from "@/lib/disputes/desk-load";
 import { CreditDeskUnavailable } from "@/components/disputes/CreditDeskUnavailable";
 import { NewCaseForm } from "@/components/disputes/NewCaseForm";
 import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
+import { OpenPortalLaunch } from "@/components/desk/OpenPortalLaunch";
 import type { AuthUser } from "@/lib/auth/session";
 
 function itemCountOf(row: { items?: unknown }): number {
@@ -56,7 +57,10 @@ export async function ChannelCasesView({
   return (
     <div className="gc-fade-up">
       <p className="gc-eyebrow mb-2">{catalog.eyebrow}</p>
-      <h1 className="text-4xl md:text-5xl mb-2">{catalog.label}</h1>
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-2">
+        <h1 className="text-4xl md:text-5xl">{catalog.label}</h1>
+        {catalog.officialSubmitUrl ? <OpenPortalLaunch href={catalog.officialSubmitUrl} /> : null}
+      </div>
       <p className="gc-section-sub mb-8 max-w-3xl">{catalog.honesty}</p>
 
       <div className="gc-grid-dense gc-grid-dense-4 mb-10">

@@ -16,7 +16,7 @@ export type NavItem = {
   label: string;
   short?: string;
   group?: NavGroup;
-  /** Official product login when the desk is last-step only. Native href stays the destination. */
+  /** Official https portal the sidebar click opens in a new tab. Native href stays the OS workspace. */
   officialLastStepUrl?: string;
 };
 
@@ -139,7 +139,7 @@ export function getStaffNav(role: StaffRole): NavItem[] {
   switch (role) {
     case "OWNER":
     case "ADMIN":
-      return [
+      return withOfficialLogins([
         { href: "/home", label: "Home", short: "Home" },
         { href: "/clients", label: "Clients", short: "Clients" },
         { href: "/inbox", label: "Inbox", short: "Inbox" },
@@ -149,9 +149,9 @@ export function getStaffNav(role: StaffRole): NavItem[] {
         { href: "/pay", label: "Pay", short: "Pay" },
         { href: "/agents", label: "Agents", short: "Agents" },
         { href: "/more", label: "More", short: "More" },
-      ];
+      ]);
     case "CUSTOMER_SERVICE":
-      return [
+      return withOfficialLogins([
         { href: "/home", label: "Home", short: "Home" },
         { href: "/clients", label: "Clients", short: "Clients" },
         { href: "/inbox", label: "Inbox", short: "Inbox" },
@@ -159,25 +159,25 @@ export function getStaffNav(role: StaffRole): NavItem[] {
         { href: "/work", label: "Care", short: "Care" },
         { href: CREDIT_DISPUTES_NAV.hub.href, label: CREDIT_DISPUTES_NAV.hub.label, short: CREDIT_DISPUTES_NAV.hub.short },
         { href: "/more", label: "More", short: "More" },
-      ];
+      ]);
     case "FILE_PREPARER":
-      return [
+      return withOfficialLogins([
         { href: "/home", label: "Home", short: "Home" },
         { href: "/clients", label: "Clients", short: "Clients" },
         { href: "/inbox", label: "Inbox", short: "Inbox" },
         { href: "/work", label: "Files", short: "Files" },
         { href: CREDIT_DISPUTES_NAV.hub.href, label: CREDIT_DISPUTES_NAV.hub.label, short: CREDIT_DISPUTES_NAV.hub.short },
         { href: "/more", label: "More", short: "More" },
-      ];
+      ]);
     case "MANAGER":
     case "MARKETING":
     case "CLIENT":
-      return [
+      return withOfficialLogins([
         { href: "/home", label: "Home", short: "Home" },
         { href: "/clients", label: "Clients", short: "Clients" },
         { href: "/inbox", label: "Inbox", short: "Inbox" },
         { href: "/work", label: "Work", short: "Work" },
-      ];
+      ]);
     default: {
       const _exhaustive: never = role;
       return _exhaustive;
@@ -192,6 +192,7 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/home", label: "Dashboard", group: "primary" },
       { href: "/clients", label: "Clients", group: "primary" },
       { href: "/inbox", label: "Inbox", group: "primary" },
+      { href: "/inbox?tab=ghl", label: "GHL", group: "primary" },
       { href: "/inbox?tab=gmail", label: "Gmail", group: "primary" },
       { href: "/dialer", label: "Dialer", group: "primary" },
       { href: "/team-chat", label: "Telegram", group: "primary" },
@@ -215,6 +216,7 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/home", label: "Client Care", group: "primary" },
       { href: "/clients", label: "Clients", group: "primary" },
       { href: "/inbox", label: "Inbox", group: "primary" },
+      { href: "/inbox?tab=ghl", label: "GHL", group: "primary" },
       { href: "/inbox?tab=gmail", label: "Gmail", group: "primary" },
       { href: "/dialer", label: "Dialer", group: "primary" },
       { href: "/team-chat", label: "Telegram", group: "primary" },
@@ -233,6 +235,7 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/home", label: "Processing", group: "primary" },
       { href: "/clients", label: "Clients", group: "primary" },
       { href: "/inbox", label: "Inbox", group: "primary" },
+      { href: "/inbox?tab=ghl", label: "GHL", group: "primary" },
       { href: "/inbox?tab=gmail", label: "Gmail", group: "primary" },
       { href: "/dialer", label: "Dialer", group: "primary" },
       { href: "/team-chat", label: "Telegram", group: "primary" },

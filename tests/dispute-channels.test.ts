@@ -26,7 +26,7 @@ describe("official bureau / CFPB / DisputeFox catalog", () => {
   });
 
   it("documents official last-step portals without making them the product", () => {
-    expect(DISPUTE_CHANNELS.EXPERIAN.officialSubmitUrl).toMatch(/experian\.com/);
+    expect(DISPUTE_CHANNELS.EXPERIAN.officialSubmitUrl).toBe("https://www.experian.com/disputes/main.html");
     expect(DISPUTE_CHANNELS.CFPB.officialSubmitUrl).toMatch(/consumerfinance\.gov\/complaint/);
     expect(DISPUTE_CHANNELS.EQUIFAX.officialSubmitUrl).toMatch(/equifax\.com/);
     expect(DISPUTE_CHANNELS.TRANSUNION.officialSubmitUrl).toMatch(/transunion\.com/);

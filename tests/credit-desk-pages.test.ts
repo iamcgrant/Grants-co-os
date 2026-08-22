@@ -92,6 +92,7 @@ const CHANNEL_PAGES: Array<{ href: string; channel?: DisputeChannel; importPage:
   [
     {
       href: "/credit/disputefox",
+      channel: "DISPUTEFOX",
       importPage: () => import("../src/app/(staff)/credit/disputefox/page"),
     },
     {
@@ -173,6 +174,7 @@ describe("credit / escalation desk pages", () => {
     const { SmartCreditAttachForm } = await import("../src/components/credit/SmartCreditAttachForm");
     const { SmartCreditSessionForm } = await import("../src/components/credit/SmartCreditSessionForm");
     const { CreditDeskUnavailable } = await import("../src/components/disputes/CreditDeskUnavailable");
+    const { OpenPortalLaunch } = await import("../src/components/desk/OpenPortalLaunch");
     const Page = (await importPage()).default;
     const tree = await resolveAsyncServerTree(await Page());
     assertNoFunctionPropsToClientComponents(tree, [
@@ -180,13 +182,20 @@ describe("credit / escalation desk pages", () => {
       SmartCreditAttachForm,
       SmartCreditSessionForm,
       CreditDeskUnavailable,
+      OpenPortalLaunch,
     ]);
     const html = renderToStaticMarkup(createElement("div", null, tree));
     expect(html, href).not.toMatch(/This page couldn't load|A server error occurred/i);
     expect(html, href).toMatch(/Open login/);
     expect(html, href).toMatch(/Honest empty desk|Open OS case|Open a case/);
+    expect(html, href).not.toMatch(/<iframe/i);
     if (channel) {
       expect(html, href).toContain(DISPUTE_CHANNELS[channel].label);
+      const official = DISPUTE_CHANNELS[channel].officialSubmitUrl;
+      expect(official, href).toBeTruthy();
+      expect(official?.startsWith("https://"), href).toBe(true);
+      expect(html, href).toContain(official as string);
+      expect(html, href).toMatch(/Open portal/);
     }
   });
 

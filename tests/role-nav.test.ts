@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { createElement, type ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { describe, expect, it, vi } from "vitest";
 import {
   CREDIT_DISPUTES_NAV,
   ESCALATIONS_NAV,
@@ -19,16 +21,31 @@ import {
   type StaffRole,
 } from "@/lib/nav/role-nav";
 import {
+  EXPERIAN_BACKDOOR_SUBMIT_PORTAL_URL,
+  EXPERIAN_OFFICIAL_CONSUMER_DISPUTE_URL,
   GMAIL_WORK_MAILBOX,
   OFFICIAL_GHL_LOGIN_URL,
   OFFICIAL_GMAIL_LOGIN_URL,
   OFFICIAL_TELEGRAM_LOGIN_URL,
+  experianOfficialClickUrl,
   isLiveNavHref,
+  isOfficialHttpsHref,
   officialLoginForHref,
+  sidebarClickHref,
 } from "@/lib/nav/official-logins";
 import { DISPUTE_CHANNELS } from "@/lib/disputes/channels";
 import { TAX_DESK_CATALOG } from "@/lib/tax/catalog";
 import { COGNITO_OFFICIAL_LOGIN_URL } from "@/lib/integrations/cognito/config";
+import { StaffShell } from "@/components/layout/StaffShell";
+
+vi.mock("next/link", () => ({
+  default: ({ href, children, ...rest }: { href: string; children?: ReactNode }) =>
+    createElement("a", { href, ...rest }, children),
+}));
+
+vi.mock("next/image", () => ({
+  default: (props: { alt?: string }) => createElement("img", { alt: props.alt || "logo" }),
+}));
 
 const CREDIT_ROLES: StaffRole[] = ["OWNER", "ADMIN", "CUSTOMER_SERVICE", "FILE_PREPARER"];
 const NON_CREDIT_ROLES: StaffRole[] = ["MANAGER", "MARKETING", "CLIENT"];
@@ -92,6 +109,7 @@ describe("Credit & Disputes navigation", () => {
       "/home",
       "/clients",
       "/inbox",
+      "/inbox?tab=ghl",
       "/inbox?tab=gmail",
       "/dialer",
       "/team-chat",
@@ -134,11 +152,14 @@ describe("Credit & Disputes navigation", () => {
     expect(nav.findIndex((item) => item.label === "SBTPG")).toBeLessThan(8);
     expect(nav.find((item) => item.label === "Telegram")?.href).toBe("/team-chat");
     expect(nav.find((item) => item.label === "Gmail")?.href).toBe("/inbox?tab=gmail");
+    expect(nav.find((item) => item.label === "GHL")?.href).toBe("/inbox?tab=ghl");
     const shell = fs.readFileSync(path.join(process.cwd(), "src/components/layout/StaffShell.tsx"), "utf8");
     expect(shell).toMatch(/data-nav=\{item\.label\}/);
-    expect(shell).toMatch(/data-nav-href=\{item\.href\}/);
+    expect(shell).toMatch(/data-nav-href=\{clickHref\}/);
+    expect(shell).toMatch(/sidebarClickHref/);
     expect(shell).toMatch(/TAX_NAV\.hub\.href/);
     expect(shell).not.toMatch(/pro\.sbtpg\.com/);
+    expect(shell).not.toMatch(/<iframe/i);
   });
 
   it("pins SBTPG on client-care and file-prep sidebars", () => {
@@ -154,6 +175,7 @@ describe("Credit & Disputes navigation", () => {
     const nav = getDesktopNav("OWNER");
     const byLabel = Object.fromEntries(nav.map((item) => [item.label, item])) as Record<string, NavItem>;
     expect(byLabel.Inbox.officialLastStepUrl).toBe(OFFICIAL_GHL_LOGIN_URL);
+    expect(byLabel.GHL.officialLastStepUrl).toBe(OFFICIAL_GHL_LOGIN_URL);
     expect(byLabel.Gmail.officialLastStepUrl).toBe(OFFICIAL_GMAIL_LOGIN_URL);
     expect(byLabel.Dialer.officialLastStepUrl).toBe(OFFICIAL_GHL_LOGIN_URL);
     expect(byLabel.Telegram.officialLastStepUrl).toBe(OFFICIAL_TELEGRAM_LOGIN_URL);
@@ -172,6 +194,9 @@ describe("Credit & Disputes navigation", () => {
     );
     expect(TAX_DESK_CATALOG.SBTPG.officialLastStepUrl).toBe("https://pro.sbtpg.com/login");
     expect(DISPUTE_CHANNELS.DISPUTEFOX.officialSubmitUrl).toBe("https://pulse.disputeprocess.com");
+    expect(EXPERIAN_BACKDOOR_SUBMIT_PORTAL_URL).toBeNull();
+    expect(experianOfficialClickUrl()).toBe(EXPERIAN_OFFICIAL_CONSUMER_DISPUTE_URL);
+    expect(DISPUTE_CHANNELS.EXPERIAN.officialSubmitUrl).toBe(EXPERIAN_OFFICIAL_CONSUMER_DISPUTE_URL);
     expect(COGNITO_OFFICIAL_LOGIN_URL).toBe("https://www.cognitoforms.com/login");
     expect(GMAIL_WORK_MAILBOX).toBe("cgrant@grantandconsultants.com");
     expect(officialLoginForHref("/credit/credit-karma")).toBeUndefined();
@@ -180,6 +205,51 @@ describe("Credit & Disputes navigation", () => {
         expect(item.officialLastStepUrl.startsWith("https://"), item.label).toBe(true);
       }
     }
+  });
+
+  it("uses a real https official href on click for required sidebar labels", () => {
+    const nav = getDesktopNav("OWNER");
+    const required: Array<[string, string]> = [
+      ["TransUnion", DISPUTE_CHANNELS.TRANSUNION.officialSubmitUrl as string],
+      ["Equifax", DISPUTE_CHANNELS.EQUIFAX.officialSubmitUrl as string],
+      ["Experian", experianOfficialClickUrl()],
+      ["CFPB", DISPUTE_CHANNELS.CFPB.officialSubmitUrl as string],
+      ["DisputeFox", DISPUTE_CHANNELS.DISPUTEFOX.officialSubmitUrl as string],
+      ["GHL", OFFICIAL_GHL_LOGIN_URL],
+      ["Inbox", OFFICIAL_GHL_LOGIN_URL],
+      ["Dialer", OFFICIAL_GHL_LOGIN_URL],
+      ["Telegram", OFFICIAL_TELEGRAM_LOGIN_URL],
+    ];
+    const html = renderToStaticMarkup(
+      createElement(
+        StaffShell,
+        {
+          user: {
+            id: "owner-1",
+            email: "owner@grantsandco.com",
+            firstName: "Charles",
+            lastName: "Grant",
+            role: "OWNER",
+            isActive: true,
+            mfaEnabled: false,
+          },
+          pathname: "/home",
+        },
+        createElement("div"),
+      ),
+    );
+    expect(html).not.toMatch(/<iframe/i);
+    for (const [label, official] of required) {
+      const item = nav.find((row) => row.label === label);
+      expect(item, label).toBeTruthy();
+      expect(isOfficialHttpsHref(official), label).toBe(true);
+      expect(sidebarClickHref(item!), official).toBe(official);
+      expect(html).toContain(`data-nav="${label}"`);
+      expect(html).toContain(`data-nav-href="${official}"`);
+      expect(html).toContain(`href="${official}"`);
+    }
+    expect(EXPERIAN_BACKDOOR_SUBMIT_PORTAL_URL).toBeNull();
+    expect(html).not.toMatch(/iframe/);
   });
 
   it("keeps mobile bottom nav lean", () => {
@@ -255,9 +325,17 @@ describe("Credit & Disputes navigation", () => {
     expect(cognito).toMatch(/loginUrl=\{COGNITO_OFFICIAL_LOGIN_URL\}/);
     const empty = fs.readFileSync(path.join(process.cwd(), "src/components/desk/DeskEmptyState.tsx"), "utf8");
     const login = fs.readFileSync(path.join(process.cwd(), "src/components/desk/OfficialLoginLink.tsx"), "utf8");
+    const launch = fs.readFileSync(path.join(process.cwd(), "src/components/desk/OpenPortalLaunch.tsx"), "utf8");
+    const channelView = fs.readFileSync(path.join(process.cwd(), "src/components/disputes/ChannelCasesView.tsx"), "utf8");
     expect(empty).toMatch(/OfficialLoginLink/);
     expect(login).toMatch(/Open login/);
+    expect(launch).toMatch(/Open portal/);
+    expect(launch).toMatch(/window\.open/);
+    expect(channelView).toMatch(/OpenPortalLaunch/);
+    expect(df).toMatch(/OpenPortalLaunch/);
     expect(empty).not.toMatch(/iframe/i);
     expect(login).not.toMatch(/iframe/i);
+    expect(launch).not.toMatch(/iframe/i);
+    expect(channelView).not.toMatch(/<iframe/i);
   });
 });
