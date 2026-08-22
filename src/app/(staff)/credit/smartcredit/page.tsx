@@ -64,6 +64,7 @@ export default async function SmartCreditWorkspacePage() {
         <DeskEmptyState
           detail={catalog.honesty}
           nextAction="Attach a Grants client, record a session, or open a SmartCredit case. No scrape."
+          loginUrl={catalog.officialSubmitUrl}
         />
       ) : null}
 

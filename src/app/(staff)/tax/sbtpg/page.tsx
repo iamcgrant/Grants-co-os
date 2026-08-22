@@ -81,8 +81,9 @@ export default async function SbtpgWorkspacePage() {
 
       {!totals.isLive ? (
         <DeskEmptyState
-          detail="No official Fee Summary snapshot or OS-recorded SBTPG payouts yet. Official pro.sbtpg.com is last-step only — this desk does not scrape."
+          detail="No official Fee Summary snapshot or OS-recorded SBTPG payouts yet. Official portal is last-step only — this desk does not scrape."
           nextAction="Ingest the official Fee Summary or record a payout so this desk and Command Center Total Revenue are live."
+          loginUrl={catalog.officialLastStepUrl}
         />
       ) : null}
 

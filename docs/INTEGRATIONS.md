@@ -124,7 +124,7 @@ The OS keeps your `pid` (or other affiliate params) intact and appends `gc_ref=<
 
 ## Cloud Tax Office (native workspace)
 
-Staff work returns in Grants OS at `/tax/cloud-tax-office`. Cloud Tax Office (ProAvalon) at `grantandco.cloudtaxoffice.com` is the background platform — not a bookmark page.
+Staff work returns in Grants OS at `/tax/cloud-tax-office`. Cloud Tax Office (ProAvalon) last-step login is `https://grantandco.cloudtaxoffice.com/proavalon/` — not a bookmark page.
 
 There is **no supported Cloud Tax Office list/read API**. Do not scrape. Official portal is the last login/file step only.
 
@@ -139,7 +139,7 @@ There is **no supported Cloud Tax Office list/read API**. Do not scrape. Officia
 
 ## SBTPG refunds / payouts (native workspace)
 
-Staff track tax-client refunds in Grants OS at `/tax/sbtpg`. Official `pro.sbtpg.com` is last-step login only. No supported list API. No scrape.
+Staff track tax-client refunds in Grants OS at `/tax/sbtpg`. Official last-step login is `https://pro.sbtpg.com/login`. No supported list API. No scrape.
 
 Record official Fee Summary (`SbtpgFeeSummarySnapshot` + `SbtpgPayout`) via `npm run sbtpg:ingest-fee-summary` or `POST /api/tax/sbtpg/fee-summary`. Command Center **Total Revenue** is official **Fee Summary PAID** (season-to-date). **UNFUNDED** is pending and is not added. Today/week stay empty unless a dated payout or Grants Pay charge exists — no invented daily split. No scrape.
 

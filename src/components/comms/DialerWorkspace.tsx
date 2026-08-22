@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { OfficialLoginLink } from "@/components/desk/OfficialLoginLink";
+import { OFFICIAL_GHL_LOGIN_URL } from "@/lib/nav/official-login-urls";
 
 type VoiceStatus = {
   ready?: boolean;
@@ -80,6 +82,9 @@ export function DialerWorkspace({
         )}
       </div>
       {status?.message && <p className="text-sm text-[var(--gc-muted)]">{status.message}</p>}
+      {!status?.ready ? (
+        <OfficialLoginLink href={OFFICIAL_GHL_LOGIN_URL} />
+      ) : null}
 
       {!!status?.numbers?.length && (
         <label className="block text-sm">
