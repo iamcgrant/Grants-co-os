@@ -1,50 +1,21 @@
 "use strict";
 
-/**
- * Official Grant & Co OS desktop sidebar — exactly these 8 desks.
- * Do not add Gmail, Dialer, Clients, Inbox, SBTPG, Tasks, TransUnion,
- * Innovis, SmartCredit, Credit Karma, Cognito, Pay, Reports, or Messages.
- * Never load OS portal fallback routes as a desk start URL.
- */
+/** @typedef {{ id: string, title: string, startUrl: string, partition: string, allowedHosts: readonly string[], kind: "os" | "vendor" }} Desk */
 
-const OS_ORIGIN = "https://os.grantandconsultants.com";
-const OS_HOST = "os.grantandconsultants.com";
-const OS_PARTITION = "persist:gc-os";
-const OS_HOME_START_URL = `${OS_ORIGIN}/login?gc_shell=app`;
-
-/** Official https logins from src/lib/nav/official-login-urls.ts + catalogs. */
-const OFFICIAL = Object.freeze({
-  ghl: "https://app.gohighlevel.com/",
-  telegram: "https://web.telegram.org/a/",
-  experian: "https://www.experian.com/consumer/upload/",
-  equifax: "https://www.equifax.com/personal/credit-report-services/credit-dispute",
-  disputefox: "https://pulse.disputeprocess.com/jsp/client/login.jsp",
-  cloudTax: "https://grantandco.cloudtaxoffice.com/proavalon/",
-  cfpb: "https://www.consumerfinance.gov/complaint/",
-});
-
-/**
- * Exact provider host plus only the IdP host required for that vendor login.
- * GHL Google sign-in leaves app.gohighlevel.com for accounts.google.com.
- * Other desks keep login on the official start host.
- *
- * @typedef {{ id: string, title: string, startUrl: string, partition: string, allowedHosts: readonly string[], kind: "os" | "vendor" }} Desk
- */
-
-/** @type {readonly Desk[]} */
+/** Exactly 8 desks. Chrome sidebar renders this array only. */
 const DESKS = Object.freeze([
   Object.freeze({
     id: "os",
     title: "Home",
-    startUrl: OS_HOME_START_URL,
-    partition: OS_PARTITION,
-    allowedHosts: Object.freeze([OS_HOST]),
+    startUrl: "https://os.grantandconsultants.com/login?gc_shell=app",
+    partition: "persist:gc-os",
+    allowedHosts: Object.freeze(["os.grantandconsultants.com"]),
     kind: "os",
   }),
   Object.freeze({
     id: "ghl",
     title: "GHL",
-    startUrl: OFFICIAL.ghl,
+    startUrl: "https://app.gohighlevel.com/",
     partition: "persist:gc-ghl",
     allowedHosts: Object.freeze(["app.gohighlevel.com", "accounts.google.com"]),
     kind: "vendor",
@@ -52,7 +23,7 @@ const DESKS = Object.freeze([
   Object.freeze({
     id: "telegram",
     title: "Telegram",
-    startUrl: OFFICIAL.telegram,
+    startUrl: "https://web.telegram.org/a/",
     partition: "persist:gc-telegram",
     allowedHosts: Object.freeze(["web.telegram.org"]),
     kind: "vendor",
@@ -60,7 +31,7 @@ const DESKS = Object.freeze([
   Object.freeze({
     id: "experian",
     title: "Experian",
-    startUrl: OFFICIAL.experian,
+    startUrl: "https://www.experian.com/consumer/upload/",
     partition: "persist:gc-experian",
     allowedHosts: Object.freeze(["www.experian.com"]),
     kind: "vendor",
@@ -68,7 +39,7 @@ const DESKS = Object.freeze([
   Object.freeze({
     id: "equifax",
     title: "Equifax",
-    startUrl: OFFICIAL.equifax,
+    startUrl: "https://www.equifax.com/personal/credit-report-services/credit-dispute",
     partition: "persist:gc-equifax",
     allowedHosts: Object.freeze(["www.equifax.com"]),
     kind: "vendor",
@@ -76,7 +47,7 @@ const DESKS = Object.freeze([
   Object.freeze({
     id: "disputefox",
     title: "DisputeFox",
-    startUrl: OFFICIAL.disputefox,
+    startUrl: "https://pulse.disputeprocess.com/jsp/client/login.jsp",
     partition: "persist:gc-disputefox",
     allowedHosts: Object.freeze(["pulse.disputeprocess.com"]),
     kind: "vendor",
@@ -84,7 +55,7 @@ const DESKS = Object.freeze([
   Object.freeze({
     id: "cloud-tax",
     title: "Cloud Tax",
-    startUrl: OFFICIAL.cloudTax,
+    startUrl: "https://grantandco.cloudtaxoffice.com/proavalon/",
     partition: "persist:gc-cloud-tax",
     allowedHosts: Object.freeze(["grantandco.cloudtaxoffice.com"]),
     kind: "vendor",
@@ -92,7 +63,7 @@ const DESKS = Object.freeze([
   Object.freeze({
     id: "cfpb",
     title: "CFPB",
-    startUrl: OFFICIAL.cfpb,
+    startUrl: "https://www.consumerfinance.gov/complaint/",
     partition: "persist:gc-cfpb",
     allowedHosts: Object.freeze(["www.consumerfinance.gov"]),
     kind: "vendor",
@@ -103,12 +74,4 @@ function deskById(id) {
   return DESKS.find((desk) => desk.id === id) ?? null;
 }
 
-module.exports = {
-  DESKS,
-  OFFICIAL,
-  OS_HOME_START_URL,
-  OS_ORIGIN,
-  OS_HOST,
-  OS_PARTITION,
-  deskById,
-};
+module.exports = { DESKS, deskById };

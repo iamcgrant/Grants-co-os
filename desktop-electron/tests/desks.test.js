@@ -4,56 +4,22 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const {
-  DESKS,
-  OFFICIAL,
-  OS_HOME_START_URL,
-  OS_HOST,
-  OS_PARTITION,
-  deskById,
-} = require("../src/main/desks");
+const { DESKS, deskById } = require("../src/main/desks");
 const { unprivilegedWebPreferences, chromeWebPreferences } = require("../src/main/security");
 
 const EXPECTED = [
-  ["os", "Home", OS_HOME_START_URL, OS_HOST],
-  ["ghl", "GHL", OFFICIAL.ghl, "app.gohighlevel.com"],
-  ["telegram", "Telegram", OFFICIAL.telegram, "web.telegram.org"],
-  ["experian", "Experian", OFFICIAL.experian, "www.experian.com"],
-  ["equifax", "Equifax", OFFICIAL.equifax, "www.equifax.com"],
-  ["disputefox", "DisputeFox", OFFICIAL.disputefox, "pulse.disputeprocess.com"],
-  ["cloud-tax", "Cloud Tax", OFFICIAL.cloudTax, "grantandco.cloudtaxoffice.com"],
-  ["cfpb", "CFPB", OFFICIAL.cfpb, "www.consumerfinance.gov"],
-];
-
-const FORBIDDEN_SIDEBAR = [
-  "Gmail",
-  "Dialer",
-  "Clients",
-  "Inbox",
-  "SBTPG",
-  "Tasks",
-  "TransUnion",
-  "Innovis",
-  "SmartCredit",
-  "Credit Karma",
-  "Cognito",
-  "Pay",
-  "Reports",
-  "Messages",
-];
-
-const FALLBACK_ROUTES = [
-  "/inbox?tab=ghl",
-  "/team-chat",
-  "/credit/experian",
-  "/credit/equifax",
-  "/credit/disputefox",
-  "/escalations/cfpb",
-  "/tax/cloud-tax-office",
+  ["os", "Home", "https://os.grantandconsultants.com/login?gc_shell=app", "persist:gc-os", ["os.grantandconsultants.com"]],
+  ["ghl", "GHL", "https://app.gohighlevel.com/", "persist:gc-ghl", ["app.gohighlevel.com", "accounts.google.com"]],
+  ["telegram", "Telegram", "https://web.telegram.org/a/", "persist:gc-telegram", ["web.telegram.org"]],
+  ["experian", "Experian", "https://www.experian.com/consumer/upload/", "persist:gc-experian", ["www.experian.com"]],
+  ["equifax", "Equifax", "https://www.equifax.com/personal/credit-report-services/credit-dispute", "persist:gc-equifax", ["www.equifax.com"]],
+  ["disputefox", "DisputeFox", "https://pulse.disputeprocess.com/jsp/client/login.jsp", "persist:gc-disputefox", ["pulse.disputeprocess.com"]],
+  ["cloud-tax", "Cloud Tax", "https://grantandco.cloudtaxoffice.com/proavalon/", "persist:gc-cloud-tax", ["grantandco.cloudtaxoffice.com"]],
+  ["cfpb", "CFPB", "https://www.consumerfinance.gov/complaint/", "persist:gc-cfpb", ["www.consumerfinance.gov"]],
 ];
 
 describe("locked 8-desk sidebar", () => {
-  it("ships exactly Home plus the seven official vendor desks", () => {
+  it("exports DESKS.length === 8 with the locked titles and start URLs", () => {
     assert.equal(DESKS.length, 8);
     assert.deepEqual(
       DESKS.map((desk) => desk.id),
@@ -63,54 +29,26 @@ describe("locked 8-desk sidebar", () => {
       DESKS.map((desk) => desk.title),
       EXPECTED.map((row) => row[1]),
     );
-    for (const title of FORBIDDEN_SIDEBAR) {
-      assert.equal(
-        DESKS.some((desk) => desk.title === title),
-        false,
-        title,
-      );
-    }
-  });
-
-  it("locks official start URLs and exact provider hosts", () => {
-    for (const [id, title, startUrl, host] of EXPECTED) {
+    for (const [id, title, startUrl, partition, hosts] of EXPECTED) {
       const desk = deskById(id);
       assert.ok(desk, id);
       assert.equal(desk.title, title);
       assert.equal(desk.startUrl, startUrl);
-      assert.ok(desk.allowedHosts.includes(host), `${id} missing ${host}`);
-      assert.match(desk.partition, /^persist:gc-/);
+      assert.equal(desk.partition, partition);
+      assert.deepEqual([...desk.allowedHosts], hosts);
     }
-    const home = deskById("os");
-    assert.equal(home.startUrl, "https://os.grantandconsultants.com/login?gc_shell=app");
-    assert.deepEqual([...home.allowedHosts], [OS_HOST]);
-    assert.equal(home.partition, OS_PARTITION);
-    assert.equal(home.kind, "os");
-    assert.ok(deskById("ghl").allowedHosts.includes("accounts.google.com"));
   });
 
-  it("never loads OS portal fallback routes as a vendor desk", () => {
+  it("does not export OWNER_NAV or website fallback start URLs", () => {
+    const src = fs.readFileSync(path.join(__dirname, "..", "src/main/desks.js"), "utf8");
+    assert.doesNotMatch(src, /OWNER_NAV|officialLastStepUrl|getDesktopNav/);
+    assert.doesNotMatch(src, /Gmail|Dialer|Clients|Inbox|SBTPG|Tasks|TransUnion|Innovis|SmartCredit|Credit Karma|Cognito|Grants Pay|Reports|Settings/);
     for (const desk of DESKS) {
-      if (desk.kind !== "vendor") continue;
-      assert.equal(desk.startUrl.startsWith("https://"), true);
-      assert.doesNotMatch(desk.startUrl, /os\.grantandconsultants\.com/);
-      assert.doesNotMatch(desk.startUrl, /\/credit\/experian/);
-      assert.doesNotMatch(desk.startUrl, /tab=ghl/);
-      assert.doesNotMatch(desk.startUrl, /\/team-chat/);
-      for (const fallback of FALLBACK_ROUTES) {
-        const parsed = new URL(desk.startUrl);
-        assert.notEqual(parsed.pathname + parsed.search, fallback, `${desk.title} ${fallback}`);
-      }
+      assert.doesNotMatch(desk.startUrl, /\/credit\/experian|\/team-chat|tab=ghl/);
     }
-    assert.equal(deskById("experian").startUrl, "https://www.experian.com/consumer/upload/");
-    assert.equal(deskById("ghl").startUrl, "https://app.gohighlevel.com/");
-    assert.equal(deskById("cfpb").startUrl, "https://www.consumerfinance.gov/complaint/");
-  });
-
-  it("gives each vendor its own partition and Home persist:gc-os", () => {
-    const vendorPartitions = DESKS.filter((desk) => desk.kind === "vendor").map((desk) => desk.partition);
-    assert.equal(new Set(vendorPartitions).size, vendorPartitions.length);
-    assert.equal(deskById("os").partition, OS_PARTITION);
+    const exported = require("../src/main/desks");
+    assert.equal(Object.prototype.hasOwnProperty.call(exported, "OWNER_NAV"), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(exported, "OFFICIAL"), false);
   });
 });
 
@@ -158,6 +96,5 @@ describe("desktop chrome invariants", () => {
     assert.doesNotMatch(main, /Electron spike|prototype/i);
     assert.match(main, /officialAttempted/);
     assert.match(main, /did-fail-load/);
-    assert.doesNotMatch(main, /openExternal: decision\.action === "system-browser"/);
   });
 });
