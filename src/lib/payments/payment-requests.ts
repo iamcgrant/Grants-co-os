@@ -159,7 +159,8 @@ export async function createPaymentRequest(input: CreatePaymentRequestInput) {
 
   if (recordedCheckoutUrl) {
     externalUrl = recordedCheckoutUrl;
-    providerSessionId = providerSessionId || STAFF_RECORDED_COMMAS_SESSION;
+    providerCheckoutId = providerCheckoutId || providerSessionId;
+    providerSessionId = STAFF_RECORDED_COMMAS_SESSION;
   }
 
   const link = await prisma.paymentLink.create({
