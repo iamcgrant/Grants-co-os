@@ -1,7 +1,12 @@
-import { CreditBureau } from "@/generated/prisma/client";
+/**
+ * Server-only Credit Karma write path. Client Components must import
+ * CLIENT_ASSISTED_SOURCE from client-assisted-source.ts, not this file.
+ */
+import type { CreditBureau } from "@/generated/prisma/client";
+import { CLIENT_ASSISTED_SOURCE } from "@/lib/credit/client-assisted-source";
 import { prisma } from "@/lib/db/prisma";
 
-export const CLIENT_ASSISTED_SOURCE = "CLIENT_ASSISTED";
+export { CLIENT_ASSISTED_SOURCE };
 
 export function parseAssistedBureau(value: string): CreditBureau {
   switch (value) {

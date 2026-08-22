@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CLIENT_ASSISTED_SOURCE } from "@/lib/credit/client-assisted";
+import { CLIENT_ASSISTED_SOURCE } from "@/lib/credit/client-assisted-source";
 
 export function ClientAssistedScoreForm({
   clients,
