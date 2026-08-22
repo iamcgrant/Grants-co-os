@@ -766,6 +766,10 @@ a {
 
 .gc-portal-desk-title {
   flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   padding: 0.55rem 1rem;
   border-bottom: 1px solid var(--gc-border);
   background: rgba(8, 9, 12, 0.96);
@@ -814,4 +818,28 @@ a {
   font-size: 0.82rem;
   line-height: 1.55;
   color: var(--gc-muted);
+}
+
+.gc-portal-return {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gc-gold);
+}
+
+.gc-portal-stage-opening {
+  margin: 0;
+  font-family: var(--font-display), Fraunces, Georgia, serif;
+  font-size: 1.85rem;
+  letter-spacing: -0.03em;
+  color: #fff;
+}
+
+.gc-portal-stage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
 }

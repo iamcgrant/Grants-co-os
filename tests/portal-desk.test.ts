@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { createElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
@@ -160,16 +162,39 @@ describe("in-OS portal navigation", () => {
     expect(html).not.toMatch(/GHL_API_KEY|DISPUTEFOX_API_KEY|API health|DEGRADED/);
   });
 
-  it("uses an in-OS same-window stage when the host refuses embed", () => {
+  it("uses a luxury same-window continue when the host refuses embed", () => {
     const html = renderToStaticMarkup(createElement(PortalDesk, { deskId: "ghl" }));
     expect(html).toContain('data-portal-desk="ghl"');
-    expect(html).toContain('data-embed-policy="refused"');
-    expect(html).toContain(`action="${OFFICIAL_GHL_LOGIN_URL}"`);
+    expect(html).toContain('data-portal-stage="continue"');
+    expect(html).toContain(`href="${OFFICIAL_GHL_LOGIN_URL}"`);
+    expect(html).toContain("Return to OS");
+    expect(html).toContain('data-return-to-os="home"');
+    expect(html).toContain("Opening GHL");
     expect(html).toContain('target="_self"');
     expect(html).not.toMatch(/target="_blank"/);
-    expect(html).not.toMatch(/GHL_API_KEY|Awaiting Integration|API health/);
+    expect(html).not.toMatch(/refuses an in-desk embed|OFFICIAL LOGIN|X-Frame-Options/i);
+    expect(html).not.toMatch(/GHL_API_KEY|Awaiting Integration|API health|DEGRADED/);
     expect(portalDeskById("experian").officialUrl).toBe(EXPERIAN_BACKDOOR_SUBMIT_PORTAL_URL);
     const experian = renderToStaticMarkup(createElement(PortalDesk, { deskId: "experian" }));
-    expect(experian).toContain(`action="${EXPERIAN_BACKDOOR_SUBMIT_PORTAL_URL}"`);
+    expect(experian).toContain(`href="${EXPERIAN_BACKDOOR_SUBMIT_PORTAL_URL}"`);
+    expect(experian).toContain("Return to OS");
+    const telegram = renderToStaticMarkup(createElement(PortalDesk, { deskId: "telegram" }));
+    expect(telegram).toContain(`href="${OFFICIAL_TELEGRAM_LOGIN_URL}"`);
+    expect(telegram).not.toMatch(/TELEGRAM_BOT_TOKEN/);
+  });
+
+  it("Telegram and DisputeFox pages are official login desks with no key theater", () => {
+    const telegramPage = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/team-chat/page.tsx"), "utf8");
+    const foxPage = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/disputefox/page.tsx"), "utf8");
+    expect(telegramPage).toMatch(/deskId: "telegram"/);
+    expect(telegramPage).toMatch(/GuardedPortalDesk/);
+    expect(telegramPage).not.toMatch(/TELEGRAM_BOT_TOKEN|TelegramTeamInbox|fail-closed/i);
+    expect(foxPage).toMatch(/deskId: "disputefox"/);
+    expect(foxPage).toMatch(/GuardedPortalDesk/);
+    expect(foxPage).not.toMatch(/DISPUTEFOX_API_PROBE|API health|DEGRADED|loadDisputeFoxDesk/);
+    expect(portalDeskById("telegram").officialUrl).toBe("https://web.telegram.org/a/");
+    expect(portalDeskById("disputefox").officialUrl).toBe(
+      "https://pulse.disputeprocess.com/jsp/client/login.jsp",
+    );
   });
 });
