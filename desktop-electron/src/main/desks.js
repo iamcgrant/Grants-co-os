@@ -3,8 +3,8 @@
 /**
  * First-wave desks for the disposable Electron spike.
  * Start URLs are the official login/home constants Charles locked in OS.
- * Do not add Telegram/Equifax/Cloud Tax extras beyond this catalog — they are in.
- * Do not add TransUnion, CFPB, Gmail, Cognito, or other desks in this spike.
+ * Do not add extras beyond this catalog — Telegram/Equifax/Cloud Tax/CFPB are in.
+ * Do not add TransUnion, Gmail, Cognito, or other desks in this spike.
  */
 
 /** @typedef {{ id: string, title: string, startUrl: string, partition: string, allowedHosts: readonly string[] }} Desk */
@@ -59,6 +59,13 @@ const DESKS = Object.freeze([
     startUrl: "https://grantandco.cloudtaxoffice.com/proavalon/",
     partition: "persist:gc-cloud-tax",
     allowedHosts: Object.freeze(["grantandco.cloudtaxoffice.com"]),
+  }),
+  Object.freeze({
+    id: "cfpb",
+    title: "CFPB",
+    startUrl: "https://www.consumerfinance.gov/complaint/",
+    partition: "persist:gc-cfpb",
+    allowedHosts: Object.freeze(["www.consumerfinance.gov"]),
   }),
 ]);
 

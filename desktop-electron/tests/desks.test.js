@@ -15,15 +15,16 @@ const EXPECTED = [
   ["equifax", "https://www.equifax.com/personal/credit-report-services/credit-dispute", "www.equifax.com"],
   ["disputefox", "https://pulse.disputeprocess.com/jsp/client/login.jsp", "pulse.disputeprocess.com"],
   ["cloud-tax", "https://grantandco.cloudtaxoffice.com/proavalon/", "grantandco.cloudtaxoffice.com"],
+  ["cfpb", "https://www.consumerfinance.gov/complaint/", "www.consumerfinance.gov"],
 ];
 
 describe("first-wave desks", () => {
-  it("ships OS home plus the six approved vendors only", () => {
+  it("ships OS home plus the seven approved vendors only", () => {
     assert.deepEqual(
       DESKS.map((desk) => desk.id),
       EXPECTED.map((row) => row[0]),
     );
-    assert.equal(DESKS.length, 7);
+    assert.equal(DESKS.length, 8);
   });
 
   it("locks official start URLs and exact allowlist hosts", () => {
@@ -69,7 +70,7 @@ describe("spike source invariants", () => {
     assert.doesNotMatch(html, /<iframe/i);
     assert.doesNotMatch(html, /<webview/i);
     assert.doesNotMatch(html, /os\.grantandconsultants\.com/);
-    assert.doesNotMatch(html, /gohighlevel|telegram\.org|experian|equifax|disputeprocess|cloudtaxoffice/i);
+    assert.doesNotMatch(html, /gohighlevel|telegram\.org|experian|equifax|disputeprocess|cloudtaxoffice|consumerfinance/i);
   });
 
   it("does not implement a grantscoos return or cookie export", () => {
