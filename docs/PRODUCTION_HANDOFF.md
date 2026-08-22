@@ -53,7 +53,7 @@ First-time Owner password: `npm run owner:setup-link` with `OWNER_SETUP_BASE_URL
 
 ## AUTOMATIONS
 
-Payment request → pay → onboarding → Simon/Jona assignment, Friday Credit Pulse, exception tickets — implemented. Cron: `/api/automations/run` every 5m via `vercel.json`.
+Payment request → pay → onboarding → Simon/Jona assignment, Friday Credit Pulse, exception tickets — implemented. Cron: `/api/automations/run` daily at `0 12 * * *` (noon UTC) via `vercel.json`.
 
 ## TEST / GATES
 
