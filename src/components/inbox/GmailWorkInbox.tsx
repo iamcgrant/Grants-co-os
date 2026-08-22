@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { OfficialLoginLink } from "@/components/desk/OfficialLoginLink";
+import { GMAIL_WORK_MAILBOX, OFFICIAL_GMAIL_LOGIN_URL } from "@/lib/nav/official-login-urls";
 
 type Mail = {
   id: string;
@@ -41,7 +43,9 @@ export function GmailWorkInbox() {
       <div className="px-4 py-3 border-b border-[var(--gc-border)] flex justify-between gap-3">
         <div>
           <p className="gc-eyebrow mb-1">Work Gmail</p>
-          <p className="font-medium">{data?.mailbox && data.mailbox !== "me" ? data.mailbox : "Official inbox"}</p>
+          <p className="font-medium">
+            {data?.mailbox && data.mailbox !== "me" ? data.mailbox : GMAIL_WORK_MAILBOX}
+          </p>
           <p className="text-xs text-[var(--gc-muted)]">Official Gmail API · no scrape · GMAIL_* only</p>
         </div>
         <button type="button" className="gc-btn gc-btn-outline text-xs" onClick={() => void load()}>
@@ -64,9 +68,12 @@ export function GmailWorkInbox() {
           </div>
         ))}
         {!loading && !data?.messages?.length && (
-          <p className="p-4 text-sm text-[var(--gc-muted)]">
-            {data?.message || "Work Gmail is empty or waiting on GMAIL_* credentials."}
-          </p>
+          <div className="p-4 space-y-3">
+            <p className="text-sm text-[var(--gc-muted)]">
+              {data?.message || "Work Gmail is empty or waiting on GMAIL_* credentials."}
+            </p>
+            <OfficialLoginLink href={OFFICIAL_GMAIL_LOGIN_URL} />
+          </div>
         )}
         {loading && <p className="p-4 text-sm text-[var(--gc-muted)]">Loading Gmail…</p>}
       </div>

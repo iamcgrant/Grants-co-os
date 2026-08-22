@@ -13,8 +13,20 @@ import {
   hasCreditDisputesNav,
   hasTaxNav,
   navSectionLabel,
+  type NavItem,
   type StaffRole,
 } from "@/lib/nav/role-nav";
+import {
+  GMAIL_WORK_MAILBOX,
+  OFFICIAL_GHL_LOGIN_URL,
+  OFFICIAL_GMAIL_LOGIN_URL,
+  OFFICIAL_TELEGRAM_LOGIN_URL,
+  isLiveNavHref,
+  officialLoginForHref,
+} from "@/lib/nav/official-logins";
+import { DISPUTE_CHANNELS } from "@/lib/disputes/channels";
+import { TAX_DESK_CATALOG } from "@/lib/tax/catalog";
+import { COGNITO_OFFICIAL_LOGIN_URL } from "@/lib/integrations/cognito/config";
 
 const CREDIT_ROLES: StaffRole[] = ["OWNER", "ADMIN", "CUSTOMER_SERVICE", "FILE_PREPARER"];
 const NON_CREDIT_ROLES: StaffRole[] = ["MANAGER", "MARKETING", "CLIENT"];
@@ -39,7 +51,12 @@ describe("Credit & Disputes navigation", () => {
       "Credit Karma",
     ]);
     expect(getEscalationsNav()).toEqual([
-      { href: ESCALATIONS_NAV.cfpb.href, label: ESCALATIONS_NAV.cfpb.label, group: "escalations" },
+      {
+        href: ESCALATIONS_NAV.cfpb.href,
+        label: ESCALATIONS_NAV.cfpb.label,
+        group: "escalations",
+        officialLastStepUrl: DISPUTE_CHANNELS.CFPB.officialSubmitUrl ?? undefined,
+      },
     ]);
     expect(CREDIT_DISPUTES_NAV.smartCredit.href).toBe("/credit/smartcredit");
   });
@@ -64,27 +81,84 @@ describe("Credit & Disputes navigation", () => {
     for (const role of NON_CREDIT_ROLES) expect(hasCreditDisputesNav(role)).toBe(false);
   });
 
-  it("preserves working desktop items for owner", () => {
+  it("lists every owner desktop nav href as a live native route or official login", () => {
     const nav = getDesktopNav("OWNER");
-    expect(hrefs(nav)).toEqual(
-      expect.arrayContaining([
-        "/home",
-        "/clients",
-        "/inbox",
-        "/work",
-        "/pay",
-        "/credit/equifax",
-        "/credit/transunion",
-        "/credit/innovis",
-        ESCALATIONS_NAV.cfpb.href,
-      ]),
-    );
+    const listed = hrefs(nav);
+    expect(listed).toEqual([
+      "/home",
+      "/clients",
+      "/inbox",
+      "/inbox?tab=gmail",
+      "/dialer",
+      "/team-chat",
+      "/work",
+      "/credit/disputefox",
+      "/credit/experian",
+      "/credit/equifax",
+      "/credit/transunion",
+      "/credit/innovis",
+      "/credit/smartcredit",
+      "/credit/credit-karma",
+      "/escalations/cfpb",
+      "/tax/cloud-tax-office",
+      "/tax/cognito",
+      "/tax/sbtpg",
+      "/pay",
+      "/intelligence",
+      "/acquisition",
+      "/automations",
+      "/system-health",
+      "/agents",
+      "/more",
+    ]);
+    for (const href of listed) {
+      expect(href, href).not.toBe("#");
+      expect(href.trim(), href).not.toBe("");
+      expect(isLiveNavHref(href), href).toBe(true);
+      if (href.startsWith("/")) {
+        const base = href.split("?")[0];
+        const page = path.join(process.cwd(), "src/app/(staff)", base.replace(/^\//, ""), "page.tsx");
+        expect(fs.existsSync(page), page).toBe(true);
+      }
+    }
     expect(nav.find((item) => item.label === "SmartCredit")?.href).toBe("/credit/smartcredit");
     expect(nav.find((item) => item.label === "Cloud Tax Office")?.href).toBe("/tax/cloud-tax-office");
     expect(nav.find((item) => item.label === "Cognito")?.href).toBe("/tax/cognito");
     expect(nav.find((item) => item.label === "SBTPG")?.href).toBe("/tax/sbtpg");
     expect(nav.find((item) => item.label === "Telegram")?.href).toBe("/team-chat");
     expect(nav.find((item) => item.label === "Gmail")?.href).toBe("/inbox?tab=gmail");
+  });
+
+  it("attaches official last-step logins from catalogs for product desks", () => {
+    const nav = getDesktopNav("OWNER");
+    const byLabel = Object.fromEntries(nav.map((item) => [item.label, item])) as Record<string, NavItem>;
+    expect(byLabel.Inbox.officialLastStepUrl).toBe(OFFICIAL_GHL_LOGIN_URL);
+    expect(byLabel.Gmail.officialLastStepUrl).toBe(OFFICIAL_GMAIL_LOGIN_URL);
+    expect(byLabel.Dialer.officialLastStepUrl).toBe(OFFICIAL_GHL_LOGIN_URL);
+    expect(byLabel.Telegram.officialLastStepUrl).toBe(OFFICIAL_TELEGRAM_LOGIN_URL);
+    expect(byLabel.DisputeFox.officialLastStepUrl).toBe(DISPUTE_CHANNELS.DISPUTEFOX.officialSubmitUrl);
+    expect(byLabel.Experian.officialLastStepUrl).toBe(DISPUTE_CHANNELS.EXPERIAN.officialSubmitUrl);
+    expect(byLabel.Equifax.officialLastStepUrl).toBe(DISPUTE_CHANNELS.EQUIFAX.officialSubmitUrl);
+    expect(byLabel.TransUnion.officialLastStepUrl).toBe(DISPUTE_CHANNELS.TRANSUNION.officialSubmitUrl);
+    expect(byLabel.Innovis.officialLastStepUrl).toBe(DISPUTE_CHANNELS.INNOVIS.officialSubmitUrl);
+    expect(byLabel.SmartCredit.officialLastStepUrl).toBe(DISPUTE_CHANNELS.SMARTCREDIT.officialSubmitUrl);
+    expect(byLabel.CFPB.officialLastStepUrl).toBe(DISPUTE_CHANNELS.CFPB.officialSubmitUrl);
+    expect(byLabel["Cloud Tax Office"].officialLastStepUrl).toBe(TAX_DESK_CATALOG.CLOUD_TAX_OFFICE.officialLastStepUrl);
+    expect(byLabel.Cognito.officialLastStepUrl).toBe(COGNITO_OFFICIAL_LOGIN_URL);
+    expect(byLabel.SBTPG.officialLastStepUrl).toBe(TAX_DESK_CATALOG.SBTPG.officialLastStepUrl);
+    expect(TAX_DESK_CATALOG.CLOUD_TAX_OFFICE.officialLastStepUrl).toBe(
+      "https://grantandco.cloudtaxoffice.com/proavalon/",
+    );
+    expect(TAX_DESK_CATALOG.SBTPG.officialLastStepUrl).toBe("https://pro.sbtpg.com/login");
+    expect(DISPUTE_CHANNELS.DISPUTEFOX.officialSubmitUrl).toBe("https://pulse.disputeprocess.com");
+    expect(COGNITO_OFFICIAL_LOGIN_URL).toBe("https://www.cognitoforms.com/login");
+    expect(GMAIL_WORK_MAILBOX).toBe("cgrant@grantandconsultants.com");
+    expect(officialLoginForHref("/credit/credit-karma")).toBeUndefined();
+    for (const item of nav) {
+      if (item.officialLastStepUrl) {
+        expect(item.officialLastStepUrl.startsWith("https://"), item.label).toBe(true);
+      }
+    }
   });
 
   it("keeps mobile bottom nav lean", () => {
@@ -100,6 +174,18 @@ describe("Credit & Disputes navigation", () => {
         CREDIT_DISPUTES_NAV.hub.href,
       ]),
     );
+  });
+
+  it("lists customer-service and file-preparer desktop hrefs as live", () => {
+    for (const role of ["CUSTOMER_SERVICE", "FILE_PREPARER"] as const) {
+      const listed = hrefs(getDesktopNav(role));
+      expect(listed.length).toBeGreaterThan(0);
+      for (const href of listed) {
+        expect(href, `${role} ${href}`).not.toBe("#");
+        expect(href.trim(), `${role} ${href}`).not.toBe("");
+        expect(isLiveNavHref(href), `${role} ${href}`).toBe(true);
+      }
+    }
   });
 
   it("workspace pages are native OS screens and do not scrape", () => {
@@ -120,8 +206,8 @@ describe("Credit & Disputes navigation", () => {
       const src = fs.readFileSync(path.join(process.cwd(), file), "utf8");
       expect(src, file).toMatch(/Access denied/);
       expect(src, file).not.toMatch(/cheerio|puppeteer|playwright/i);
+      expect(src, file).not.toMatch(/<iframe/i);
       expect(src, file).not.toMatch(/Open portal|open portal/i);
-      expect(src, file).not.toMatch(/https:\/\/www\.(experian|equifax|transunion|innovis|consumerfinance)/);
     }
     const df = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/disputefox/page.tsx"), "utf8");
     expect(df).toMatch(/Clients/);
@@ -140,5 +226,14 @@ describe("Credit & Disputes navigation", () => {
     expect(cognito).toMatch(/CognitoPullForm/);
     const sbtpg = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/sbtpg/page.tsx"), "utf8");
     expect(sbtpg).toMatch(/listTaxDeskBoard/);
+    expect(sbtpg).toMatch(/loginUrl=\{catalog\.officialLastStepUrl\}/);
+    expect(tax).toMatch(/loginUrl=\{catalog\.officialLastStepUrl\}/);
+    expect(cognito).toMatch(/loginUrl=\{COGNITO_OFFICIAL_LOGIN_URL\}/);
+    const empty = fs.readFileSync(path.join(process.cwd(), "src/components/desk/DeskEmptyState.tsx"), "utf8");
+    const login = fs.readFileSync(path.join(process.cwd(), "src/components/desk/OfficialLoginLink.tsx"), "utf8");
+    expect(empty).toMatch(/OfficialLoginLink/);
+    expect(login).toMatch(/Open login/);
+    expect(empty).not.toMatch(/iframe/i);
+    expect(login).not.toMatch(/iframe/i);
   });
 });

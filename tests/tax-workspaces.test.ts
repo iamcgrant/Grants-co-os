@@ -65,8 +65,7 @@ describe("native Cloud Tax Office + SBTPG desks", () => {
       expect(src, file).toMatch(/Access denied/);
       expect(src, file).not.toMatch(/cheerio|puppeteer|playwright/i);
       expect(src, file).not.toMatch(/Open portal|open portal/i);
-      expect(src, file).not.toMatch(/https:\/\/grantandco\.cloudtaxoffice\.com/);
-      expect(src, file).not.toMatch(/https:\/\/pro\.sbtpg\.com/);
+      expect(src, file).not.toMatch(/<iframe/i);
     }
     const tax = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/cloud-tax-office/page.tsx"), "utf8");
     expect(tax).toMatch(/listTaxDeskBoard/);
@@ -139,7 +138,7 @@ describe("native Cloud Tax Office + SBTPG desks", () => {
       status: "REVIEW",
       nextAction: "File after review",
     });
-    expect(session.lastStepUrl).toBe("https://grantandco.cloudtaxoffice.com/");
+    expect(session.lastStepUrl).toBe("https://grantandco.cloudtaxoffice.com/proavalon/");
     const board = await listTaxDeskBoard("CLOUD_TAX_OFFICE");
     const row = board.find((item) => item.grantsClientId === client.grantsClientId);
     expect(row?.status).toBe("REVIEW");

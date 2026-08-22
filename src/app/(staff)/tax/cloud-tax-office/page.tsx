@@ -63,6 +63,7 @@ export default async function CloudTaxOfficePage() {
         <DeskEmptyState
           detail={catalog.honesty}
           nextAction="Attach a Grants client and record a return session. Official Cloud Tax Office is last-step only."
+          loginUrl={catalog.officialLastStepUrl}
         />
       ) : null}
 

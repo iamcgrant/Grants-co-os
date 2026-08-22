@@ -62,6 +62,7 @@ export async function ChannelCasesView({
               ? "Open a case for a Grants client below. Official portal is a last submit step only — this desk does not scrape."
               : "Ask processing to open a case. Official portal is last-step only."
           }
+          loginUrl={catalog.officialSubmitUrl}
         />
       ) : null}
 

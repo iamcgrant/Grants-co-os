@@ -57,6 +57,7 @@ export default async function DisputeFoxWorkspacePage() {
         <DeskEmptyState
           detail={catalog.honesty}
           nextAction="Open a DisputeFox case for a Grants client. Live list/get stays off. No scrape."
+          loginUrl={catalog.officialSubmitUrl}
         />
       ) : null}
 
