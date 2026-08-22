@@ -6,6 +6,11 @@ import { addTimelineEvent } from "@/lib/clients/timeline";
 import { writeAuditLog } from "@/lib/audit/log";
 import { queueAutomation } from "@/lib/automations/engine";
 import { commasPublicStatus } from "./commas-config";
+import {
+  STAFF_RECORDED_COMMAS_SESSION,
+  isOfficialCommasCheckoutUrl,
+  parseOfficialCommasCheckoutUrl,
+} from "./commas-checkout-url";
 
 function appBaseUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -34,12 +39,14 @@ export type CreatePaymentRequestInput = {
   actorId?: string;
   sendEmail?: boolean;
   sendSms?: boolean;
+  commasCheckoutUrl?: string;
 };
 
 /**
  * Create a payment request + invoice (if needed) + secure payment link.
- * Commas hosted checkout when PAYMENT_PROVIDER=commas and configured;
- * otherwise mock/internal OS pay path for safe local validation.
+ * Commas API checkout when PAYMENT_PROVIDER=commas and COMMAS_API_KEY exists.
+ * Without a key (Fanbasis has no API Keys page): still create the OS invoice
+ * and accept a staff-pasted official Fanbasis checkout / product URL.
  * Simulated/mock payments never count as collected production revenue.
  */
 export async function createPaymentRequest(input: CreatePaymentRequestInput) {
@@ -47,6 +54,10 @@ export async function createPaymentRequest(input: CreatePaymentRequestInput) {
 
   const client = await prisma.client.findUnique({ where: { id: input.clientId } });
   if (!client) throw new Error("Client not found");
+
+  const recordedCheckoutUrl = input.commasCheckoutUrl?.trim()
+    ? parseOfficialCommasCheckoutUrl(input.commasCheckoutUrl)
+    : null;
 
   const provider = getPaymentProvider();
   const publicId = await nextPaymentRequestPublicId();
@@ -95,8 +106,14 @@ export async function createPaymentRequest(input: CreatePaymentRequestInput) {
       allowPartial: Boolean(input.allowPartial),
       recurring: Boolean(input.recurring),
       recurringDays: input.recurringDays || null,
-      provider: provider.name,
+      provider: recordedCheckoutUrl ? "commas" : provider.name,
       createdByUserId: input.actorId || null,
+      metadataJson: recordedCheckoutUrl
+        ? JSON.stringify({
+            commasCheckoutSource: "staff_recorded",
+            commasCheckoutUrl: recordedCheckoutUrl,
+          })
+        : null,
     },
   });
 
@@ -133,11 +150,16 @@ export async function createPaymentRequest(input: CreatePaymentRequestInput) {
         externalUrl = session.url;
       }
     } catch (err) {
-      // Fail soft for mock/local: keep OS pay path. Fail hard for commas if configured.
+      // Fail soft for mock/local and unkeyed Commas: keep OS invoice. Fail hard only if keyed.
       if (provider.name === "commas" && commasPublicStatus().configured) {
         throw err;
       }
     }
+  }
+
+  if (recordedCheckoutUrl) {
+    externalUrl = recordedCheckoutUrl;
+    providerSessionId = providerSessionId || STAFF_RECORDED_COMMAS_SESSION;
   }
 
   const link = await prisma.paymentLink.create({
@@ -146,7 +168,7 @@ export async function createPaymentRequest(input: CreatePaymentRequestInput) {
       invoiceId: invoice.id,
       clientId: client.id,
       kind: input.recurring ? "RECURRING" : input.allowPartial ? "PARTIAL" : "ONE_TIME",
-      provider: provider.name,
+      provider: recordedCheckoutUrl ? "commas" : provider.name,
       providerSessionId,
       providerCheckoutId,
       url: externalUrl,
@@ -280,5 +302,119 @@ export async function issueOnboardingToken(input: {
     setupPath: `/setup/${raw}`,
     setupUrl: `${appBaseUrl()}/setup/${raw}`,
     expiresAt,
+  };
+}
+
+export async function listRecordedCommasCheckoutUrls(limit = 12) {
+  const links = await prisma.paymentLink.findMany({
+    where: { provider: "commas" },
+    orderBy: { createdAt: "desc" },
+    take: 80,
+    select: { url: true },
+  });
+  const seen = new Set<string>();
+  const urls: string[] = [];
+  for (const link of links) {
+    if (!isOfficialCommasCheckoutUrl(link.url) || seen.has(link.url)) continue;
+    seen.add(link.url);
+    urls.push(link.url);
+    if (urls.length >= limit) break;
+  }
+  return urls;
+}
+
+export async function recordCommasCheckoutUrl(input: {
+  paymentRequestPublicId?: string;
+  invoiceNumber?: string;
+  url: string;
+  actorId?: string;
+}) {
+  const officialUrl = parseOfficialCommasCheckoutUrl(input.url);
+
+  const request = input.paymentRequestPublicId
+    ? await prisma.paymentRequest.findUnique({
+        where: { publicId: input.paymentRequestPublicId },
+        include: { invoice: true, links: { orderBy: { createdAt: "desc" }, take: 1 } },
+      })
+    : input.invoiceNumber
+      ? (
+          await prisma.invoice.findUnique({
+            where: { invoiceNumber: input.invoiceNumber },
+            include: {
+              paymentRequests: {
+                orderBy: { createdAt: "desc" },
+                take: 1,
+                include: { invoice: true, links: { orderBy: { createdAt: "desc" }, take: 1 } },
+              },
+            },
+          })
+        )?.paymentRequests[0]
+      : null;
+
+  if (!request) throw new Error("Payment request not found");
+
+  const existing = request.links[0];
+  const link = existing
+    ? await prisma.paymentLink.update({
+        where: { id: existing.id },
+        data: {
+          provider: "commas",
+          providerSessionId: existing.providerSessionId || STAFF_RECORDED_COMMAS_SESSION,
+          url: officialUrl,
+          status: "ACTIVE",
+        },
+      })
+    : await prisma.paymentLink.create({
+        data: {
+          paymentRequestId: request.id,
+          invoiceId: request.invoiceId,
+          clientId: request.clientId,
+          kind: request.recurring ? "RECURRING" : request.allowPartial ? "PARTIAL" : "ONE_TIME",
+          provider: "commas",
+          providerSessionId: STAFF_RECORDED_COMMAS_SESSION,
+          url: officialUrl,
+          osPayPath: request.invoice ? `/pay/${request.invoice.invoiceNumber}` : null,
+          status: "ACTIVE",
+        },
+      });
+
+  await prisma.paymentRequest.update({
+    where: { id: request.id },
+    data: {
+      provider: "commas",
+      metadataJson: JSON.stringify({
+        commasCheckoutSource: "staff_recorded",
+        commasCheckoutUrl: officialUrl,
+      }),
+    },
+  });
+
+  await addTimelineEvent({
+    clientId: request.clientId,
+    actorId: input.actorId,
+    eventType: "COMMAS_CHECKOUT_RECORDED",
+    title: "Official Commas checkout recorded",
+    description: `${request.publicId} · last-step Fanbasis checkout attached`,
+    idempotencyKey: `commas_checkout:${request.id}:${officialUrl}`,
+    metadata: { paymentRequestId: request.id, invoiceId: request.invoiceId },
+  });
+
+  await writeAuditLog({
+    actorId: input.actorId,
+    action: "COMMAS_CHECKOUT_RECORDED",
+    entityType: "PaymentRequest",
+    entityId: request.id,
+    metadata: { urlHost: new URL(officialUrl).hostname },
+  });
+
+  return {
+    requestPublicId: request.publicId,
+    invoiceNumber: request.invoice?.invoiceNumber || null,
+    link: {
+      id: link.id,
+      url: link.url,
+      osPayPath: link.osPayPath,
+      provider: link.provider,
+    },
   };
 }

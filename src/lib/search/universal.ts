@@ -74,7 +74,7 @@ export async function universalSearch(query: string, limit = 20): Promise<Search
       id: inv.id,
       title: inv.invoiceNumber,
       subtitle: `${inv.client.firstName} ${inv.client.lastName} · $${(inv.amountCents / 100).toFixed(2)} · ${inv.status}`,
-      href: `/pay/${inv.invoiceNumber}`,
+      href: `/pay/invoices/${inv.invoiceNumber}`,
     });
   }
 
@@ -94,7 +94,7 @@ export async function universalSearch(query: string, limit = 20): Promise<Search
       id: p.id,
       title: `Payment ${p.providerTransactionId}`,
       subtitle: `${p.client.grantsClientId} · $${(p.amountCents / 100).toFixed(2)} · ${p.status}`,
-      href: p.invoice ? `/pay/${p.invoice.invoiceNumber}` : `/clients/${p.clientId}`,
+      href: p.invoice ? `/pay/invoices/${p.invoice.invoiceNumber}` : `/clients/${p.clientId}`,
     });
   }
 
@@ -111,7 +111,7 @@ export async function universalSearch(query: string, limit = 20): Promise<Search
       id: pr.id,
       title: pr.publicId,
       subtitle: `${pr.client.firstName} ${pr.client.lastName} · $${(pr.amountCents / 100).toFixed(2)} · ${pr.status}`,
-      href: pr.invoice ? `/pay/${pr.invoice.invoiceNumber}` : `/clients/${pr.clientId}`,
+      href: pr.invoice ? `/pay/invoices/${pr.invoice.invoiceNumber}` : `/clients/${pr.clientId}`,
     });
   }
 

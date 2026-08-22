@@ -22,6 +22,7 @@ export async function POST(req: Request) {
       recurringDays?: number;
       sendEmail?: boolean;
       sendSms?: boolean;
+      commasCheckoutUrl?: string;
     };
 
     if (!body.clientId || !body.amountCents) {
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
       actorId: user.id,
       sendEmail: body.sendEmail,
       sendSms: body.sendSms,
+      commasCheckoutUrl: body.commasCheckoutUrl,
     });
 
     return NextResponse.json(result, { status: 201 });

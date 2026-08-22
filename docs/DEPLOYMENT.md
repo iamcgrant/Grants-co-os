@@ -12,9 +12,10 @@ BUILDX owns Vercel CLI/token, Neon, and domain attach. Cloud Agent does not need
 
 ```bash
 # Required on the machine running go-live (BUILDX):
-# VERCEL_TOKEN, COMMAS_API_KEY, GHL_API_KEY, GHL_LOCATION_ID
+# VERCEL_TOKEN, GHL_API_KEY, GHL_LOCATION_ID
 # AUTH_SECRET + GC_CRON_SECRET
-# PAYMENT_PROVIDER=commas  NEXT_PUBLIC_APP_URL=https://os.grantandconsultants.com
+# Do not invent COMMAS_API_KEY — Fanbasis has no API Keys page.
+# PAYMENT_PROVIDER=mock  NEXT_PUBLIC_APP_URL=https://os.grantandconsultants.com
 # GC_VERCEL_EXTERNAL=1
 
 npm run go:live

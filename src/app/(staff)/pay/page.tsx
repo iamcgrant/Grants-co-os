@@ -7,7 +7,9 @@ import { prisma } from "@/lib/db/prisma";
 import { MetricTile, Panel } from "@/components/ui/density";
 import { getGcEnvironment } from "@/lib/integrations/env";
 import { CreatePaymentRequestForm } from "@/components/pay/CreatePaymentRequestForm";
+import { InvoiceDocument } from "@/components/pay/InvoiceDocument";
 import { commasHonestHealth, commasPublicStatus } from "@/lib/payments/commas-config";
+import { commasLastStepUrl } from "@/lib/payments/commas-checkout-url";
 import { getPaymentProvider } from "@/lib/payments/provider";
 
 export default async function GrantsPayPage({
@@ -33,7 +35,7 @@ export default async function GrantsPayPage({
   const paymentProvider = process.env.PAYMENT_PROVIDER || "mock";
   const commas = commasPublicStatus();
   const lastCommasWebhook = await prisma.webhookEvent.findFirst({
-    where: { status: "PROCESSED", provider: "commas" },
+    where: { status: "PROCESSED", provider: { in: ["commas", "grants_pay"] } },
     orderBy: { processedAt: "desc" },
     select: { processedAt: true },
   });
@@ -52,9 +54,22 @@ export default async function GrantsPayPage({
     orderBy: { createdAt: "desc" },
     take: 20,
     include: {
-      client: { select: { grantsClientId: true, firstName: true, lastName: true } },
-      invoice: { select: { invoiceNumber: true } },
+      client: { select: { grantsClientId: true, firstName: true, lastName: true, email: true } },
+      invoice: { include: { items: true } },
       links: { take: 1, orderBy: { createdAt: "desc" } },
+    },
+  });
+  const recentInvoices = await prisma.invoice.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 8,
+    include: {
+      client: { select: { grantsClientId: true, firstName: true, lastName: true, email: true } },
+      items: true,
+      paymentRequests: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        include: { links: { take: 1, orderBy: { createdAt: "desc" } } },
+      },
     },
   });
 
@@ -101,8 +116,8 @@ export default async function GrantsPayPage({
             {dataPlane} data plane
             {" · "}
             {paymentProvider === "mock"
-              ? `Mock processor · Commas ${commas.configured ? "credentials present" : "ACTION REQUIRED (COMMAS_API_KEY)"}`
-              : `Provider ${paymentProvider}${commas.configured ? "" : " · Commas key missing"}`}
+              ? `Manual Commas mode · ${commasHealth.status.replaceAll("_", " ")}`
+              : `Provider ${paymentProvider} · ${commasHealth.status.replaceAll("_", " ")}`}
           </p>
         </div>
         <Link href="/home" className="gc-btn gc-btn-outline">
@@ -111,10 +126,44 @@ export default async function GrantsPayPage({
       </div>
 
       {hasPermission(user.role, "MANAGE_PAYMENTS") ? (
-        <Panel title="Create payment request">
+        <Panel title="Create invoice" eyebrow="Native OS desk · Commas last-step only">
           <CreatePaymentRequestForm commas={commasHealth} />
         </Panel>
       ) : null}
+
+      <Panel title="Invoices" eyebrow="Luxury OS invoices · not a link farm">
+        <div className="space-y-6">
+          {recentInvoices.length === 0 ? (
+            <p className="text-sm text-[var(--gc-muted)] py-3">No invoices yet.</p>
+          ) : (
+            recentInvoices.map((inv) => {
+              const request = inv.paymentRequests[0];
+              return (
+                <InvoiceDocument
+                  key={inv.id}
+                  staffHref={`/pay/invoices/${inv.invoiceNumber}`}
+                  invoice={{
+                    invoiceNumber: inv.invoiceNumber,
+                    status: inv.status,
+                    amountCents: inv.amountCents,
+                    amountPaidCents: inv.amountPaidCents,
+                    description: inv.description,
+                    dueAt: inv.dueAt,
+                    createdAt: inv.createdAt,
+                    clientName: `${inv.client.firstName} ${inv.client.lastName}`,
+                    grantsClientId: inv.client.grantsClientId,
+                    clientEmail: inv.client.email,
+                    paymentRequestPublicId: request?.publicId || null,
+                    items: inv.items,
+                    lastStepUrl: commasLastStepUrl(request?.links[0]?.url),
+                    osPayPath: `/pay/${inv.invoiceNumber}`,
+                  }}
+                />
+              );
+            })
+          )}
+        </div>
+      </Panel>
 
       <Panel title="Payment requests">
         <div className="divide-y divide-[var(--gc-border)]">
@@ -137,8 +186,8 @@ export default async function GrantsPayPage({
                 <div className="flex items-center gap-3">
                   <span>{formatUsd(pr.amountCents)}</span>
                   {pr.invoice ? (
-                    <Link href={`/pay/${pr.invoice.invoiceNumber}`} className="text-[var(--gc-gold)]">
-                      Open
+                    <Link href={`/pay/invoices/${pr.invoice.invoiceNumber}`} className="text-[var(--gc-gold)]">
+                      Invoice
                     </Link>
                   ) : null}
                 </div>

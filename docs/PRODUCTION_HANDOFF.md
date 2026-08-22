@@ -41,7 +41,7 @@ First-time Owner password: `npm run owner:setup-link` with `OWNER_SETUP_BASE_URL
 
 | System | Status |
 |--------|--------|
-| **Commas** | Adapter complete. BUILDX sets `COMMAS_API_KEY` + `PAYMENT_PROVIDER=commas` then `npm run commas:register-webhook` |
+| **Commas** | OS invoices + recorded official checkout. Fanbasis has no API Keys page — do not invent `COMMAS_API_KEY`. Optional `GRANTS_PAY_INBOUND_WEBHOOK_SECRET` for Zapier/GHL mark-paid. |
 | **GHL inbound** | Live with current PIT |
 | **GHL outbound** | Fail-closed until PIT has `conversations/message.write` |
 | **DisputeFox** | Native `/setup` intake primary |

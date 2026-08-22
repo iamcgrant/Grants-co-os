@@ -12,7 +12,9 @@ import {
 import { formatUsd } from "@/lib/payments/dashboard";
 import { ClientActions } from "@/components/clients/ClientActions";
 import { CreatePaymentRequestForm } from "@/components/pay/CreatePaymentRequestForm";
+import { InvoiceDocument } from "@/components/pay/InvoiceDocument";
 import { commasHonestHealth } from "@/lib/payments/commas-config";
+import { commasLastStepUrl } from "@/lib/payments/commas-checkout-url";
 import { getPaymentProvider } from "@/lib/payments/provider";
 import { ClientHandoffActions } from "@/components/clients/ClientHandoffActions";
 import { SyncGhlContactButton } from "@/components/integrations/SyncGhlContactButton";
@@ -91,7 +93,18 @@ export default async function Client360Page({
   const base = `/clients/${client.grantsClientId}`;
 
   const invoices = showFinance
-    ? await prisma.invoice.findMany({ where: { clientId: client.id }, orderBy: { createdAt: "desc" } })
+    ? await prisma.invoice.findMany({
+        where: { clientId: client.id },
+        orderBy: { createdAt: "desc" },
+        include: {
+          items: true,
+          paymentRequests: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            include: { links: { take: 1, orderBy: { createdAt: "desc" } } },
+          },
+        },
+      })
     : [];
   const transactions = showFinance
     ? await prisma.paymentTransaction.findMany({
@@ -109,7 +122,7 @@ export default async function Client360Page({
     : [];
   const lastCommasWebhook = showFinance
     ? await prisma.webhookEvent.findFirst({
-        where: { status: "PROCESSED", provider: "commas" },
+        where: { status: "PROCESSED", provider: { in: ["commas", "grants_pay"] } },
         orderBy: { processedAt: "desc" },
         select: { processedAt: true },
       })
@@ -585,7 +598,7 @@ export default async function Client360Page({
       {tab === "pay" && showFinance && (
         <div className="space-y-4">
           {canPay ? (
-            <Panel title="Create payment request" eyebrow={`Commas · ${commas.status.replaceAll("_", " ")}`}>
+            <Panel title="Create invoice" eyebrow={`Commas · ${commas.status.replaceAll("_", " ")}`}>
               <CreatePaymentRequestForm
                 lockedClientId={client.id}
                 lockedLabel={`${client.firstName} ${client.lastName} · ${client.grantsClientId}`}
@@ -594,7 +607,7 @@ export default async function Client360Page({
             </Panel>
           ) : null}
           {paymentRequests.length > 0 ? (
-            <Panel title="Payment request links">
+            <Panel title="Payment requests">
               <div className="divide-y divide-[var(--gc-border)]">
                 {paymentRequests.map((pr) => (
                   <div key={pr.id} className="py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2 text-sm">
@@ -602,7 +615,11 @@ export default async function Client360Page({
                       <p className="font-medium">
                         {pr.publicId} · {pr.status}
                       </p>
-                      <p className="text-[var(--gc-muted)] break-all">{pr.links[0]?.url || "No link"}</p>
+                      <p className="text-[var(--gc-muted)]">
+                        {commasLastStepUrl(pr.links[0]?.url)
+                          ? "Official Commas checkout recorded"
+                          : "Awaiting official Commas checkout"}
+                      </p>
                     </div>
                     <span className="display">{formatUsd(pr.amountCents)}</span>
                   </div>
@@ -618,33 +635,38 @@ export default async function Client360Page({
               Development sample ledger — live processors not charging.
             </p>
           )}
-          <Panel title="Invoices">
-            <table className="gc-table">
-              <thead>
-                <tr>
-                  <th>Invoice</th>
-                  <th>Status</th>
-                  <th>Amount</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {invoices.map((inv) => (
-                  <tr key={inv.id}>
-                    <td>{inv.invoiceNumber}</td>
-                    <td><span className="gc-status">{inv.status}</span></td>
-                    <td className="display">{formatUsd(inv.amountCents)}</td>
-                    <td>
-                      {(inv.status === "DUE" || inv.status === "FAILED") && (
-                        <Link href={`/pay/${inv.invoiceNumber}`} className="text-[0.65rem] uppercase tracking-wider text-[var(--gc-gold)]">
-                          Collect
-                        </Link>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <Panel title="Invoices" eyebrow="Native OS invoices">
+            <div className="space-y-6">
+              {invoices.length === 0 ? (
+                <p className="text-sm text-[var(--gc-muted)]">No invoices yet.</p>
+              ) : (
+                invoices.map((inv) => {
+                  const request = inv.paymentRequests[0];
+                  return (
+                    <InvoiceDocument
+                      key={inv.id}
+                      staffHref={`/pay/invoices/${inv.invoiceNumber}`}
+                      invoice={{
+                        invoiceNumber: inv.invoiceNumber,
+                        status: inv.status,
+                        amountCents: inv.amountCents,
+                        amountPaidCents: inv.amountPaidCents,
+                        description: inv.description,
+                        dueAt: inv.dueAt,
+                        createdAt: inv.createdAt,
+                        clientName: `${client.firstName} ${client.lastName}`,
+                        grantsClientId: client.grantsClientId,
+                        clientEmail: client.email,
+                        paymentRequestPublicId: request?.publicId || null,
+                        items: inv.items,
+                        lastStepUrl: commasLastStepUrl(request?.links[0]?.url),
+                        osPayPath: `/pay/${inv.invoiceNumber}`,
+                      }}
+                    />
+                  );
+                })
+              )}
+            </div>
           </Panel>
           <Panel title="Payment timeline">
             <table className="gc-table">

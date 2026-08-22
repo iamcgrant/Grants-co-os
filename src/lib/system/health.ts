@@ -102,6 +102,7 @@ export async function collectSystemHealth(): Promise<{
     cognitoProbe,
     sbtpgProbe,
     lastCommasCheckout,
+    lastCommasPaymentWebhook,
   ] = await Promise.all([
     prisma.webhookEvent.findFirst({
       where: { status: "PROCESSED" },
@@ -149,12 +150,13 @@ export async function collectSystemHealth(): Promise<{
       orderBy: { createdAt: "desc" },
       select: { createdAt: true },
     }),
+    prisma.webhookEvent.findFirst({
+      where: { status: "PROCESSED", provider: { in: ["commas", "grants_pay"] } },
+      orderBy: { processedAt: "desc" },
+    }),
   ]);
   const commas = commasHonestHealth({
-    lastWebhookAt:
-      lastPaymentWebhook?.provider === "commas"
-        ? lastPaymentWebhook.processedAt?.toISOString() || null
-        : null,
+    lastWebhookAt: lastCommasPaymentWebhook?.processedAt?.toISOString() || null,
     lastCheckoutAt: lastCommasCheckout?.createdAt.toISOString() || null,
     paymentProvider: provider.name,
   });

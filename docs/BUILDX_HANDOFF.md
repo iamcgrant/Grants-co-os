@@ -32,8 +32,8 @@ Copy from `.env.production.example`. Minimum for first Owner login:
 | `GC_VERCEL_EXTERNAL` | `1` |
 | `GHL_API_KEY` | existing |
 | `GHL_LOCATION_ID` | existing |
-| `PAYMENT_PROVIDER` | `commas` when Commas key ready; else leave unset/`mock` for UI-only |
-| `COMMAS_API_KEY` | when ready |
+| `PAYMENT_PROVIDER` | `mock` is valid (manual Commas). Do not invent `COMMAS_API_KEY`. |
+| `GRANTS_PAY_INBOUND_WEBHOOK_SECRET` | optional Zapier/GHL mark-paid |
 | `COMMAS_ENVIRONMENT` | `sandbox` until live charges approved |
 | `COMMAS_LIVE_CHARGES` | `false` until approved |
 
@@ -62,10 +62,7 @@ OWNER_SETUP_BASE_URL=https://os.grantandconsultants.com npm run owner:setup-link
 
 ## Commas (after public HTTPS)
 
-```bash
-COMMAS_API_KEY=… NEXT_PUBLIC_APP_URL=https://os.grantandconsultants.com npm run commas:register-webhook
-# Store returned COMMAS_WEBHOOK_SECRET on Vercel Production env
-```
+Fanbasis has no API Keys page. Do not invent `COMMAS_API_KEY`. Staff create invoices in OS and record the official checkout URL. Optional: set `GRANTS_PAY_INBOUND_WEBHOOK_SECRET` and point Zapier/GHL at `POST /api/webhooks/grants-pay` (see `docs/PAYMENTS.md`).
 
 ## Desktop
 

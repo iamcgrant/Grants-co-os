@@ -25,35 +25,45 @@ export function CreatePaymentRequestForm({
   const [clientId, setClientId] = useState(lockedClientId || "");
   const [amount, setAmount] = useState("750.00");
   const [serviceName, setServiceName] = useState("Credit Optimization");
+  const [commasCheckoutUrl, setCommasCheckoutUrl] = useState("");
+  const [recordedUrls, setRecordedUrls] = useState<string[]>([]);
   const [sendEmail, setSendEmail] = useState(true);
   const [sendSms, setSendSms] = useState(false);
   const [result, setResult] = useState<string>("");
   const [copyUrl, setCopyUrl] = useState("");
+  const [invoiceHref, setInvoiceHref] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (lockedClientId) {
       setClientId(lockedClientId);
-      return;
+    } else {
+      void fetch("/api/clients?limit=50")
+        .then((r) => r.json())
+        .then((d) => {
+          const list = (d.clients || d || []) as Array<{
+            id: string;
+            firstName: string;
+            lastName: string;
+            grantsClientId: string;
+          }>;
+          if (Array.isArray(list)) {
+            setClients(
+              list.map((c) => ({
+                id: c.id,
+                label: `${c.firstName} ${c.lastName} · ${c.grantsClientId}`,
+              })),
+            );
+          }
+        })
+        .catch(() => undefined);
     }
-    void fetch("/api/clients?limit=50")
+
+    void fetch("/api/pay/commas-checkouts")
       .then((r) => r.json())
       .then((d) => {
-        const list = (d.clients || d || []) as Array<{
-          id: string;
-          firstName: string;
-          lastName: string;
-          grantsClientId: string;
-        }>;
-        if (Array.isArray(list)) {
-          setClients(
-            list.map((c) => ({
-              id: c.id,
-              label: `${c.firstName} ${c.lastName} · ${c.grantsClientId}`,
-            })),
-          );
-        }
+        if (Array.isArray(d.urls)) setRecordedUrls(d.urls as string[]);
       })
       .catch(() => undefined);
   }, [lockedClientId]);
@@ -64,6 +74,7 @@ export function CreatePaymentRequestForm({
     setError("");
     setResult("");
     setCopyUrl("");
+    setInvoiceHref("");
     try {
       const amountCents = Math.round(parseFloat(amount) * 100);
       const res = await fetch("/api/pay/requests", {
@@ -75,13 +86,16 @@ export function CreatePaymentRequestForm({
           serviceName,
           sendEmail,
           sendSms,
+          commasCheckoutUrl: commasCheckoutUrl.trim() || undefined,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
+      const invoiceNumber = data.invoice?.invoiceNumber as string | undefined;
       setCopyUrl(typeof data.link?.url === "string" ? data.link.url : "");
+      setInvoiceHref(invoiceNumber ? `/pay/invoices/${invoiceNumber}` : "");
       setResult(
-        `Created ${data.request.publicId} · Pay: ${data.link.osPayPath} · Copy: ${data.link.url}`,
+        `Invoice ${data.invoice.invoiceNumber} · ${data.request.publicId} · ${data.request.status}`,
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed");
@@ -103,7 +117,11 @@ export function CreatePaymentRequestForm({
   return (
     <form onSubmit={onSubmit} className="gc-card space-y-3">
       <p className="text-[0.62rem] tracking-[0.14em] uppercase text-[var(--gc-muted)]">
-        Commas payment request
+        Create invoice
+      </p>
+      <p className="text-sm text-[var(--gc-muted)]">
+        Issue the invoice in Grants OS. Official Commas / Fanbasis checkout is the last step only.
+        Fanbasis has no API Keys page — do not invent a key.
       </p>
       {commas ? (
         <p className="text-sm text-[var(--gc-muted)]">
@@ -139,6 +157,26 @@ export function CreatePaymentRequestForm({
         onChange={(e) => setAmount(e.target.value)}
         placeholder="Amount"
       />
+      {recordedUrls.length > 0 ? (
+        <select
+          className="gc-input"
+          value=""
+          onChange={(e) => setCommasCheckoutUrl(e.target.value)}
+        >
+          <option value="">Pick a recorded Commas checkout</option>
+          {recordedUrls.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
+      ) : null}
+      <input
+        className="gc-input"
+        value={commasCheckoutUrl}
+        onChange={(e) => setCommasCheckoutUrl(e.target.value)}
+        placeholder="Official Commas checkout URL (optional)"
+      />
       <label className="flex items-center gap-2 text-sm text-[var(--gc-muted)]">
         <input type="checkbox" checked={sendEmail} onChange={(e) => setSendEmail(e.target.checked)} />
         Queue email via GHL
@@ -148,12 +186,17 @@ export function CreatePaymentRequestForm({
         Queue SMS via GHL
       </label>
       <button type="submit" className="gc-btn gc-btn-gold w-full" disabled={loading || !clientId}>
-        {loading ? "Creating…" : "Create payment request link"}
+        {loading ? "Creating…" : "Create invoice"}
       </button>
       {copyUrl ? (
         <button type="button" className="gc-btn gc-btn-outline w-full" onClick={() => void copyLink()}>
           Copy payment link
         </button>
+      ) : null}
+      {invoiceHref ? (
+        <a href={invoiceHref} className="gc-btn gc-btn-ghost w-full text-center">
+          Open invoice
+        </a>
       ) : null}
       {error ? <p className="text-sm text-[var(--gc-danger)]">{error}</p> : null}
       {result ? <p className="text-sm text-[var(--gc-success)] break-all">{result}</p> : null}

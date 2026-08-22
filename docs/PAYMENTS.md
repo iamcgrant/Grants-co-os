@@ -8,15 +8,18 @@ Financial infrastructure is **Priority #1**. Do not connect production processor
 
 **Commas (Fanbasis) is the approved payment platform for Grants & Co.**
 
-Grants Pay never collects or stores raw card numbers / CVV. Customers complete payment on Commas’ secure hosted checkout (`payment_link`). Grants & Co OS owns the branded concierge experience, invoices, master client identity, receipts, and post-payment intake.
+Charles confirmed the Fanbasis dashboard has **no API Keys page**. Do **not** invent `COMMAS_API_KEY`. Do not scrape.
+
+Grants Pay never collects or stores raw card numbers / CVV. Staff create the invoice in Grants OS. Customers complete payment on Commas’ official hosted checkout (`payment_link` or a recorded product / checkout URL). Grants & Co OS owns the branded concierge experience, invoices, master client identity, receipts, and post-payment intake.
 
 | Adapter | Status | Role |
 |---------|--------|------|
-| CommasPaymentProvider | **Primary** — hosted checkout + webhooks | Production path when `PAYMENT_PROVIDER=commas` + sandbox/live keys |
+| CommasPaymentProvider | Optional keyed path | Only when a real `COMMAS_API_KEY` exists (Fanbasis does not currently expose one) |
+| Manual / recorded Commas checkout | **Primary without a key** | Staff paste or pick an official Fanbasis checkout / product URL |
 | MockPaymentProvider | Active local default | Safe simulation (simulated payments **never** count as collected revenue) |
 | AuthorizeNetPaymentProvider | Secondary sandbox Accept.js | Optional proprietary card path; fail-closed without credentials |
 
-Set `PAYMENT_PROVIDER=mock|commas|authorize_net`.
+Set `PAYMENT_PROVIDER=mock|commas|authorize_net`. Mock / manual-Commas is valid. Do not invent a key to force `commas`.
 
 ## Provider interface
 
@@ -31,19 +34,54 @@ Set `PAYMENT_PROVIDER=mock|commas|authorize_net`.
 ## Grants Pay workflow
 
 ```
-CLIENT → PAYMENT REQUEST → GRANTS PAY (branded) → COMMAS SECURE CHECKOUT
-  → payment.succeeded webhook → MASTER CLIENT → CLIENT SETUP → ONBOARDING → STAFF
+STAFF → OS INVOICE / PAYMENT REQUEST → GRANTS PAY (branded)
+  → official Commas checkout (recorded URL or keyed payment_link)
+  → payment.succeeded (inbound Zapier/GHL or Commas HMAC)
+  → MASTER CLIENT → CLIENT SETUP → ONBOARDING → STAFF
 ```
 
 Staff APIs:
 
-- `POST /api/pay/requests` — create payment request + invoice + secure link
-- Client 360 → Pay — same create/send flow for the open Grants client (`COMMAS_API_KEY` from env)
-- `GET /pay/[invoiceNumber]` — luxury client checkout
-- `POST /api/webhooks/payments` — Commas HMAC (`x-webhook-signature`)
-- `/setup/[token]` — native one-time client setup after payment
+- `POST /api/pay/requests` — create invoice + payment request. Optional `commasCheckoutUrl` (official Fanbasis https URL).
+- `POST /api/pay/requests/[publicId]/checkout` — attach / replace the official Commas last-step URL.
+- `GET /api/pay/commas-checkouts` — recorded official URLs staff can pick.
+- Client 360 → Pay — same create/send flow for the open Grants client.
+- Staff invoice desk — `/pay/invoices/[invoiceNumber]`
+- `GET /pay/[invoiceNumber]` — luxury client checkout (last-step official Commas).
+- `POST /api/webhooks/payments` — Commas HMAC (`x-webhook-signature`) when a real Commas webhook secret exists.
+- `POST /api/webhooks/grants-pay` — official Zapier / GHL inbound mark-paid (see below).
+- `/setup/[token]` — native one-time client setup after payment.
 
 Statuses tracked: Pending, Paid, Failed, Canceled, Refunded, Partially Refunded, Chargeback/Dispute.
+
+## Inbound Zapier / GHL webhook (optional)
+
+Charles does **not** need to build the Zap in this change. When ready, point Zapier or GHL at:
+
+**`POST https://os.grantandconsultants.com/api/webhooks/grants-pay`**
+
+Headers:
+
+- `Authorization: Bearer $GRANTS_PAY_INBOUND_WEBHOOK_SECRET`
+- or `x-grants-pay-secret: $GRANTS_PAY_INBOUND_WEBHOOK_SECRET`
+- `Content-Type: application/json`
+
+JSON body:
+
+```json
+{
+  "event": "payment.succeeded",
+  "paymentRequestPublicId": "GP-1001",
+  "invoiceNumber": "GC-1048",
+  "amountCents": 75000,
+  "providerTransactionId": "fanbasis_or_zap_id",
+  "source": "zapier"
+}
+```
+
+`source` may be `zapier` or `ghl`. Identify the OS invoice with `paymentRequestPublicId` and/or `invoiceNumber`. Without `GRANTS_PAY_INBOUND_WEBHOOK_SECRET` the route **fails closed**. GHL remains the only phone / SMS / email backend — this webhook only marks the PaymentRequest paid.
+
+`GET /api/webhooks/grants-pay` returns the same contract (no secrets).
 
 ## Safety
 
@@ -52,18 +90,22 @@ Statuses tracked: Pending, Paid, Failed, Canceled, Refunded, Partially Refunded,
 - Invoice status separate from settlement / payout
 - Never store raw PAN/CVV
 - Never put secret keys in browser, GitHub, logs, or screenshots
-- Webhook verification via HMAC-SHA256 (`COMMAS_WEBHOOK_SECRET`)
+- Webhook verification via HMAC-SHA256 (`COMMAS_WEBHOOK_SECRET`) when that secret exists
+- Inbound Zapier/GHL uses `GRANTS_PAY_INBOUND_WEBHOOK_SECRET`
 - Live charges require `COMMAS_LIVE_CHARGES=true` (or Authorize.Net equivalent)
 - Mock / simulated payments are excluded from production collected-revenue semantics
 
-## Credentials (sandbox first — do not activate live)
+## Credentials
 
-### Commas (primary)
+### Commas (primary in spirit)
+
+Fanbasis has **no API Keys page**. Do not invent `COMMAS_API_KEY`.
 
 | Env var | Purpose |
 |---------|---------|
-| `COMMAS_API_KEY` | Dashboard → API Keys (`x-api-key`). Scopes: `checkout-sessions`, `payments`, `refunds`, `webhooks`, `customers` |
-| `COMMAS_WEBHOOK_SECRET` | `secret_key` from webhook subscription create |
+| `GRANTS_PAY_INBOUND_WEBHOOK_SECRET` | Optional OS-owned secret for Zapier/GHL mark-paid |
+| `COMMAS_API_KEY` | Only if Fanbasis later issues a real key. Key presence is never CONNECTED. |
+| `COMMAS_WEBHOOK_SECRET` | `secret_key` from webhook subscription create (keyed path only) |
 | `COMMAS_ENVIRONMENT` | `sandbox` → `https://qa.dev-fan-basis.com` · `production` → `https://www.fanbasis.com` |
 | `COMMAS_CREATOR_HANDLE` | Optional — embedded checkout |
 | `COMMAS_LIVE_CHARGES` | Must be `true` for production charges |
@@ -87,6 +129,11 @@ Native `/setup/[token]` is the primary post-payment experience. Existing Dispute
 
 ## Checkout surfaces
 
+- Staff invoice desk: `/pay/invoices/[invoiceNumber]`
 - Proprietary Grants Pay UI: `/pay/[invoiceNumber]`
 - Post-success bridge: `/pay/continue/[invoiceNumber]`
 - Native client setup: `/setup/[token]`
+
+## Health
+
+Key absence is never `CONNECTED`. A recorded official Commas checkout URL or a processed Grants Pay inbound / Commas payment webhook can become `CONNECTED` later.
