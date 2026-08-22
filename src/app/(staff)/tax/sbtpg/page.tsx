@@ -35,7 +35,7 @@ export default async function SbtpgWorkspacePage() {
       <h1 className="text-4xl md:text-5xl mb-2">SBTPG payouts</h1>
       <p className="gc-section-sub mb-6 max-w-3xl">
         {totals.isLive
-          ? `${totals.source} · ${totals.window}${totals.taxYear ? ` · TY ${totals.taxYear}` : ""}${totals.capturedOn ? ` · captured ${totals.capturedOn}` : ""}. Official portal is last-step only. No scrape.`
+          ? `Total Revenue is ${totals.staffAttribution} · ${totals.window}${totals.taxYear ? ` · TY ${totals.taxYear}` : ""}${totals.capturedOn ? ` · captured ${totals.capturedOn}` : ""}. Official portal is SBTPG — last-step login only. No scrape.`
           : catalog.honesty}
       </p>
 
@@ -45,7 +45,9 @@ export default async function SbtpgWorkspacePage() {
           <p className="display text-2xl" data-sbtpg-paid>
             {formatUsd(totals.totalRevenueCents)}
           </p>
-          <p className="text-sm text-[var(--gc-muted)] mt-2">{totals.paidTaxpayerCount} taxpayers · {totals.source}</p>
+          <p className="text-sm text-[var(--gc-muted)] mt-2">
+            {totals.paidTaxpayerCount} taxpayers · {totals.staffAttribution}
+          </p>
         </div>
         <div className="gc-card">
           <p className="text-[0.62rem] tracking-[0.14em] uppercase text-[var(--gc-muted)] mb-2">Paid taxpayers</p>

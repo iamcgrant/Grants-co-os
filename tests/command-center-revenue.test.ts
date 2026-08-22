@@ -3,6 +3,7 @@ import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetSqliteFromSchema } from "./helpers/sqlite-schema";
 import {
+  commandCenterChartMatchesTotal,
   commandCenterRevenueSeries,
   mapCommandCenterRevenue,
   OFFICIAL_SBTPG_FEE_SUMMARY_TY2026_2026_08_22,
@@ -94,20 +95,37 @@ describe("Command Center Total Revenue mapping", () => {
     expect(home).toMatch(/label="Total Revenue"/);
     expect(home).toMatch(/data\.finance\.totalRevenueCents/);
     expect(home).toMatch(/data\.finance\.unfundedCents/);
-    expect(home).toMatch(/href="\/tax\/sbtpg"/);
-    expect(home).toMatch(/Season-to-date/);
-    expect(home).toMatch(/Revenue trend/);
+    expect(home).toMatch(/COMMAND_CENTER_TOTAL_REVENUE_HREF/);
+    expect(home).toMatch(/COMMAND_CENTER_UPDATE_REVENUE_LOGIN_URL/);
+    expect(home).toMatch(/COMMAND_CENTER_UPDATE_REVENUE_LABEL/);
+    expect(home).toMatch(/OfficialLoginLink/);
+    expect(home).toMatch(/OfficialFeeSummaryPersistForm/);
+    expect(home).toMatch(/SEASON-TO-DATE/);
+    expect(home).toMatch(/title="Revenue trend"/);
+    expect(home).toMatch(/Total Company Revenue/);
+    expect(home).toMatch(/STAFF_REVENUE_FIRM/);
+    expect(home).toMatch(/STAFF_REVENUE_ATTRIBUTION/);
+    expect(home).toMatch(/data\.revenueTrend\.values/);
+    expect(home).toMatch(/name: "Revenue trend"/);
     expect(home).not.toMatch(/117700|117,700/);
     expect(home).not.toMatch(/SBTPG/);
+    expect(home).not.toMatch(/from SBTPG|SBTPG collected|via SBTPG/i);
     expect(home).not.toMatch(/taxpayer/i);
     expect(home).not.toMatch(/SbtpgPayoutForm|SbtpgFeeSummaryIngestForm/);
+    expect(home).not.toMatch(/<iframe/i);
     expect(home).not.toMatch(/cheerio|puppeteer|playwright/i);
   });
 
   it("draws the Command Center chart at the official season-to-date total, not an invented series", () => {
-    const series = commandCenterRevenueSeries(11_770_000, ["08-16", "08-22"], [0, 75000]);
+    const revenue = mapCommandCenterRevenue(official, emptyDated, emptyGrantsPay);
+    const series = commandCenterRevenueSeries(revenue.totalRevenueCents, ["08-16", "08-22"], [0, 75000]);
+    expect(revenue.totalRevenueCents).toBe(11_770_000);
+    expect(official.paidCents).toBe(11_770_000);
+    expect(series.labels).toEqual(["SEASON-TO-DATE", "SEASON-TO-DATE"]);
     expect(series.values).toEqual([11_770_000, 11_770_000]);
     expect(series.values.every((value) => value === 11_770_000)).toBe(true);
+    expect(commandCenterChartMatchesTotal(11_770_000, series)).toBe(true);
+    expect(commandCenterChartMatchesTotal(revenue.totalRevenueCents, series)).toBe(true);
   });
 
   it("maps the native SBTPG desk tiles from the official snapshot, not zeros", () => {
@@ -118,6 +136,7 @@ describe("Command Center Total Revenue mapping", () => {
     expect(desk.unfundedCents).toBe(2_100_000);
     expect(desk.unfundedTaxpayerCount).toBe(12);
     expect(desk.source).toBe("SBTPG Fee Summary PAID");
+    expect(desk.staffAttribution).toBe("from Grants & Co Consultants");
     expect(desk.window).toBe("season-to-date");
     expect(desk.taxYear).toBe("2026");
     expect(desk.capturedOn).toBe("2026-08-22");
@@ -179,6 +198,8 @@ describe("persisted official Fee Summary → Command Center query", () => {
   let getFinanceDashboard: typeof import("../src/lib/payments/dashboard").getFinanceDashboard;
   let recordSbtpgPayout: typeof import("../src/lib/tax/payouts").recordSbtpgPayout;
   let loadSbtpgDesk: typeof import("../src/lib/tax/sbtpg-desk").loadSbtpgDesk;
+  let getOwnerCommandCenter: typeof import("../src/lib/ops/command-center").getOwnerCommandCenter;
+  let commandCenterChartMatchesTotal: typeof import("../src/lib/tax/fee-summary-mapping").commandCenterChartMatchesTotal;
 
   beforeAll(async () => {
     process.env.DATABASE_URL = `file:${testDb}`;
@@ -199,6 +220,10 @@ describe("persisted official Fee Summary → Command Center query", () => {
     getFinanceDashboard = finance.getFinanceDashboard;
     const desk = await import("../src/lib/tax/sbtpg-desk");
     loadSbtpgDesk = desk.loadSbtpgDesk;
+    const commandCenter = await import("../src/lib/ops/command-center");
+    getOwnerCommandCenter = commandCenter.getOwnerCommandCenter;
+    const mapping = await import("../src/lib/tax/fee-summary-mapping");
+    commandCenterChartMatchesTotal = mapping.commandCenterChartMatchesTotal;
   });
 
   beforeEach(async () => {
@@ -245,6 +270,12 @@ describe("persisted official Fee Summary → Command Center query", () => {
     const finance = await getFinanceDashboard();
     expect(finance.totalRevenueCents).toBe(11_770_000);
     expect(finance.totalRevenueTaxpayerCount).toBe(73);
+
+    const owner = await getOwnerCommandCenter();
+    expect(owner.finance.totalRevenueCents).toBe(11_770_000);
+    expect(owner.revenueTrend.values).toEqual([11_770_000, 11_770_000]);
+    expect(owner.revenueTrend.labels).toEqual(["SEASON-TO-DATE", "SEASON-TO-DATE"]);
+    expect(commandCenterChartMatchesTotal(owner.finance.totalRevenueCents, owner.revenueTrend)).toBe(true);
     expect(finance.totalRevenueSource).toBe("SBTPG Fee Summary PAID");
     expect(finance.unfundedCents).toBe(2_100_000);
     expect(finance.unfundedTaxpayerCount).toBe(12);
@@ -284,10 +315,14 @@ describe("persisted official Fee Summary → Command Center query", () => {
     expect(desk.totals.unfundedCents).toBe(2_100_000);
     expect(desk.totals.unfundedTaxpayerCount).toBe(12);
     expect(desk.totals.source).toBe("SBTPG Fee Summary PAID");
+    expect(desk.totals.staffAttribution).toBe("from Grants & Co Consultants");
     const page = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/sbtpg/page.tsx"), "utf8");
     expect(page).toMatch(/loadSbtpgDesk/);
     expect(page).toMatch(/totals\.totalRevenueCents/);
     expect(page).toMatch(/totals\.unfundedCents/);
+    expect(page).toMatch(/totals\.staffAttribution/);
+    expect(page).toMatch(/Official portal is SBTPG/);
+    expect(page).not.toMatch(/from SBTPG|SBTPG collected|via SBTPG/);
     expect(page).not.toMatch(/coming soon/i);
   });
 

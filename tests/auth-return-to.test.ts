@@ -19,7 +19,11 @@ describe("login returnTo", () => {
   it("builds login href and returns staff to the SBTPG desk after sign-in", () => {
     expect(loginHref("/tax/sbtpg")).toBe("/login?returnTo=%2Ftax%2Fsbtpg");
     expect(loginHref("https://evil.example")).toBe("/login");
+    expect(loginHref("https://pro.sbtpg.com/login")).toBe("/login");
     expect(pathAfterLogin("OWNER", "/tax/sbtpg")).toBe("/tax/sbtpg");
+    expect(pathAfterLogin("ADMIN", "/tax/sbtpg")).toBe("/tax/sbtpg");
+    expect(pathAfterLogin("CUSTOMER_SERVICE", "/tax/sbtpg")).toBe("/tax/sbtpg");
+    expect(pathAfterLogin("FILE_PREPARER", "/tax/sbtpg")).toBe("/tax/sbtpg");
     expect(pathAfterLogin("ADMIN", null)).toBe("/home");
     expect(pathAfterLogin("CLIENT", "/tax/sbtpg")).toBe("/portal");
   });

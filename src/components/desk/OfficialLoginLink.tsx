@@ -1,9 +1,11 @@
 export function OfficialLoginLink({
   href,
   label = "Open login",
+  action,
 }: {
   href: string;
   label?: string;
+  action?: string;
 }) {
   return (
     <a
@@ -11,6 +13,8 @@ export function OfficialLoginLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
+      data-official-login={href}
+      data-official-action={action ?? label}
     >
       {label}
     </a>

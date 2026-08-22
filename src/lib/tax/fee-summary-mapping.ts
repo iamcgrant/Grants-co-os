@@ -3,6 +3,10 @@
  * Source: signed-in pro.sbtpg.com/account/dashboard. No invented daily split.
  */
 
+import { STAFF_REVENUE_ATTRIBUTION } from "@/lib/tax/staff-revenue-copy";
+
+export { STAFF_REVENUE_ATTRIBUTION } from "@/lib/tax/staff-revenue-copy";
+
 export const SBTPG_WINDOW_SEASON_TO_DATE = "season_to_date" as const;
 export const SBTPG_WINDOW_DATED = "dated" as const;
 
@@ -156,16 +160,28 @@ export function officialSummaryFromFeeSummaryPayouts(
   };
 }
 
-/** Season-to-date chart uses the official total on every point — no invented daily split. */
+export const COMMAND_CENTER_SEASON_LABEL = "SEASON-TO-DATE";
+
+/** Season-to-date chart is a flat official total — no invented daily split. */
 export function commandCenterRevenueSeries(
   officialTotalCents: number | null,
   labels: string[],
   datedValues: number[],
 ): { labels: string[]; values: number[] } {
   if (officialTotalCents != null && officialTotalCents > 0) {
-    return { labels, values: labels.map(() => officialTotalCents) };
+    return {
+      labels: [COMMAND_CENTER_SEASON_LABEL, COMMAND_CENTER_SEASON_LABEL],
+      values: [officialTotalCents, officialTotalCents],
+    };
   }
   return { labels, values: datedValues };
+}
+
+export function commandCenterChartMatchesTotal(
+  totalRevenueCents: number,
+  series: { values: number[] },
+): boolean {
+  return series.values.length > 0 && series.values.every((value) => value === totalRevenueCents);
 }
 
 export function officialFeeSummaryFromCaptureKey(key: string): OfficialSbtpgFeeSummary {
@@ -175,6 +191,61 @@ export function officialFeeSummaryFromCaptureKey(key: string): OfficialSbtpgFeeS
   throw new Error("Unknown official SBTPG Fee Summary capture");
 }
 
+export type OfficialFeeSummaryPersistPayout = {
+  amountCents: number;
+  status: "PAID" | "UNFUNDED";
+  bucket: typeof SBTPG_BUCKET_FEE_SUMMARY_PAID | typeof SBTPG_BUCKET_FEE_SUMMARY_UNFUNDED;
+  windowKind: typeof SBTPG_WINDOW_SEASON_TO_DATE;
+  taxpayerCount: number;
+  externalId: string;
+  taxYear: string;
+  paidAt: string;
+  source: "official_import";
+};
+
+export type OfficialFeeSummaryPersistRows = {
+  snapshot: OfficialSbtpgFeeSummary;
+  paidPayout: OfficialFeeSummaryPersistPayout;
+  unfundedPayout: OfficialFeeSummaryPersistPayout | null;
+};
+
+/**
+ * Map an official Fee Summary capture onto SbtpgFeeSummarySnapshot + matching
+ * SbtpgPayout rows. Amounts come from the capture only — never invented.
+ */
+export function officialFeeSummaryPersistRows(
+  summary: OfficialSbtpgFeeSummary,
+): OfficialFeeSummaryPersistRows {
+  return {
+    snapshot: { ...summary },
+    paidPayout: {
+      amountCents: summary.paidCents,
+      status: "PAID",
+      bucket: SBTPG_BUCKET_FEE_SUMMARY_PAID,
+      windowKind: SBTPG_WINDOW_SEASON_TO_DATE,
+      taxpayerCount: summary.paidTaxpayerCount,
+      externalId: officialPaidPayoutExternalId(summary),
+      taxYear: summary.taxYear,
+      paidAt: summary.capturedAt,
+      source: "official_import",
+    },
+    unfundedPayout:
+      summary.unfundedCents > 0
+        ? {
+            amountCents: summary.unfundedCents,
+            status: "UNFUNDED",
+            bucket: SBTPG_BUCKET_FEE_SUMMARY_UNFUNDED,
+            windowKind: SBTPG_WINDOW_SEASON_TO_DATE,
+            taxpayerCount: summary.unfundedTaxpayerCount,
+            externalId: officialUnfundedPayoutExternalId(summary),
+            taxYear: summary.taxYear,
+            paidAt: summary.capturedAt,
+            source: "official_import",
+          }
+        : null,
+  };
+}
+
 export type SbtpgDeskTotals = {
   isLive: boolean;
   totalRevenueCents: number;
@@ -182,6 +253,7 @@ export type SbtpgDeskTotals = {
   unfundedCents: number;
   unfundedTaxpayerCount: number;
   source: "SBTPG Fee Summary PAID" | "SbtpgPayout PAID/FUNDED";
+  staffAttribution: typeof STAFF_REVENUE_ATTRIBUTION;
   window: "season-to-date" | "recorded-payouts";
   taxYear: string | null;
   capturedOn: string | null;
@@ -212,6 +284,7 @@ export function sbtpgDeskTotals(
       unfundedCents: liveOfficial.unfundedCents,
       unfundedTaxpayerCount: liveOfficial.unfundedTaxpayerCount,
       source: "SBTPG Fee Summary PAID",
+      staffAttribution: STAFF_REVENUE_ATTRIBUTION,
       window: "season-to-date",
       taxYear: liveOfficial.taxYear || null,
       capturedOn: liveOfficial.capturedOn || null,
@@ -225,6 +298,7 @@ export function sbtpgDeskTotals(
     unfundedCents: 0,
     unfundedTaxpayerCount: openFromBoard,
     source: "SbtpgPayout PAID/FUNDED",
+    staffAttribution: STAFF_REVENUE_ATTRIBUTION,
     window: "recorded-payouts",
     taxYear: null,
     capturedOn: null,

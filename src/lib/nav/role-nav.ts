@@ -103,7 +103,7 @@ export function getTaxNav(): NavItem[] {
 
 /** First-class sidebar app — always above the Credit stack so the click is live. */
 export function getPinnedSbtpgNav(): NavItem {
-  return { href: TAX_NAV.sbtpg.href, label: TAX_NAV.sbtpg.label, group: "primary" };
+  return withOfficialLogin({ href: TAX_NAV.sbtpg.href, label: TAX_NAV.sbtpg.label, group: "primary" });
 }
 
 export function getDesktopTaxNav(): NavItem[] {

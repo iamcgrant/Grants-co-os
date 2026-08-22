@@ -74,7 +74,12 @@ describe("Credit & Disputes navigation", () => {
     expect(TAX_NAV.cloudTaxOffice.href).toBe("/tax/cloud-tax-office");
     expect(TAX_NAV.cognito.href).toBe("/tax/cognito");
     expect(TAX_NAV.sbtpg.href).toBe("/tax/sbtpg");
-    expect(getPinnedSbtpgNav()).toEqual({ href: "/tax/sbtpg", label: "SBTPG", group: "primary" });
+    expect(getPinnedSbtpgNav()).toEqual({
+      href: "/tax/sbtpg",
+      label: "SBTPG",
+      group: "primary",
+      officialLastStepUrl: TAX_DESK_CATALOG.SBTPG.officialLastStepUrl,
+    });
     expect(labels(getDesktopTaxNav())).toEqual(["Cloud Tax Office", "Cognito"]);
     for (const role of CREDIT_ROLES) expect(hasTaxNav(role)).toBe(true);
     for (const role of NON_CREDIT_ROLES) expect(hasTaxNav(role)).toBe(false);
