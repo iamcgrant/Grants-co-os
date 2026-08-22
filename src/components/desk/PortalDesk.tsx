@@ -11,9 +11,10 @@ const RETURN_TO_OS_HREF = "/home";
 
 /**
  * Vendor login stays in the desk pane when the host allows a third-party
- * iframe. Hosts that send X-Frame-Options / frame-ancestors get a Grants & Co
- * desk — never a blank broken-embed icon, never top-level vendor navigation,
- * never a new tab, never an invented proxy or API-key theater.
+ * iframe. Hosts that send X-Frame-Options / frame-ancestors keep the luxury
+ * Grants & Co desk on this OS tab. Staff may click Open in browser to open
+ * the official login in a new tab. Never auto-navigate, never send this OS
+ * tab to a vendor origin, never restore a refused iframe, never invent a proxy.
  */
 export function PortalDesk({ deskId }: { deskId: PortalDeskId }) {
   const desk = portalDeskById(deskId);
@@ -63,6 +64,19 @@ function PortalLuxuryStage({ desk }: { desk: PortalDeskDef }) {
         <p className="gc-portal-official-url" data-official-address={desk.officialUrl}>
           {desk.officialUrl}
         </p>
+        {desk.officialUrl.startsWith("https://") ? (
+          <div className="gc-portal-stage-actions">
+            <a
+              className="gc-btn gc-btn-gold"
+              href={desk.officialUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-open-in-browser={desk.officialUrl}
+            >
+              Open in browser
+            </a>
+          </div>
+        ) : null}
       </div>
     </div>
   );
