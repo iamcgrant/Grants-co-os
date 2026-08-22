@@ -1,8 +1,6 @@
 /**
- * GHL location id is a runtime secret (`GHL_LOCATION_ID`). Never print or commit the value.
- * `GHL_PRODUCTION_LOCATION_ID` is a non-secret placeholder used only when the env var is
- * unset so existing contact-sync tests keep a stable default. Live HTTP still requires
- * `GHL_API_KEY` from host/runtime secrets.
+ * GHL location id is a known Grants production location (not a secret).
+ * Live HTTP still requires `GHL_API_KEY` from host/runtime secrets. Never log the key.
  */
 
 export const GHL_PRODUCTION_LOCATION_ID = "[REDACTED]";
@@ -26,6 +24,14 @@ export const GHL_CONVERSATIONS_MESSAGE_READONLY_SCOPE = "conversations/message.r
 export const GHL_CONVERSATIONS_MESSAGE_WRITE_SCOPE = "conversations/message.write";
 /** Optional: create/update conversation threads before send when none exists. */
 export const GHL_CONVERSATIONS_WRITE_SCOPE = "conversations.write";
+
+/**
+ * Phone / voice. LeadConnector does not expose a documented OS WebRTC token for this
+ * account path. PIT must authorize phone-system reads before numbers can be listed.
+ * Do not invent extra scope slugs from application code.
+ */
+export const GHL_PHONE_SYSTEM_READONLY_SCOPE = "phone-system.readonly";
+export const GHL_VOICE_SESSION_SCOPE = "phone-system.voice";
 
 export function resolveGhlLocationId(explicit?: string | null): string {
   const fromEnv = explicit?.trim() || process.env[GHL_LOCATION_ID_ENV]?.trim();

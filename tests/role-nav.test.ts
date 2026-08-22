@@ -71,9 +71,16 @@ describe("Credit & Disputes navigation", () => {
 
   it("keeps mobile bottom nav lean", () => {
     const mobile = getStaffNav("OWNER");
-    expect(mobile.length).toBeLessThanOrEqual(8);
+    expect(mobile.length).toBeLessThanOrEqual(9);
     expect(hrefs(mobile)).toEqual(
-      expect.arrayContaining(["/home", "/clients", "/inbox", "/work", CREDIT_DISPUTES_NAV.hub.href]),
+      expect.arrayContaining([
+        "/home",
+        "/clients",
+        "/inbox",
+        "/dialer",
+        "/work",
+        CREDIT_DISPUTES_NAV.hub.href,
+      ]),
     );
   });
 

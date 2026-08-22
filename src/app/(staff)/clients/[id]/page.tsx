@@ -13,6 +13,7 @@ import { formatUsd } from "@/lib/payments/dashboard";
 import { ClientActions } from "@/components/clients/ClientActions";
 import { ClientHandoffActions } from "@/components/clients/ClientHandoffActions";
 import { SyncGhlContactButton } from "@/components/integrations/SyncGhlContactButton";
+import { GhlClientDesk } from "@/components/inbox/GhlClientDesk";
 import { ScoreIntelligencePanel } from "@/components/credit/ScoreIntelligencePanel";
 import { buildScoreIntelligence } from "@/lib/credit/score-intelligence";
 import { Tabs } from "@/components/ui/Tabs";
@@ -196,6 +197,14 @@ export default async function Client360Page({
           {clientConv && (
             <Link href={`/inbox?tab=client&c=${clientConv.id}`} className="gc-btn gc-btn-gold">
               Message client
+            </Link>
+          )}
+          {client.phone && (
+            <Link
+              href={`/dialer?to=${encodeURIComponent(client.phone)}`}
+              className="gc-btn gc-btn-outline"
+            >
+              Call
             </Link>
           )}
           {internalConv && (
@@ -467,22 +476,14 @@ export default async function Client360Page({
 
       {tab === "comms" && (
         <div className="space-y-4">
-          {integrations.ghlMessages.state === "AWAITING_INTEGRATION" && (
-            <p className="text-sm text-[var(--gc-gold)]">
-              GHL communication history · Awaiting Integration
-            </p>
-          )}
-          <div className="gc-dash-grid gc-dash-grid-2">
-          <Panel title="Client channel" eyebrow="Leaves the company" action={clientConv && <Link href={`/inbox?tab=client&c=${clientConv.id}`} className="text-[0.65rem] uppercase tracking-wider text-[var(--gc-gold)]">Open inbox</Link>}>
-            {(clientConv?.messages || []).map((m) => (
-              <div key={m.id} className="gc-bubble-client mb-2">
-                <p className="gc-bubble-label client">Client{m.sender ? ` · ${m.sender.firstName}` : ""}</p>
-                <p className="text-sm">{m.body}</p>
-              </div>
-            ))}
-            {!clientConv?.messages?.length && <p className="text-sm text-[var(--gc-muted)]">No client messages.</p>}
-          </Panel>
-          <Panel title="Internal thread" eyebrow="Staff only" action={internalConv && <Link href={`/inbox?tab=team&c=${internalConv.id}`} className="text-[0.65rem] uppercase tracking-wider text-[var(--gc-ice)]">Open</Link>}>
+          <div className="gc-panel overflow-hidden">
+            <GhlClientDesk
+              clientId={client.id}
+              osConversationId={clientConv?.id}
+              clientName={`${client.firstName} ${client.lastName}`}
+            />
+          </div>
+          <Panel title="Internal notes" eyebrow="Staff only · never sent via GHL">
             {(internalConv?.messages || []).map((m) => (
               <div key={m.id} className="gc-bubble-internal mb-2">
                 <p className="gc-bubble-label internal">Internal{m.sender ? ` · ${m.sender.firstName}` : ""}</p>
@@ -491,7 +492,6 @@ export default async function Client360Page({
             ))}
             {!internalConv?.messages?.length && <p className="text-sm text-[var(--gc-muted)]">No internal notes.</p>}
           </Panel>
-          </div>
         </div>
       )}
 

@@ -8,6 +8,8 @@ const schema = z.object({
   conversationId: z.string().min(1),
   body: z.string().min(1).max(8000),
   isInternal: z.boolean(),
+  channel: z.enum(["INTERNAL", "SMS", "EMAIL"]).optional(),
+  subject: z.string().max(200).optional(),
 });
 
 export async function POST(req: Request) {
@@ -40,7 +42,12 @@ export async function POST(req: Request) {
       senderId: user.id,
       body: parsed.data.body,
       isInternal: parsed.data.isInternal,
-      channel: parsed.data.isInternal ? "INTERNAL" : "SMS",
+      channel: parsed.data.isInternal
+        ? "INTERNAL"
+        : parsed.data.channel === "EMAIL"
+          ? "EMAIL"
+          : "SMS",
+      subject: parsed.data.subject,
       mentionUserIds,
     });
 

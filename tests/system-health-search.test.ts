@@ -13,6 +13,8 @@ const ENV_KEYS = [
   "SMARTCREDIT_SPONSOR_URL",
   "SMARTCREDIT_SPONSOR_CODE",
   "COMMAS_API_KEY",
+  "TELEGRAM_BOT_TOKEN",
+  "TELEGRAM_TEAM_CHAT_IDS",
 ] as const;
 
 function component(
@@ -50,6 +52,7 @@ describe("system health + universal search", () => {
     for (const key of ENV_KEYS) {
       delete process.env[key];
     }
+    vi.restoreAllMocks();
   });
 
   afterAll(async () => {
@@ -94,6 +97,12 @@ describe("system health + universal search", () => {
     process.env.DISPUTEFOX_API_KEY = "df_test_not_a_real_key";
     process.env.SMARTCREDIT_SPONSOR_URL = "https://www.smartcredit.com/join/?pid=TEST";
 
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      new Response(JSON.stringify({ message: "The token is not authorized for this scope." }), {
+        status: 401,
+      }),
+    );
+
     const { collectSystemHealth } = await import("@/lib/system/health");
     const health = await collectSystemHealth();
     const ids = health.components.map((c) => c.component);
@@ -105,6 +114,7 @@ describe("system health + universal search", () => {
       "ghl_outbound",
       "email",
       "voice",
+      "telegram",
       "ghl_webhook",
       "disputefox",
       "smartcredit",
@@ -126,11 +136,13 @@ describe("system health + universal search", () => {
     expect(component(health, "ghl_inbound_pull").lastSuccessAt).toBeNull();
 
     expect(component(health, "ghl_outbound").status).toBe("ACTION_REQUIRED");
-    expect(component(health, "ghl_outbound").lastSuccessAt).toBeNull();
+    expect(component(health, "ghl_outbound").detail).toMatch(/conversations\/message\.write|GHL_API_KEY/);
     expect(component(health, "email").status).toBe("ACTION_REQUIRED");
-    expect(component(health, "email").lastSuccessAt).toBeNull();
+    expect(component(health, "email").detail).toMatch(/conversations\/message\.write|GHL_API_KEY/);
     expect(component(health, "voice").status).toBe("ACTION_REQUIRED");
     expect(component(health, "voice").lastSuccessAt).toBeNull();
+    expect(component(health, "telegram").status).toBe("ACTION_REQUIRED");
+    expect(component(health, "telegram").detail).toMatch(/TELEGRAM_BOT_TOKEN/);
     expect(component(health, "ghl_webhook").status).toBe("ACTION_REQUIRED");
     expect(component(health, "ghl_webhook").lastSuccessAt).toBeNull();
 
@@ -233,11 +245,13 @@ describe("system health + universal search", () => {
     expect(component(health, "ghl_inbound_pull").status).toBe("CONNECTED");
     expect(component(health, "ghl_inbound_pull").lastSuccessAt).toBe(pulledAt.toISOString());
 
-    expect(component(health, "ghl_outbound").status).toBe("CONNECTED");
+    expect(component(health, "ghl_outbound").status).toBe("ACTION_REQUIRED");
     expect(component(health, "ghl_outbound").lastSuccessAt).toBe(sentSmsAt.toISOString());
+    expect(component(health, "ghl_outbound").detail).toMatch(/GHL_API_KEY|conversations\/message\.write/);
 
-    expect(component(health, "email").status).toBe("CONNECTED");
+    expect(component(health, "email").status).toBe("ACTION_REQUIRED");
     expect(component(health, "email").lastSuccessAt).toBe(sentEmailAt.toISOString());
+    expect(component(health, "email").detail).toMatch(/GHL_API_KEY|conversations\/message\.write/);
 
     expect(component(health, "ghl_webhook").status).toBe("CONNECTED");
     expect(component(health, "ghl_webhook").lastSuccessAt).toBe(ghlWebhookAt.toISOString());
@@ -251,6 +265,35 @@ describe("system health + universal search", () => {
     expect(component(health, "smartcredit").status).toBe("ACTION_REQUIRED");
     expect(component(health, "smartcredit").lastSuccessAt).toBeNull();
     expect(component(health, "credit_karma").status).toBe("DEGRADED");
+    expect(component(health, "telegram").status).toBe("ACTION_REQUIRED");
+  });
+
+  it("marks SMS/email/voice CONNECTED only after live probes succeed", async () => {
+    process.env.GHL_API_KEY = "pk_test_not_a_real_key";
+    process.env.GHL_LOCATION_ID = "loc_test";
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      const method = String((init as RequestInit | undefined)?.method || "GET").toUpperCase();
+      if (url.includes("/conversations/messages") && method === "POST") {
+        return new Response(JSON.stringify({ message: "validation" }), { status: 400 });
+      }
+      if (url.includes("/conversations/search")) {
+        return new Response(JSON.stringify({ conversations: [] }), { status: 200 });
+      }
+      if (url.includes("/phone-system/numbers") || url.includes("/phone-system/voice-ai")) {
+        return new Response(JSON.stringify({ numbers: [{ id: "n1", phone: "+15551230000" }] }), {
+          status: 200,
+        });
+      }
+      return new Response("{}", { status: 404 });
+    });
+
+    const { collectSystemHealth } = await import("@/lib/system/health");
+    const health = await collectSystemHealth();
+    expect(component(health, "ghl_outbound").status).toBe("CONNECTED");
+    expect(component(health, "email").status).toBe("CONNECTED");
+    expect(component(health, "voice").status).toBe("CONNECTED");
+    expect(component(health, "telegram").status).toBe("ACTION_REQUIRED");
   });
 
   it("searches clients and invoices", async () => {

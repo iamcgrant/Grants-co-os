@@ -2,7 +2,8 @@ import { prisma } from "@/lib/db/prisma";
 import { getPaymentProvider } from "@/lib/payments/provider";
 import { commasPublicStatus, isCommasConfigured } from "@/lib/payments/commas-config";
 import { isGhlApiReady } from "@/lib/integrations/ghl/http";
-import { GHL_CONVERSATIONS_MESSAGE_WRITE_SCOPE } from "@/lib/integrations/ghl/location";
+import { probeGhlSmsEmailPath, probeGhlVoiceHealth } from "@/lib/integrations/ghl/probes";
+import { probeTelegramTeam } from "@/lib/integrations/telegram/workspace";
 import { getGcEnvironment } from "@/lib/integrations/env";
 import { probeDisputeFoxApi } from "@/lib/integrations/disputefox/probe";
 
@@ -154,10 +155,18 @@ export async function collectSystemHealth(): Promise<{
   const outboundEmailAt = isoOrNull(lastGhlOutboundEmail?.createdAt);
   const ghlWebhookAt = isoOrNull(lastGhlWebhook?.processedAt);
 
+  const [smsEmailProbe, voiceProbe, telegramProbe] = await Promise.all([
+    probeGhlSmsEmailPath(),
+    probeGhlVoiceHealth(),
+    probeTelegramTeam(),
+  ]);
+
   const ghlAuth = ghlAuthHealth(ghlReady, authSuccessAt);
   const ghlInbound = ghlInboundPullHealth(ghlReady, inboundPullAt);
-  const ghlOutbound = ghlOutboundHealth(ghlReady, outboundSmsAt);
-  const email = ghlEmailHealth(ghlReady, outboundEmailAt);
+  const ghlOutbound = ghlOutboundHealth(smsEmailProbe, outboundSmsAt);
+  const email = ghlEmailHealth(smsEmailProbe, outboundEmailAt);
+  const voice = ghlVoiceHealth(voiceProbe);
+  const telegram = telegramHealth(telegramProbe);
   const ghlWebhook = ghlWebhookHealth(lastGhlWebhook?.eventType ?? null, ghlWebhookAt);
   const disputeFox = {
     component: "disputefox",
@@ -202,14 +211,8 @@ export async function collectSystemHealth(): Promise<{
     { ...ghlInbound, lastCheckedAt: checkedAt },
     { ...ghlOutbound, lastCheckedAt: checkedAt },
     { ...email, lastCheckedAt: checkedAt },
-    {
-      component: "voice",
-      label: "Voice / Dialer",
-      status: "ACTION_REQUIRED",
-      detail: "Telephony adapter pending LeadConnector/GHL voice session support",
-      lastSuccessAt: null,
-      lastCheckedAt: checkedAt,
-    },
+    { ...voice, lastCheckedAt: checkedAt },
+    { ...telegram, lastCheckedAt: checkedAt },
     { ...ghlWebhook, lastCheckedAt: checkedAt },
     { ...disputeFox, lastCheckedAt: checkedAt },
     { ...smartCredit, lastCheckedAt: checkedAt },
@@ -367,49 +370,73 @@ function ghlInboundPullHealth(
 }
 
 function ghlOutboundHealth(
-  configured: boolean,
+  probe: { ready: boolean; status: HealthStatus; message: string; requiredScope: string },
   lastSuccessAt: string | null,
 ): Omit<HealthComponent, "lastCheckedAt"> {
-  if (lastSuccessAt) {
+  if (probe.ready) {
     return {
       component: "ghl_outbound",
-      label: "GHL outbound",
+      label: "SMS",
       status: "CONNECTED",
-      detail: "Outbound SMS delivered via POST /conversations/messages",
+      detail: probe.message,
       lastSuccessAt,
     };
   }
   return {
     component: "ghl_outbound",
-    label: "GHL outbound",
-    status: "ACTION_REQUIRED",
-    detail: configured
-      ? `No successful outbound SMS · PIT missing ${GHL_CONVERSATIONS_MESSAGE_WRITE_SCOPE} (live 401)`
-      : `Fail-closed: GHL_API_KEY + PIT scope ${GHL_CONVERSATIONS_MESSAGE_WRITE_SCOPE} required`,
-    lastSuccessAt: null,
+    label: "SMS",
+    status: probe.status,
+    detail: probe.message,
+    lastSuccessAt,
   };
 }
 
 function ghlEmailHealth(
-  configured: boolean,
+  probe: { ready: boolean; status: HealthStatus; message: string; requiredScope: string },
   lastSuccessAt: string | null,
 ): Omit<HealthComponent, "lastCheckedAt"> {
-  if (lastSuccessAt) {
+  if (probe.ready) {
     return {
       component: "email",
       label: "Email",
       status: "CONNECTED",
-      detail: "Outbound email delivered via POST /conversations/messages",
+      detail: probe.message,
       lastSuccessAt,
     };
   }
   return {
     component: "email",
     label: "Email",
-    status: "ACTION_REQUIRED",
-    detail: configured
-      ? `No successful outbound email · PIT missing ${GHL_CONVERSATIONS_MESSAGE_WRITE_SCOPE} (live 401)`
-      : `Fail-closed: GHL_API_KEY + PIT scope ${GHL_CONVERSATIONS_MESSAGE_WRITE_SCOPE} required`,
+    status: probe.status,
+    detail: probe.message,
+    lastSuccessAt,
+  };
+}
+
+function ghlVoiceHealth(probe: {
+  ready: boolean;
+  status: HealthStatus;
+  message: string;
+}): Omit<HealthComponent, "lastCheckedAt"> {
+  return {
+    component: "voice",
+    label: "Voice / Dialer",
+    status: probe.ready ? "CONNECTED" : probe.status,
+    detail: probe.message,
+    lastSuccessAt: null,
+  };
+}
+
+function telegramHealth(probe: {
+  ready: boolean;
+  status: HealthStatus;
+  message: string;
+}): Omit<HealthComponent, "lastCheckedAt"> {
+  return {
+    component: "telegram",
+    label: "Telegram team",
+    status: probe.ready ? "CONNECTED" : probe.status,
+    detail: probe.message,
     lastSuccessAt: null,
   };
 }

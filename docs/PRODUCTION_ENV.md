@@ -36,8 +36,10 @@ Do **not** invent alternate names. Values go in Cursor Secrets / Vercel Project 
 | `GHL_LOCATION_ID` | Yes (present) | |
 | `GHL_LOGIN_EMAIL` | No | Staff-portal scaffolding only |
 | `GHL_LOGIN_PASSWORD` | No | Staff-portal scaffolding only |
+| `TELEGRAM_BOT_TOKEN` | Yes for Team green | Bot token for in-OS Telegram team inbox |
+| `TELEGRAM_TEAM_CHAT_IDS` | Optional | Comma-separated Simon / CS / disputes chat ids |
 
-Outbound SMS/email also needs PIT **scope** `conversations/message.write` on the existing key (not a new env var name).
+Outbound SMS/email also needs PIT **scopes** `conversations/message.write` (required) and `conversations.write` (recommended) on the existing key — not a new env var. Voice needs `phone-system.readonly` + `phone-system.voice`. Do not add Twilio/Telnyx.
 
 ## Desktop (public URLs only — never server secrets)
 

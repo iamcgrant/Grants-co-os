@@ -1,7 +1,9 @@
 /**
- * Telephony adapter — honest interface for LeadConnector / GHL voice.
- * Browser dialer is only enabled when the provider exposes a supported session API.
+ * Telephony adapter — LeadConnector / GHL voice only.
+ * No Twilio, Telnyx, or second provider. Browser dialer is on only after a live probe.
  */
+
+import { startGhlOutboundCall, probeGhlVoicePath } from "@/lib/integrations/ghl/voice";
 
 export type CallDirection = "INBOUND" | "OUTBOUND";
 
@@ -39,11 +41,9 @@ export class LeadConnectorTelephonyAdapter implements TelephonyProvider {
   readonly name = "leadconnector";
 
   capabilities(): TelephonyCapabilities {
-    // LeadConnector does not currently expose a documented browser WebRTC dialer
-    // for this Grants account path. Keep UI honest — do not pretend Answer works.
     return {
-      browserDialer: false,
-      inboundScreenPop: true, // OS can match Master Client on inbound CLI when webhook arrives
+      browserDialer: true,
+      inboundScreenPop: true,
       transfer: false,
       recordings: false,
       transcripts: false,
@@ -51,12 +51,23 @@ export class LeadConnectorTelephonyAdapter implements TelephonyProvider {
     };
   }
 
-  async startOutboundSession(): Promise<{ ok: false; reason: string }> {
-    return {
-      ok: false,
-      reason:
-        "Browser dialer unavailable: configure a telephony provider that exposes supported voice sessions, or place the call from the LeadConnector softphone while OS owns the client timeline.",
-    };
+  async startOutboundSession(input: {
+    toE164: string;
+    clientId?: string;
+    staffUserId: string;
+  }): Promise<{ ok: true; sessionId: string } | { ok: false; reason: string; requiredScope?: string }> {
+    const probe = await probeGhlVoicePath();
+    if (!probe.ready) {
+      return { ok: false, reason: probe.message, requiredScope: probe.requiredScope };
+    }
+    const started = await startGhlOutboundCall({
+      toE164: input.toE164,
+      staffUserId: input.staffUserId,
+    });
+    if (!started.ok) {
+      return { ok: false, reason: started.reason, requiredScope: started.requiredScope };
+    }
+    return { ok: true, sessionId: started.sessionId };
   }
 }
 

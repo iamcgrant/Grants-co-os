@@ -161,12 +161,12 @@ export function buildClientDossierIntegrations(input: {
       ? {
           state: "LIVE",
           value: "Linked",
-          detail: "GHL message pull not enabled in this slice (no live sends)",
+          detail: "GHL SMS/email desk available in Inbox and Client 360",
         }
       : {
           state: "UNMATCHED",
           value: null,
-          detail: "GHL message pull not enabled in this slice (no live sends)",
+          detail: "GHL SMS/email desk available in Inbox and Client 360",
         }
     : {
         state: "AWAITING_INTEGRATION",

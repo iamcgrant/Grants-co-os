@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import type { ConversationKind, MessageChannel } from "@/generated/prisma/client";
+import { sendGhlOutboundMessage } from "@/lib/integrations/ghl/outbound";
 
 /** Communication service abstraction — OS owns the conversation; providers deliver. */
 export async function ensureTeamConversation(userIds: string[]) {
@@ -96,6 +97,13 @@ export async function postMessage(input: {
   channel?: MessageChannel;
   isInternal: boolean;
   mentionUserIds?: string[];
+  subject?: string;
+  /** When the caller already delivered via GHL, only persist the OS row. */
+  skipProviderSend?: boolean;
+  provider?: string | null;
+  externalId?: string | null;
+  deliveryStatus?: string;
+  metadata?: Record<string, unknown>;
 }) {
   if (!input.isInternal && input.channel === "INTERNAL") {
     throw new Error("Client-bound messages cannot use INTERNAL channel");
@@ -105,12 +113,16 @@ export async function postMessage(input: {
   }
 
   const channel = input.channel || (input.isInternal ? "INTERNAL" : "SMS");
-  let deliveryStatus = input.isInternal ? "RECORDED" : "PENDING";
-  let provider: string | null = null;
-  let externalId: string | null = null;
-  let metadata: Record<string, unknown> | undefined;
+  let deliveryStatus = input.deliveryStatus || (input.isInternal ? "RECORDED" : "PENDING");
+  let provider: string | null = input.provider ?? null;
+  let externalId: string | null = input.externalId ?? null;
+  let metadata: Record<string, unknown> | undefined = input.metadata;
 
-  if (!input.isInternal && (channel === "SMS" || channel === "EMAIL")) {
+  if (
+    !input.skipProviderSend &&
+    !input.isInternal &&
+    (channel === "SMS" || channel === "EMAIL")
+  ) {
     const conv = await prisma.conversation.findUnique({
       where: { id: input.conversationId },
       include: {
@@ -129,17 +141,17 @@ export async function postMessage(input: {
           "No GHL contact id on master client — link GHL before outbound send",
       };
     } else {
-      const { sendGhlOutboundMessage } = await import("@/lib/integrations/ghl/outbound");
       const sent = await sendGhlOutboundMessage({
         channel: channel === "EMAIL" ? "Email" : "SMS",
         ghlContactId,
         body: input.body,
+        subject: input.subject,
       });
       if (sent.ok) {
         deliveryStatus = "SENT";
         provider = "GHL";
         externalId = sent.providerMessageId;
-        metadata = { conversationId: sent.conversationId };
+        metadata = { conversationId: sent.conversationId, subject: input.subject };
       } else {
         deliveryStatus = "FAILED";
         metadata = {

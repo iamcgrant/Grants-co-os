@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/session";
 import { listInbox } from "@/lib/communications/service";
 import { ComposeMessage } from "@/components/inbox/ComposeMessage";
+import { GhlClientDesk } from "@/components/inbox/GhlClientDesk";
 import { prisma } from "@/lib/db/prisma";
 import { Panel } from "@/components/ui/density";
 import { isGhlApiReady } from "@/lib/integrations/ghl/http";
@@ -50,13 +51,15 @@ export default async function InboxPage({
             {" · "}
             {dataPlane} data plane
             {" · "}
-            GHL channel {ghlReady ? "API ready (no live sends)" : "Awaiting Integration"}
+            GHL is the only client SMS/email backend
+            {" · "}
+            {ghlReady ? "LeadConnector configured" : "Awaiting GHL_API_KEY"}
           </p>
         </div>
         <div className="flex gap-2">
           <Link href="/inbox?tab=all" className={`gc-btn text-xs ${tab === "all" ? "gc-btn-primary" : "gc-btn-outline"}`}>All</Link>
           <Link href="/inbox?tab=client" className={`gc-btn text-xs ${tab === "client" ? "gc-btn-primary" : "gc-btn-outline"}`}>Client</Link>
-          <Link href="/inbox?tab=team" className={`gc-btn text-xs ${tab === "team" ? "gc-btn-primary" : "gc-btn-outline"}`}>Team</Link>
+          <Link href="/team-chat" className="gc-btn gc-btn-outline text-xs">Team</Link>
         </div>
       </div>
 
@@ -108,25 +111,22 @@ export default async function InboxPage({
               Select a conversation to read and reply
             </div>
           )}
-          {active && (
+          {active && active.kind === "CLIENT" && active.client && (
+            <GhlClientDesk
+              clientId={active.client.id}
+              osConversationId={active.id}
+              clientName={`${active.client.firstName} ${active.client.lastName}`}
+            />
+          )}
+          {active && active.kind !== "CLIENT" && (
             <>
               <div className="border-b border-[var(--gc-border)] px-4 py-3 flex justify-between gap-3">
                 <div>
-                  <p className="font-medium">
-                    {active.client
-                      ? `${active.client.firstName} ${active.client.lastName}`
-                      : active.subject || "Team"}
-                  </p>
+                  <p className="font-medium">{active.subject || "Internal"}</p>
                   <p className="text-xs text-[var(--gc-muted)]">
-                    {active.kind.replaceAll("_", " ")}
-                    {active.client ? ` · ${active.client.grantsClientId}` : ""}
+                    OS internal notes · Telegram team chat is under Team
                   </p>
                 </div>
-                {active.client && (
-                  <Link href={`/clients/${active.client.grantsClientId}`} className="gc-btn gc-btn-ghost text-xs">
-                    Client 360
-                  </Link>
-                )}
               </div>
               <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 bg-[rgba(0,0,0,0.15)]">
                 {active.messages.map((m) => (
@@ -145,8 +145,8 @@ export default async function InboxPage({
               </div>
               <ComposeMessage
                 conversationId={active.id}
-                defaultInternal={active.kind !== "CLIENT"}
-                allowClientSend={active.kind === "CLIENT"}
+                defaultInternal
+                allowClientSend={false}
               />
             </>
           )}

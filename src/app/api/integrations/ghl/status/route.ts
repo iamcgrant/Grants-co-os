@@ -55,11 +55,17 @@ export async function GET() {
       },
       outbound: {
         endpoint: "POST /conversations/messages",
-        sendMessages: false,
+        sendMessages: true,
         requiredScope: "conversations/message.write",
         additionalScopesNeeded: ["conversations.write"],
-        status: "ACTION_REQUIRED",
-        note: "Live PIT returns 401 not authorized for this scope until write scopes are added",
+        status: "PROBE",
+        note: "SMS/email send from the OS inbox. CONNECTED only after a live send+receive probe succeeds.",
+      },
+      voice: {
+        endpoint: "GET /phone-system/numbers + voice session",
+        requiredScope: "phone-system.readonly",
+        additionalScopesNeeded: ["phone-system.voice"],
+        note: "In-OS dialer uses existing GHL numbers only. No Twilio/Telnyx.",
       },
       // Never expose secret values or hints that embed secrets
     });
