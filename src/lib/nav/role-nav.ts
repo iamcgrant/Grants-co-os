@@ -7,7 +7,7 @@ export type StaffRole =
   | "MARKETING"
   | "CLIENT";
 
-export type NavGroup = "primary" | "ops" | "finance" | "system" | "credit" | "escalations";
+export type NavGroup = "primary" | "ops" | "finance" | "system" | "credit" | "escalations" | "tax";
 
 export type NavItem = {
   href: string;
@@ -30,6 +30,14 @@ export const CREDIT_DISPUTES_NAV = {
 
 export const ESCALATIONS_NAV = {
   cfpb: { href: "/escalations/cfpb", label: "CFPB" },
+} as const;
+
+/** Tax desks — native OS workspaces, not portal bookmarks. */
+export const TAX_NAV = {
+  hub: { href: "/tax", label: "Tax", short: "Tax" },
+  cloudTaxOffice: { href: "/tax/cloud-tax-office", label: "Cloud Tax Office" },
+  cognito: { href: "/tax/cognito", label: "Cognito" },
+  sbtpg: { href: "/tax/sbtpg", label: "SBTPG" },
 } as const;
 
 export function hasCreditDisputesNav(role: StaffRole): boolean {
@@ -66,6 +74,18 @@ export function getEscalationsNav(): NavItem[] {
   return [{ href: ESCALATIONS_NAV.cfpb.href, label: ESCALATIONS_NAV.cfpb.label, group: "escalations" }];
 }
 
+export function hasTaxNav(role: StaffRole): boolean {
+  return hasCreditDisputesNav(role);
+}
+
+export function getTaxNav(): NavItem[] {
+  return [
+    { href: TAX_NAV.cloudTaxOffice.href, label: TAX_NAV.cloudTaxOffice.label, group: "tax" },
+    { href: TAX_NAV.cognito.href, label: TAX_NAV.cognito.label, group: "tax" },
+    { href: TAX_NAV.sbtpg.href, label: TAX_NAV.sbtpg.label, group: "tax" },
+  ];
+}
+
 export function navSectionLabel(group: NavGroup | undefined): string | null {
   switch (group) {
     case undefined:
@@ -81,6 +101,8 @@ export function navSectionLabel(group: NavGroup | undefined): string | null {
       return "Credit & Disputes";
     case "escalations":
       return "Escalations";
+    case "tax":
+      return "Tax";
     default: {
       const _exhaustive: never = group;
       return _exhaustive;
@@ -151,6 +173,7 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/work", label: "Tasks", group: "ops" },
       ...getCreditDisputesNav(),
       ...getEscalationsNav(),
+      ...getTaxNav(),
       { href: "/pay", label: "Grants Pay", group: "finance" },
       { href: "/intelligence", label: "Reports", group: "finance" },
       { href: "/acquisition", label: "Acquisition", group: "finance" },
@@ -171,6 +194,7 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/work", label: "Tasks", group: "ops" },
       ...getCreditDisputesNav(),
       ...getEscalationsNav(),
+      ...getTaxNav(),
       { href: "/search", label: "Search", group: "system" },
       { href: "/more", label: "Settings", group: "system" },
     ];
@@ -186,6 +210,7 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/work", label: "File Queues", group: "ops" },
       ...getCreditDisputesNav(),
       ...getEscalationsNav(),
+      ...getTaxNav(),
       { href: "/search", label: "Search", group: "system" },
       { href: "/more", label: "Settings", group: "system" },
     ];

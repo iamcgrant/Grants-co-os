@@ -24,6 +24,9 @@ export type ClientDossierIntegrations = {
   ghlContactId: IntegrationFieldState;
   disputeFoxClientId: IntegrationFieldState;
   smartCreditClientId: IntegrationFieldState;
+  cloudTaxOfficeId: IntegrationFieldState;
+  cognitoEntryId: IntegrationFieldState;
+  sbtpgId: IntegrationFieldState;
   intakeStatus: IntegrationFieldState;
   credit: IntegrationFieldState;
   payments: IntegrationFieldState;
@@ -76,8 +79,11 @@ function fieldFromIdentifier(
   };
 }
 
-/** Staff-recorded ids (SmartCredit has no live list API). Never hide a recorded member id. */
-function fieldFromStaffRecorded(ident: Ident | undefined): IntegrationFieldState {
+/** Staff-recorded ids (no live list API). Never hide a recorded member id. */
+function fieldFromStaffRecorded(
+  ident: Ident | undefined,
+  label = "SmartCredit",
+): IntegrationFieldState {
   if (!ident) {
     return {
       state: "AWAITING_INTEGRATION",
@@ -89,13 +95,13 @@ function fieldFromStaffRecorded(ident: Ident | undefined): IntegrationFieldState
     return {
       state: "DEV_SAMPLE",
       value: ident.externalId,
-      detail: "Development sample — not live SmartCredit data",
+      detail: `Development sample — not live ${label} data`,
     };
   }
   return {
     state: "UNMATCHED",
     value: ident.externalId,
-    detail: "Staff-recorded on Grants master · no live SmartCredit API",
+    detail: `Staff-recorded on Grants master · no live ${label} API`,
   };
 }
 
@@ -114,6 +120,9 @@ export function buildClientDossierIntegrations(input: {
   const ghl = input.identifiers.find((i) => i.provider === "GHL");
   const df = input.identifiers.find((i) => i.provider === "DISPUTEFOX");
   const smartCredit = input.identifiers.find((i) => i.provider === "SMARTCREDIT");
+  const cloudTax = input.identifiers.find((i) => i.provider === "CLOUD_TAX_OFFICE");
+  const cognito = input.identifiers.find((i) => i.provider === "COGNITO");
+  const sbtpg = input.identifiers.find((i) => i.provider === "SBTPG");
 
   // Intake Status — OS stage is source of truth; GHL field key intake_status maps here.
   const stageLabel = (input.stage || "NEW_ENROLLMENT").replaceAll("_", " ");
@@ -205,7 +214,20 @@ export function buildClientDossierIntegrations(input: {
     grantsClientId: input.grantsClientId,
     ghlContactId: fieldFromIdentifier(ghl, ghlReady),
     disputeFoxClientId: fieldFromIdentifier(df, dfReady),
-    smartCreditClientId: fieldFromStaffRecorded(smartCredit),
+    smartCreditClientId: fieldFromStaffRecorded(smartCredit, "SmartCredit"),
+    cloudTaxOfficeId: fieldFromStaffRecorded(cloudTax, "Cloud Tax Office"),
+    cognitoEntryId: cognito
+      ? {
+          state: "UNMATCHED",
+          value: cognito.externalId,
+          detail: "Official Cognito Forms API · matched on Grants master",
+        }
+      : {
+          state: "AWAITING_INTEGRATION",
+          value: null,
+          detail: flags.cognitoApi ? "No matched Cognito entry yet" : "COGNITO_API_KEY required",
+        },
+    sbtpgId: fieldFromStaffRecorded(sbtpg, "SBTPG"),
     intakeStatus,
     credit,
     payments,

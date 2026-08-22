@@ -43,6 +43,9 @@ export function StaffShell({
         pathBase.startsWith("/escalations/")
       );
     }
+    if (base === "/tax") {
+      return pathBase === "/tax" || pathBase.startsWith("/tax/");
+    }
     return pathBase === base || pathBase.startsWith(`${base}/`);
   }
 

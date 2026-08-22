@@ -66,6 +66,13 @@ export default async function MorePage() {
             </p>
           </Link>
         )}
+        <Link href="/tax" className="gc-card hover:bg-white/[0.06] transition-colors">
+          <p className="gc-eyebrow mb-2">Tax</p>
+          <p className="text-xl display">Tax desks</p>
+          <p className="text-sm text-[var(--gc-muted)] mt-2">
+            Cloud Tax Office, Cognito submissions, and SBTPG payouts — native OS, not portal bookmarks.
+          </p>
+        </Link>
         <Link href="/credit-pulse" className="gc-card hover:bg-white/[0.06] transition-colors">
           <p className="gc-eyebrow mb-2">Credit</p>
           <p className="text-xl display">Friday Pulse</p>

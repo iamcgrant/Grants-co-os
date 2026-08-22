@@ -74,6 +74,8 @@ export function integrationCredentialStatus() {
     disputeFoxPortal: Boolean(getDisputeFoxPortalCredentials()),
     disputeFoxApi: isDisputeFoxLiveConfigured(),
     smartCreditSponsor: Boolean(process.env.SMARTCREDIT_SPONSOR_URL?.trim()),
+    cognitoApi: Boolean(process.env.COGNITO_API_KEY?.trim()),
+    commasApi: Boolean(process.env.COMMAS_API_KEY?.trim()),
     hints: {
       ghlPortal: getGhlPortalCredentials() ? null : requiredHint("GHL_LOGIN_EMAIL/PASSWORD"),
       ghlApi: ghlConfig?.apiKey ? null : requiredHint(GHL_API_KEY_ENV),

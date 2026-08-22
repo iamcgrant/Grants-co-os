@@ -11,6 +11,9 @@ import {
 } from "@/lib/clients/dossier";
 import { formatUsd } from "@/lib/payments/dashboard";
 import { ClientActions } from "@/components/clients/ClientActions";
+import { CreatePaymentRequestForm } from "@/components/pay/CreatePaymentRequestForm";
+import { commasHonestHealth } from "@/lib/payments/commas-config";
+import { getPaymentProvider } from "@/lib/payments/provider";
 import { ClientHandoffActions } from "@/components/clients/ClientHandoffActions";
 import { SyncGhlContactButton } from "@/components/integrations/SyncGhlContactButton";
 import { GhlClientDesk } from "@/components/inbox/GhlClientDesk";
@@ -96,6 +99,34 @@ export default async function Client360Page({
         orderBy: { createdAt: "desc" },
       })
     : [];
+  const paymentRequests = showFinance
+    ? await prisma.paymentRequest.findMany({
+        where: { clientId: client.id },
+        orderBy: { createdAt: "desc" },
+        take: 12,
+        include: { links: { take: 1, orderBy: { createdAt: "desc" } } },
+      })
+    : [];
+  const lastCommasWebhook = showFinance
+    ? await prisma.webhookEvent.findFirst({
+        where: { status: "PROCESSED", provider: "commas" },
+        orderBy: { processedAt: "desc" },
+        select: { processedAt: true },
+      })
+    : null;
+  const lastCommasCheckout = showFinance
+    ? await prisma.paymentLink.findFirst({
+        where: { provider: "commas", providerSessionId: { not: null } },
+        orderBy: { createdAt: "desc" },
+        select: { createdAt: true },
+      })
+    : null;
+  const commas = commasHonestHealth({
+    lastWebhookAt: lastCommasWebhook?.processedAt?.toISOString() || null,
+    lastCheckoutAt: lastCommasCheckout?.createdAt.toISOString() || null,
+    paymentProvider: getPaymentProvider().name,
+  });
+  const canPay = hasPermission(user.role, "MANAGE_PAYMENTS");
 
   const integrations = buildClientDossierIntegrations({
     grantsClientId: client.grantsClientId,
@@ -212,6 +243,11 @@ export default async function Client360Page({
               Internal thread
             </Link>
           )}
+          {canPay && showFinance ? (
+            <Link href={`${base}?tab=pay`} className="gc-btn gc-btn-gold">
+              Payment request
+            </Link>
+          ) : null}
           <ClientHandoffActions
             clientId={client.id}
             stage={client.stage}
@@ -247,6 +283,18 @@ export default async function Client360Page({
                 <div className="flex justify-between gap-2">
                   <span className="text-[var(--gc-muted)]">SmartCredit ID</span>
                   <IntegrationValue field={integrations.smartCreditClientId} />
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--gc-muted)]">Cloud Tax Office</span>
+                  <IntegrationValue field={integrations.cloudTaxOfficeId} />
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--gc-muted)]">Cognito entry</span>
+                  <IntegrationValue field={integrations.cognitoEntryId} />
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--gc-muted)]">SBTPG payout</span>
+                  <IntegrationValue field={integrations.sbtpgId} />
                 </div>
                 <div className="flex justify-between gap-2">
                   <span className="text-[var(--gc-muted)]">Intake Status</span>
@@ -414,6 +462,12 @@ export default async function Client360Page({
             <Link href={`/credit/smartcredit/${client.grantsClientId}`} className="gc-btn gc-btn-outline text-xs">
               SmartCredit OS workspace
             </Link>
+            <Link href={`/tax/cloud-tax-office/${client.grantsClientId}`} className="gc-btn gc-btn-outline text-xs">
+              Cloud Tax OS workspace
+            </Link>
+            <Link href={`/tax/sbtpg/${client.grantsClientId}`} className="gc-btn gc-btn-outline text-xs">
+              SBTPG OS workspace
+            </Link>
           </span>
         }>
           <div className="mb-3 text-sm">
@@ -530,6 +584,32 @@ export default async function Client360Page({
 
       {tab === "pay" && showFinance && (
         <div className="space-y-4">
+          {canPay ? (
+            <Panel title="Create payment request" eyebrow={`Commas · ${commas.status.replaceAll("_", " ")}`}>
+              <CreatePaymentRequestForm
+                lockedClientId={client.id}
+                lockedLabel={`${client.firstName} ${client.lastName} · ${client.grantsClientId}`}
+                commas={commas}
+              />
+            </Panel>
+          ) : null}
+          {paymentRequests.length > 0 ? (
+            <Panel title="Payment request links">
+              <div className="divide-y divide-[var(--gc-border)]">
+                {paymentRequests.map((pr) => (
+                  <div key={pr.id} className="py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2 text-sm">
+                    <div>
+                      <p className="font-medium">
+                        {pr.publicId} · {pr.status}
+                      </p>
+                      <p className="text-[var(--gc-muted)] break-all">{pr.links[0]?.url || "No link"}</p>
+                    </div>
+                    <span className="display">{formatUsd(pr.amountCents)}</span>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          ) : null}
           {integrations.payments.state === "AWAITING_INTEGRATION" && invoices.length === 0 && (
             <p className="text-sm text-[var(--gc-gold)]">Payment data · Awaiting Integration</p>
           )}

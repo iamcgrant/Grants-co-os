@@ -4,11 +4,14 @@ import { describe, expect, it } from "vitest";
 import {
   CREDIT_DISPUTES_NAV,
   ESCALATIONS_NAV,
+  TAX_NAV,
   getCreditDisputesNav,
   getDesktopNav,
   getEscalationsNav,
   getStaffNav,
+  getTaxNav,
   hasCreditDisputesNav,
+  hasTaxNav,
   navSectionLabel,
   type StaffRole,
 } from "@/lib/nav/role-nav";
@@ -44,6 +47,16 @@ describe("Credit & Disputes navigation", () => {
   it("labels Credit & Disputes and Escalations sections", () => {
     expect(navSectionLabel("credit")).toBe("Credit & Disputes");
     expect(navSectionLabel("escalations")).toBe("Escalations");
+    expect(navSectionLabel("tax")).toBe("Tax");
+  });
+
+  it("exposes Cloud Tax Office, Cognito, and SBTPG as native tax desks", () => {
+    expect(labels(getTaxNav())).toEqual(["Cloud Tax Office", "Cognito", "SBTPG"]);
+    expect(TAX_NAV.cloudTaxOffice.href).toBe("/tax/cloud-tax-office");
+    expect(TAX_NAV.cognito.href).toBe("/tax/cognito");
+    expect(TAX_NAV.sbtpg.href).toBe("/tax/sbtpg");
+    for (const role of CREDIT_ROLES) expect(hasTaxNav(role)).toBe(true);
+    for (const role of NON_CREDIT_ROLES) expect(hasTaxNav(role)).toBe(false);
   });
 
   it("role-gates credit nav like existing staff credit access", () => {
@@ -67,6 +80,9 @@ describe("Credit & Disputes navigation", () => {
       ]),
     );
     expect(nav.find((item) => item.label === "SmartCredit")?.href).toBe("/credit/smartcredit");
+    expect(nav.find((item) => item.label === "Cloud Tax Office")?.href).toBe("/tax/cloud-tax-office");
+    expect(nav.find((item) => item.label === "Cognito")?.href).toBe("/tax/cognito");
+    expect(nav.find((item) => item.label === "SBTPG")?.href).toBe("/tax/sbtpg");
   });
 
   it("keeps mobile bottom nav lean", () => {
@@ -94,6 +110,9 @@ describe("Credit & Disputes navigation", () => {
       "src/app/(staff)/credit/smartcredit/page.tsx",
       "src/app/(staff)/escalations/cfpb/page.tsx",
       "src/app/(staff)/credit/credit-karma/page.tsx",
+      "src/app/(staff)/tax/cloud-tax-office/page.tsx",
+      "src/app/(staff)/tax/cognito/page.tsx",
+      "src/app/(staff)/tax/sbtpg/page.tsx",
     ];
     for (const file of files) {
       const src = fs.readFileSync(path.join(process.cwd(), file), "utf8");
@@ -112,5 +131,12 @@ describe("Credit & Disputes navigation", () => {
     expect(sc).toMatch(/SmartCreditSessionForm/);
     const ck = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/credit-karma/page.tsx"), "utf8");
     expect(ck).toMatch(/Client-assisted/);
+    const tax = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/cloud-tax-office/page.tsx"), "utf8");
+    expect(tax).toMatch(/listTaxDeskBoard/);
+    expect(tax).toMatch(/TaxDeskAttachForm/);
+    const cognito = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/cognito/page.tsx"), "utf8");
+    expect(cognito).toMatch(/CognitoPullForm/);
+    const sbtpg = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/sbtpg/page.tsx"), "utf8");
+    expect(sbtpg).toMatch(/listTaxDeskBoard/);
   });
 });

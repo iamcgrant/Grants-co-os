@@ -46,6 +46,10 @@ First-time Owner password: `npm run owner:setup-link` with `OWNER_SETUP_BASE_URL
 | **GHL outbound** | Fail-closed until PIT has `conversations/message.write` |
 | **DisputeFox** | Native `/setup` intake primary |
 | **SmartCredit** | Native `/credit/smartcredit` workspace. Set `SMARTCREDIT_SPONSOR_URL=https://www.smartcredit.com/join/?pid=69411` in Vercel env (public join link, not hardcoded). Optional `SMARTCREDIT_API_KEY` + `SMARTCREDIT_API_PROBE_URL` if a partner API appears. CONNECTED only after a probe or recorded OS operation. |
+| **Cloud Tax Office** | Native `/tax/cloud-tax-office` desk. No supported list API. Official portal last-step only. No scrape. |
+| **Cognito Forms** | Native `/tax/cognito` submissions via official API. `COGNITO_API_KEY` in env, never commit. |
+| **SBTPG** | Native `/tax/sbtpg` refund/payout tracker. Official portal last-step only. No scrape. |
+| **Commas payment request** | Client 360 Pay tab creates/sends a payment request link. Honest health — key presence is never CONNECTED. |
 
 ## AUTOMATIONS
 

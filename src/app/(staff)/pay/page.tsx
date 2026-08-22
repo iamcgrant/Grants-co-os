@@ -7,7 +7,8 @@ import { prisma } from "@/lib/db/prisma";
 import { MetricTile, Panel } from "@/components/ui/density";
 import { getGcEnvironment } from "@/lib/integrations/env";
 import { CreatePaymentRequestForm } from "@/components/pay/CreatePaymentRequestForm";
-import { commasPublicStatus } from "@/lib/payments/commas-config";
+import { commasHonestHealth, commasPublicStatus } from "@/lib/payments/commas-config";
+import { getPaymentProvider } from "@/lib/payments/provider";
 
 export default async function GrantsPayPage({
   searchParams,
@@ -31,6 +32,21 @@ export default async function GrantsPayPage({
   const dataPlane = getGcEnvironment();
   const paymentProvider = process.env.PAYMENT_PROVIDER || "mock";
   const commas = commasPublicStatus();
+  const lastCommasWebhook = await prisma.webhookEvent.findFirst({
+    where: { status: "PROCESSED", provider: "commas" },
+    orderBy: { processedAt: "desc" },
+    select: { processedAt: true },
+  });
+  const lastCommasCheckout = await prisma.paymentLink.findFirst({
+    where: { provider: "commas", providerSessionId: { not: null } },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true },
+  });
+  const commasHealth = commasHonestHealth({
+    lastWebhookAt: lastCommasWebhook?.processedAt?.toISOString() || null,
+    lastCheckoutAt: lastCommasCheckout?.createdAt.toISOString() || null,
+    paymentProvider: getPaymentProvider().name,
+  });
 
   const paymentRequests = await prisma.paymentRequest.findMany({
     orderBy: { createdAt: "desc" },
@@ -96,7 +112,7 @@ export default async function GrantsPayPage({
 
       {hasPermission(user.role, "MANAGE_PAYMENTS") ? (
         <Panel title="Create payment request">
-          <CreatePaymentRequestForm />
+          <CreatePaymentRequestForm commas={commasHealth} />
         </Panel>
       ) : null}
 

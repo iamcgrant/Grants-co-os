@@ -101,4 +101,30 @@ describe("Client 360 dossier integrations", () => {
     expect(d.smartCreditClientId.value).toBe("sc_member_184");
     expect(d.smartCreditClientId.detail).toMatch(/no live SmartCredit API/);
   });
+
+  it("surfaces staff-recorded Cloud Tax and SBTPG ids without claiming a live API", () => {
+    const d = buildClientDossierIntegrations({
+      grantsClientId: "GC-000200",
+      identifiers: [
+        {
+          provider: "CLOUD_TAX_OFFICE",
+          externalId: "cto_return_200",
+          metadataJson: JSON.stringify({ source: "staff_recorded" }),
+        },
+        {
+          provider: "SBTPG",
+          externalId: "sbt_ref_200",
+          metadataJson: JSON.stringify({ source: "staff_recorded" }),
+        },
+      ],
+      hasCreditScores: false,
+      hasPaymentRecords: false,
+      creditConnectionStatuses: [],
+    });
+    expect(d.cloudTaxOfficeId.value).toBe("cto_return_200");
+    expect(d.cloudTaxOfficeId.detail).toMatch(/no live Cloud Tax Office API/);
+    expect(d.sbtpgId.value).toBe("sbt_ref_200");
+    expect(d.sbtpgId.detail).toMatch(/no live SBTPG API/);
+    expect(d.cognitoEntryId.state).toBe("AWAITING_INTEGRATION");
+  });
 });

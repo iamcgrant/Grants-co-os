@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db/prisma";
 import { getPaymentProvider } from "@/lib/payments/provider";
-import { commasPublicStatus, isCommasConfigured } from "@/lib/payments/commas-config";
+import { commasHonestHealth } from "@/lib/payments/commas-config";
+import { probeCloudTaxOfficeHealth, probeSbtpgHealth } from "@/lib/tax/health";
+import { probeCognitoHealth } from "@/lib/integrations/cognito/health";
 import { isGhlApiReady } from "@/lib/integrations/ghl/http";
 import { probeGhlSmsEmailPath, probeGhlVoiceHealth } from "@/lib/integrations/ghl/probes";
 import { probeTelegramTeam } from "@/lib/integrations/telegram/workspace";
@@ -78,7 +80,6 @@ export async function collectSystemHealth(): Promise<{
 }> {
   const now = new Date();
   const checkedAt = now.toISOString();
-  const commas = commasPublicStatus();
   const provider = getPaymentProvider();
   const ghlReady = isGhlApiReady();
   const engine = resolveDatabaseEngine();
@@ -97,6 +98,10 @@ export async function collectSystemHealth(): Promise<{
     lastPulse,
     disputeFoxProbe,
     smartCreditProbe,
+    cloudTaxProbe,
+    cognitoProbe,
+    sbtpgProbe,
+    lastCommasCheckout,
   ] = await Promise.all([
     prisma.webhookEvent.findFirst({
       where: { status: "PROCESSED" },
@@ -136,7 +141,23 @@ export async function collectSystemHealth(): Promise<{
     prisma.fridayPulseRun.findFirst({ orderBy: { createdAt: "desc" } }),
     probeDisputeFoxApi(),
     probeSmartCreditHealth(),
+    probeCloudTaxOfficeHealth(),
+    probeCognitoHealth(),
+    probeSbtpgHealth(),
+    prisma.paymentLink.findFirst({
+      where: { provider: "commas", providerSessionId: { not: null } },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    }),
   ]);
+  const commas = commasHonestHealth({
+    lastWebhookAt:
+      lastPaymentWebhook?.provider === "commas"
+        ? lastPaymentWebhook.processedAt?.toISOString() || null
+        : null,
+    lastCheckoutAt: lastCommasCheckout?.createdAt.toISOString() || null,
+    paymentProvider: provider.name,
+  });
 
   let databaseStatus: HealthStatus = "CONNECTED";
   let databaseDetail = databaseRespondingDetail(engine);
@@ -198,20 +219,9 @@ export async function collectSystemHealth(): Promise<{
     {
       component: "commas",
       label: "Commas (Grants Pay)",
-      status: !isCommasConfigured()
-        ? "ACTION_REQUIRED"
-        : commas.environment === "production" && !commas.liveChargesEnabled
-          ? "DEGRADED"
-          : provider.name === "commas"
-            ? "CONNECTED"
-            : "DEGRADED",
-      detail: !isCommasConfigured()
-        ? "COMMAS_API_KEY required — sandbox first"
-        : `Provider=${provider.name} · env=${commas.environment} · live=${commas.liveChargesEnabled ? "on" : "locked"}`,
-      lastSuccessAt:
-        lastPaymentWebhook?.provider === "commas"
-          ? lastPaymentWebhook.processedAt?.toISOString() || null
-          : null,
+      status: commas.status,
+      detail: commas.detail,
+      lastSuccessAt: commas.lastSuccessAt,
       lastCheckedAt: checkedAt,
     },
     { ...ghlAuth, lastCheckedAt: checkedAt },
@@ -223,6 +233,30 @@ export async function collectSystemHealth(): Promise<{
     { ...ghlWebhook, lastCheckedAt: checkedAt },
     { ...disputeFox, lastCheckedAt: checkedAt },
     { ...smartCredit, lastCheckedAt: checkedAt },
+    {
+      component: "cloud_tax_office",
+      label: "Cloud Tax Office",
+      status: cloudTaxProbe.status,
+      detail: cloudTaxProbe.detail,
+      lastSuccessAt: cloudTaxProbe.lastSuccessAt,
+      lastCheckedAt: checkedAt,
+    },
+    {
+      component: "cognito",
+      label: "Cognito Forms",
+      status: cognitoProbe.status,
+      detail: cognitoProbe.detail,
+      lastSuccessAt: cognitoProbe.lastSuccessAt,
+      lastCheckedAt: checkedAt,
+    },
+    {
+      component: "sbtpg",
+      label: "SBTPG payouts",
+      status: sbtpgProbe.status,
+      detail: sbtpgProbe.detail,
+      lastSuccessAt: sbtpgProbe.lastSuccessAt,
+      lastCheckedAt: checkedAt,
+    },
     {
       component: "credit_karma",
       label: "Credit Karma",
