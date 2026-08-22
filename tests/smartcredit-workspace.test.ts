@@ -89,7 +89,7 @@ describe("native SmartCredit workspace", () => {
 
   it("does not treat the official portal as the product UI", () => {
     const page = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/smartcredit/page.tsx"), "utf8");
-    expect(page).toMatch(/listSmartCreditBoard/);
+    expect(page).toMatch(/loadSmartCreditDeskSafe/);
     expect(page).toMatch(/SmartCreditAttachForm/);
     expect(page).toMatch(/SmartCreditSessionForm/);
     expect(page).toMatch(/Access denied/);

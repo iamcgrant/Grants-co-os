@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { hasPermission } from "@/lib/rbac/permissions";
-import { prisma } from "@/lib/db/prisma";
 import {
   DISPUTE_CASE_STATUSES,
   channelCatalog,
@@ -8,10 +7,35 @@ import {
   type DisputeCaseStatus,
   type DisputeChannel,
 } from "@/lib/disputes/channels";
-import { listCasesForChannel } from "@/lib/disputes/cases";
+import { loadChannelDeskSafe } from "@/lib/disputes/desk-load";
+import { CreditDeskUnavailable } from "@/components/disputes/CreditDeskUnavailable";
 import { NewCaseForm } from "@/components/disputes/NewCaseForm";
 import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
 import type { AuthUser } from "@/lib/auth/session";
+
+function itemCountOf(row: { items?: unknown }): number {
+  return Array.isArray(row.items) ? row.items.length : 0;
+}
+
+function checklistLabel(row: { checklist?: Array<{ done?: boolean }> | null }): string {
+  const list = Array.isArray(row.checklist) ? row.checklist : [];
+  return `${list.filter((item) => item.done).length}/${list.length}`;
+}
+
+function clientName(row: { client?: { firstName?: string | null; lastName?: string | null; grantsClientId?: string | null } | null }): string {
+  const client = row.client;
+  if (!client) return "Unknown client";
+  return `${client.firstName ?? ""} ${client.lastName ?? ""} · ${client.grantsClientId ?? ""}`.trim();
+}
+
+export async function renderChannelDeskSafe(channel: DisputeChannel, user: AuthUser) {
+  try {
+    return await ChannelCasesView({ channel, user });
+  } catch (error) {
+    console.error(`[${channel}] desk render failed`, error);
+    return <CreditDeskUnavailable channel={channel} />;
+  }
+}
 
 export async function ChannelCasesView({
   channel,
@@ -21,16 +45,11 @@ export async function ChannelCasesView({
   user: AuthUser;
 }) {
   const catalog = channelCatalog(channel);
-  const cases = await listCasesForChannel(channel);
-  const clients = await prisma.client.findMany({
-    orderBy: { lastName: "asc" },
-    take: 200,
-    select: { id: true, grantsClientId: true, firstName: true, lastName: true },
-  });
+  const { cases, clients, loadError } = await loadChannelDeskSafe(channel);
   const canManage = hasPermission(user.role, "MANAGE_CREDIT");
   const detailBase = catalog.href;
   const openCount = cases.filter((row) => row.status !== "CLOSED").length;
-  const itemCount = cases.reduce((sum, row) => sum + row.items.length, 0);
+  const itemCount = cases.reduce((sum, row) => sum + itemCountOf(row), 0);
   const readyCount = cases.filter((row) => row.status === "READY").length;
   const submittedCount = cases.filter((row) => row.status === "SUBMITTED" || row.status === "RESULTS").length;
 
@@ -56,7 +75,7 @@ export async function ChannelCasesView({
 
       {cases.length === 0 ? (
         <DeskEmptyState
-          detail={catalog.honesty}
+          detail={loadError ? `${catalog.honesty} ${loadError}` : catalog.honesty}
           nextAction={
             canManage
               ? "Open a case for a Grants client below. Official portal is a last submit step only — this desk does not scrape."
@@ -68,11 +87,7 @@ export async function ChannelCasesView({
 
       {canManage ? (
         <div className="mb-10">
-          <NewCaseForm
-            channel={channel}
-            clients={clients}
-            detailHref={(id) => `${detailBase}/${id}`}
-          />
+          <NewCaseForm channel={channel} clients={clients} />
         </div>
       ) : null}
 
@@ -90,12 +105,9 @@ export async function ChannelCasesView({
                 rows.map((row) => (
                   <Link key={row.id} href={`${detailBase}/${row.id}`} className="py-4 flex justify-between gap-4">
                     <div>
-                      <p className="font-medium">
-                        {row.client.firstName} {row.client.lastName} · {row.client.grantsClientId}
-                      </p>
+                      <p className="font-medium">{clientName(row)}</p>
                       <p className="text-sm text-[var(--gc-muted)]">
-                        {row.title} · {row.items.length} items · checklist{" "}
-                        {row.checklist.filter((c) => c.done).length}/{row.checklist.length}
+                        {row.title} · {itemCountOf(row)} items · checklist {checklistLabel(row)}
                         {row.outcome ? ` · ${row.outcome}` : ""}
                       </p>
                     </div>

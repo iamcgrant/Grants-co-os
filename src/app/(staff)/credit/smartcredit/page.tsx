@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { hasPermission } from "@/lib/rbac/permissions";
-import { prisma } from "@/lib/db/prisma";
 import { requireCreditStaff } from "@/lib/disputes/access";
-import { listSmartCreditBoard } from "@/lib/credit/smartcredit-workspace";
-import { probeSmartCreditHealth } from "@/lib/credit/smartcredit-health";
+import { loadSmartCreditDeskSafe } from "@/lib/disputes/desk-load";
 import { DISPUTE_CASE_STATUSES, channelCatalog, statusLabel } from "@/lib/disputes/channels";
 import { NewCaseForm } from "@/components/disputes/NewCaseForm";
 import { SmartCreditAttachForm } from "@/components/credit/SmartCreditAttachForm";
@@ -15,15 +13,7 @@ export default async function SmartCreditWorkspacePage() {
   if (denied || !user) return <p>Access denied.</p>;
 
   const catalog = channelCatalog("SMARTCREDIT");
-  const [board, probe, clients] = await Promise.all([
-    listSmartCreditBoard(),
-    probeSmartCreditHealth(),
-    prisma.client.findMany({
-      orderBy: { lastName: "asc" },
-      take: 200,
-      select: { id: true, grantsClientId: true, firstName: true, lastName: true },
-    }),
-  ]);
+  const { board, probe, clients, loadError } = await loadSmartCreditDeskSafe();
   const canManage = hasPermission(user.role, "MANAGE_CREDIT");
   const openCases = board.filter((row) => row.case && row.case.status !== "CLOSED");
   const itemCount = board.reduce((sum, row) => sum + (row.case?.items.length ?? 0), 0);
@@ -62,7 +52,7 @@ export default async function SmartCreditWorkspacePage() {
 
       {board.length === 0 ? (
         <DeskEmptyState
-          detail={catalog.honesty}
+          detail={loadError ? `${catalog.honesty} ${loadError}` : catalog.honesty}
           nextAction="Attach a Grants client, record a session, or open a SmartCredit case. No scrape."
           loginUrl={catalog.officialSubmitUrl}
         />
@@ -73,11 +63,7 @@ export default async function SmartCreditWorkspacePage() {
           <SmartCreditAttachForm clients={clients} />
           <SmartCreditSessionForm clients={clients} />
           <div className="lg:col-span-2">
-            <NewCaseForm
-              channel="SMARTCREDIT"
-              clients={clients}
-              detailHref={(id) => `/credit/smartcredit/case/${id}`}
-            />
+            <NewCaseForm channel="SMARTCREDIT" clients={clients} />
           </div>
         </div>
       ) : (

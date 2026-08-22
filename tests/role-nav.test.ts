@@ -232,10 +232,10 @@ describe("Credit & Disputes navigation", () => {
     }
     const df = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/disputefox/page.tsx"), "utf8");
     expect(df).toMatch(/Clients/);
-    expect(df).toMatch(/listDisputeFoxBoard/);
+    expect(df).toMatch(/loadDisputeFoxDeskSafe/);
     const sc = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/smartcredit/page.tsx"), "utf8");
     expect(sc).toMatch(/Clients/);
-    expect(sc).toMatch(/listSmartCreditBoard/);
+    expect(sc).toMatch(/loadSmartCreditDeskSafe/);
     expect(sc).toMatch(/SmartCreditAttachForm/);
     expect(sc).toMatch(/SmartCreditSessionForm/);
     const ck = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/credit-karma/page.tsx"), "utf8");
