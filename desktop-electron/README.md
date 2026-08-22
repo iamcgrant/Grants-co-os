@@ -14,13 +14,16 @@ Each of the following loads in its **own** unprivileged `WebContentsView` (not a
 
 | Desk | Official start URL | Exact allowlisted host | Partition |
 |------|--------------------|------------------------|-----------|
-| OS Home | `https://os.grantandconsultants.com/` | `os.grantandconsultants.com` | `persist:gc-os` |
-| GHL | `https://app.gohighlevel.com/` | `app.gohighlevel.com` | `persist:gc-ghl` |
+| Home | `https://os.grantandconsultants.com/login?gc_shell=app` | `os.grantandconsultants.com` | `persist:gc-os` |
+| GHL | `https://app.gohighlevel.com/` | `app.gohighlevel.com`, `accounts.google.com` | `persist:gc-ghl` |
 | Telegram | `https://web.telegram.org/a/` | `web.telegram.org` | `persist:gc-telegram` |
 | Experian | `https://www.experian.com/consumer/upload/` | `www.experian.com` | `persist:gc-experian` |
 | Equifax | `https://www.equifax.com/personal/credit-report-services/credit-dispute` | `www.equifax.com` | `persist:gc-equifax` |
 | DisputeFox | `https://pulse.disputeprocess.com/jsp/client/login.jsp` | `pulse.disputeprocess.com` | `persist:gc-disputefox` |
 | Cloud Tax | `https://grantandco.cloudtaxoffice.com/proavalon/` | `grantandco.cloudtaxoffice.com` | `persist:gc-cloud-tax` |
+| CFPB | `https://www.consumerfinance.gov/complaint/` | `www.consumerfinance.gov` | `persist:gc-cfpb` |
+
+Owner-only ninth desk: **Messages** (local trusted renderer + signed helper, never a website). Visible only with a server-signed owner entitlement. See `docs/IMESSAGE.md`. Build helper with `npm run helper:fetch` then `npm run helper:build` on the owner Mac.
 
 See `docs/ALLOWLIST.md` for the matching rules. See `docs/TEST-CRITERIA.md` for the empty compatibility matrix.
 

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'"
+    />
+    <title>Messages</title>
+    <link rel="stylesheet" href="./messages.css" />
+  </head>
+  <body>
+    <div id="app" class="app">
+      <section id="unavailable" class="setup" hidden>
+        <p class="eyebrow">Grant &amp; Co OS</p>
+        <h1>Messages</h1>
+        <p class="lede">
+          This desk talks to the Messages app already signed in on the owner Mac. It is not available
+          on this computer.
+        </p>
+        <p id="unavailable-status" class="status"></p>
+      </section>
+
+      <section id="setup" class="setup" hidden>
+        <p class="eyebrow">Grant &amp; Co OS</p>
+        <h1>Allow Messages on this Mac</h1>
+        <p class="lede">
+          One-time macOS permissions. Grant &amp; Co OS does not ask for your Apple ID, password, or
+          MFA. It uses the Messages account already signed in on this Mac.
+        </p>
+        <p id="setup-status" class="status">Checking this Mac…</p>
+        <ul class="panes">
+          <li>
+            <div>
+              <strong>Messages Data / Full Disk Access</strong>
+              <span>Lets Grant &amp; Co OS read the local Messages database on this Mac.</span>
+            </div>
+            <button type="button" data-pane="messages-data">Open System Settings</button>
+          </li>
+          <li>
+            <div>
+              <strong>Accessibility</strong>
+              <span>Required for the local helper to drive Messages.app.</span>
+            </div>
+            <button type="button" data-pane="accessibility">Open System Settings</button>
+          </li>
+          <li>
+            <div>
+              <strong>Automation for Messages</strong>
+              <span>Allows sending and selecting chats in the already-signed-in Messages app.</span>
+            </div>
+            <button type="button" data-pane="automation">Open System Settings</button>
+          </li>
+          <li>
+            <div>
+              <strong>Contacts</strong>
+              <span>Shows names you already have in Contacts instead of raw handles.</span>
+            </div>
+            <button type="button" data-pane="contacts">Open System Settings</button>
+          </li>
+        </ul>
+        <div class="actions">
+          <button type="button" id="btn-recheck">I’ve finished in System Settings</button>
+          <button type="button" id="btn-open-messages">Open Apple Messages</button>
+        </div>
+      </section>
+
+      <section id="inbox" class="inbox" hidden>
+        <aside>
+          <header>
+            <strong>Messages</strong>
+            <button type="button" id="btn-disconnect">Disconnect</button>
+          </header>
+          <input id="search" type="search" placeholder="Search" autocomplete="off" />
+          <nav id="conversations"></nav>
+        </aside>
+        <section class="thread">
+          <header>
+            <strong id="thread-title">Select a conversation</strong>
+            <button type="button" id="btn-open-thread">Open Apple Messages</button>
+          </header>
+          <div id="thread-body" class="thread-body"></div>
+          <form id="composer">
+            <input id="compose-text" type="text" maxlength="8000" placeholder="Message" autocomplete="off" />
+            <button type="button" id="btn-attach">Attach</button>
+            <button type="submit">Send</button>
+          </form>
+        </section>
+      </section>
+    </div>
+    <script src="./messages.js"></script>
+  </body>
+</html>

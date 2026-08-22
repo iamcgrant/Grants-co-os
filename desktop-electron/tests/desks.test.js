@@ -4,8 +4,8 @@ const { describe, it } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
-const { DESKS, deskById } = require("../src/main/desks");
-const { unprivilegedWebPreferences, chromeWebPreferences } = require("../src/main/security");
+const { DESKS, MESSAGES_DESK, deskById, visibleDesks } = require("../src/main/desks");
+const { unprivilegedWebPreferences, chromeWebPreferences, messagesWebPreferences } = require("../src/main/security");
 
 const EXPECTED = [
   ["os", "Home", "https://os.grantandconsultants.com/login?gc_shell=app", "persist:gc-os", ["os.grantandconsultants.com"]],
@@ -50,6 +50,19 @@ describe("locked 8-desk sidebar", () => {
     assert.equal(Object.prototype.hasOwnProperty.call(exported, "OWNER_NAV"), false);
     assert.equal(Object.prototype.hasOwnProperty.call(exported, "OFFICIAL"), false);
   });
+
+  it("shows 8 desks for non-owners and Messages as the 9th for owners", () => {
+    assert.equal(visibleDesks(false).length, 8);
+    assert.equal(visibleDesks(true).length, 9);
+    assert.equal(visibleDesks(false).some((desk) => desk.id === "messages"), false);
+    assert.equal(visibleDesks(true).at(-1).id, "messages");
+    assert.equal(visibleDesks(true).at(-1).title, "Messages");
+    assert.equal(MESSAGES_DESK.kind, "local-trusted");
+    assert.equal(MESSAGES_DESK.startUrl, undefined);
+    assert.equal(DESKS.some((desk) => desk.id === "messages"), false);
+    assert.equal(deskById("messages"), null);
+    assert.equal(deskById("messages", visibleDesks(true))?.id, "messages");
+  });
 });
 
 describe("renderer privileges", () => {
@@ -59,6 +72,15 @@ describe("renderer privileges", () => {
     assert.equal(prefs.contextIsolation, true);
     assert.equal(prefs.sandbox, true);
     assert.equal(Object.prototype.hasOwnProperty.call(prefs, "preload"), false);
+  });
+
+  it("never gives vendor or OS views the Messages preload", () => {
+    const vendor = unprivilegedWebPreferences("persist:gc-os");
+    assert.equal(Object.prototype.hasOwnProperty.call(vendor, "preload"), false);
+    const messages = messagesWebPreferences("/tmp/messages-preload.js");
+    assert.equal(messages.preload, "/tmp/messages-preload.js");
+    assert.equal(messages.partition, "gc-messages-local");
+    assert.notEqual(messages.partition, vendor.partition);
   });
 
   it("keeps chrome sandboxed and isolated even with a chrome-only preload", () => {
@@ -83,6 +105,8 @@ describe("desktop chrome invariants", () => {
     assert.doesNotMatch(html, /url-bar|address bar/i);
     assert.doesNotMatch(html, /spike|prototype|Electron/i);
     assert.match(html, /Grant &amp; Co OS/);
+    assert.match(html, /id="build-id"/);
+    assert.match(html, /Build 0822-/);
   });
 
   it("does not implement a grantscoos return or cookie export", () => {
@@ -96,5 +120,24 @@ describe("desktop chrome invariants", () => {
     assert.doesNotMatch(main, /Electron spike|prototype/i);
     assert.match(main, /officialAttempted/);
     assert.match(main, /did-fail-load/);
+  });
+
+  it("ships Grant & Co OS production package identity", () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+    assert.equal(pkg.name, "grant-co-os");
+    assert.equal(pkg.version, "1.0.0");
+    assert.equal(pkg.description, "Grant & Co OS desktop for Grant & Co Consultants");
+    assert.equal(pkg.build.appId, "com.grantandconsultants.os");
+    assert.equal(pkg.build.productName, "Grant & Co OS");
+    assert.equal(pkg.build.copyright, "Grant & Co Consultants");
+    assert.equal(pkg.build.mac.identity, null);
+    assert.equal(pkg.build.mac.hardenedRuntime, true);
+    assert.equal(pkg.build.mac.artifactName, "Grant-and-Co-OS-Mac.${ext}");
+    assert.equal(pkg.build.mac.extendInfo.CFBundleIdentifier, "com.grantandconsultants.os");
+    assert.match(pkg.scripts["build:mac"], /electron-builder --mac dir --arm64/);
+    assert.match(pkg.scripts["dist:mac"], /electron-builder --mac dmg --arm64/);
+    assert.ok(pkg.scripts["helper:fetch"]);
+    assert.ok(pkg.scripts["helper:build"]);
+    assert.doesNotMatch(JSON.stringify(pkg), /spike|prototype|DISPOSABLE|electron-spike/i);
   });
 });

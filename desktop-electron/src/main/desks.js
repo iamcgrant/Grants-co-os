@@ -1,8 +1,10 @@
 "use strict";
 
-/** @typedef {{ id: string, title: string, startUrl: string, partition: string, allowedHosts: readonly string[], kind: "os" | "vendor" }} Desk */
+/**
+ * @typedef {{ id: string, title: string, startUrl?: string, partition?: string, allowedHosts?: readonly string[], kind: "os" | "vendor" | "local-trusted" }} Desk
+ */
 
-/** Exactly 8 desks. Chrome sidebar renders this array only. */
+/** Exactly 8 website desks. Chrome renders this array, plus Messages when entitled. */
 const DESKS = Object.freeze([
   Object.freeze({
     id: "os",
@@ -70,8 +72,18 @@ const DESKS = Object.freeze([
   }),
 ]);
 
-function deskById(id) {
-  return DESKS.find((desk) => desk.id === id) ?? null;
+const MESSAGES_DESK = Object.freeze({
+  id: "messages",
+  title: "Messages",
+  kind: "local-trusted",
+});
+
+function deskById(id, desks = DESKS) {
+  return desks.find((desk) => desk.id === id) ?? null;
 }
 
-module.exports = { DESKS, deskById };
+function visibleDesks(messagesVisible) {
+  return messagesVisible ? [...DESKS, MESSAGES_DESK] : [...DESKS];
+}
+
+module.exports = { DESKS, MESSAGES_DESK, deskById, visibleDesks };

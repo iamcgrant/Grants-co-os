@@ -55,6 +55,8 @@ button:not(:disabled):hover {
   border-right: 1px solid var(--line);
   padding: 18px 16px;
   overflow: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .eyebrow {
@@ -76,6 +78,15 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  flex: 1;
+}
+
+.build-id {
+  margin: 18px 4px 0;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 10px;
 }
 
 .nav-section {
