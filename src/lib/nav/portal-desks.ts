@@ -42,19 +42,38 @@ export type PortalDeskDef = {
 
 /**
  * Hosts observed to send X-Frame-Options and/or CSP frame-ancestors that
- * refuse a third-party iframe. Documented so the desk uses the in-OS stage
- * instead of a blank frame or a Safari tab.
+ * refuse a third-party iframe. Documented so the desk uses the in-OS luxury
+ * stage instead of a blank broken-embed icon or a vendor navigation.
+ *
+ * Investigated 2026-08-22 — no official embed/partner login URL exists for
+ * these products. GHL Marketplace Custom Pages embed *your* app inside GHL,
+ * not GHL inside OS. Telegram Login Widget is OAuth only, not Telegram Web.
+ * Experian upload and Equifax dispute send frame-ancestors none/'self'.
+ * vercel.json rewrites is empty; src/proxy.ts only stamps x-gc-pathname.
+ * Do not invent a scrape / cookie-forwarding reverse proxy.
+ *
+ * Cloud Tax Office is not listed: owner production click-test after PR 41
+ * showed the ProAvalon login in the desk iframe. Bot fetches may hit a
+ * Cloudflare challenge page that sends X-Frame-Options; the staff browser does not.
  */
 export const HOSTS_THAT_REFUSE_EMBED = [
   { host: "app.gohighlevel.com", header: "X-Frame-Options: SAMEORIGIN" },
   { host: "www.experian.com", header: "X-Frame-Options: deny; CSP frame-ancestors 'none'" },
   { host: "web.telegram.org", header: "X-Frame-Options: deny" },
-  { host: "grantandco.cloudtaxoffice.com", header: "X-Frame-Options: SAMEORIGIN" },
   { host: "www.equifax.com", header: "X-Frame-Options: SAMEORIGIN; CSP frame-ancestors 'self'" },
   { host: "www.transunion.com", header: "X-Frame-Options: SAMEORIGIN" },
   { host: "www.consumerfinance.gov", header: "X-Frame-Options: SAMEORIGIN" },
   { host: "mail.google.com", header: "X-Frame-Options: DENY / CSP frame-ancestors 'self'" },
 ] as const;
+
+/** Honest notes for desks that cannot show the vendor login form in-frame. */
+export const PORTAL_EMBED_INVESTIGATION = {
+  ghl: "app.gohighlevel.com sends X-Frame-Options: SAMEORIGIN. No official partner login URL.",
+  telegram: "web.telegram.org/a and /k send X-Frame-Options: deny. Login Widget is not Telegram Web.",
+  experian: "www.experian.com/consumer/upload sends X-Frame-Options: deny and CSP frame-ancestors 'none'.",
+  equifax: "www.equifax.com dispute center sends X-Frame-Options: SAMEORIGIN and CSP frame-ancestors 'self'.",
+  proxy: "No cookie-safe TOS-safe vendor reverse proxy exists in this repo.",
+} as const;
 
 export const PORTAL_DESKS: readonly PortalDeskDef[] = [
   {
@@ -139,7 +158,7 @@ export const PORTAL_DESKS: readonly PortalDeskDef[] = [
     title: "Cloud Tax Office",
     osHref: "/tax/cloud-tax-office",
     officialUrl: OFFICIAL_CLOUD_TAX_OFFICE_URL,
-    embed: "refused",
+    embed: "try",
   },
 ];
 
@@ -161,6 +180,11 @@ export function hostRefusesEmbed(officialUrl: string): boolean {
 
 export function portalEmbedPolicy(officialUrl: string): PortalEmbedPolicy {
   return hostRefusesEmbed(officialUrl) ? "refused" : "try";
+}
+
+/** True only when this desk may load the official login in an iframe. */
+export function portalDeskCanEmbed(desk: PortalDeskDef): boolean {
+  return desk.embed === "try" && !hostRefusesEmbed(desk.officialUrl);
 }
 
 /** Match `/inbox` vs `/inbox?tab=ghl` so each sidebar click has its own desk. */

@@ -25,5 +25,7 @@ describe("stay signed in", () => {
     expect(desk).not.toMatch(/target="_blank"|target="_self"/);
     expect(desk).not.toMatch(/window\.location|location\.assign/);
     expect(desk).not.toMatch(/refuses an in-desk embed/);
+    expect(desk).not.toMatch(/PortalContinue|data-portal-continue/);
+    expect(desk).toMatch(/portalDeskCanEmbed|data-embed-policy/);
   });
 });
