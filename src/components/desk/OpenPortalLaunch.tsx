@@ -5,7 +5,7 @@ import { useEffect } from "react";
 /**
  * Primary official-portal control. Sidebar click is the staff path; this
  * button auto-opens the same https URL on first visit to a native desk.
- * Never iframe. Sites set X-Frame-Options.
+ * New tab only — do not embed vendor sites.
  */
 export function OpenPortalLaunch({
   href,

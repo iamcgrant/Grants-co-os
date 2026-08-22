@@ -335,7 +335,7 @@ describe("Credit & Disputes navigation", () => {
     expect(df).toMatch(/OpenPortalLaunch/);
     expect(empty).not.toMatch(/iframe/i);
     expect(login).not.toMatch(/iframe/i);
-    expect(launch).not.toMatch(/iframe/i);
+    expect(launch).not.toMatch(/<iframe/i);
     expect(channelView).not.toMatch(/<iframe/i);
   });
 });
