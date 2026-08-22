@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { hasPermission } from "@/lib/rbac/permissions";
-import { prisma } from "@/lib/db/prisma";
 import { requireCreditStaff } from "@/lib/disputes/access";
-import { listDisputeFoxBoard } from "@/lib/disputes/cases";
+import { loadDisputeFoxDeskSafe } from "@/lib/disputes/desk-load";
 import { DISPUTE_CASE_STATUSES, channelCatalog, statusLabel } from "@/lib/disputes/channels";
-import { probeDisputeFoxApi } from "@/lib/integrations/disputefox/probe";
 import { NewCaseForm } from "@/components/disputes/NewCaseForm";
 import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
 
@@ -13,15 +11,7 @@ export default async function DisputeFoxWorkspacePage() {
   if (denied || !user) return <p>Access denied.</p>;
 
   const catalog = channelCatalog("DISPUTEFOX");
-  const [board, probe, clients] = await Promise.all([
-    listDisputeFoxBoard(),
-    probeDisputeFoxApi(),
-    prisma.client.findMany({
-      orderBy: { lastName: "asc" },
-      take: 200,
-      select: { id: true, grantsClientId: true, firstName: true, lastName: true },
-    }),
-  ]);
+  const { board, probe, clients, loadError } = await loadDisputeFoxDeskSafe();
   const canManage = hasPermission(user.role, "MANAGE_CREDIT");
   const openCases = board.filter((row) => row.case && row.case.status !== "CLOSED");
   const itemCount = board.reduce((sum, row) => sum + (row.case?.items.length ?? 0), 0);
@@ -55,7 +45,7 @@ export default async function DisputeFoxWorkspacePage() {
 
       {board.length === 0 ? (
         <DeskEmptyState
-          detail={catalog.honesty}
+          detail={loadError ? `${catalog.honesty} ${loadError}` : catalog.honesty}
           nextAction="Open a DisputeFox case for a Grants client. Live list/get stays off. No scrape."
           loginUrl={catalog.officialSubmitUrl}
         />
@@ -63,11 +53,7 @@ export default async function DisputeFoxWorkspacePage() {
 
       {canManage ? (
         <div className="mb-10">
-          <NewCaseForm
-            channel="DISPUTEFOX"
-            clients={clients}
-            detailHref={(id) => `/credit/disputefox/case/${id}`}
-          />
+          <NewCaseForm channel="DISPUTEFOX" clients={clients} />
         </div>
       ) : null}
 

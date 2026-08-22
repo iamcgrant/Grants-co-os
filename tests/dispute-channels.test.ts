@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DISPUTE_CHANNELS, nextDisputeStatus, type DisputeChannel } from "@/lib/disputes/channels";
+import { caseDetailHref, DISPUTE_CHANNELS, nextDisputeStatus, type DisputeChannel } from "@/lib/disputes/channels";
 
 describe("official bureau / CFPB / DisputeFox catalog", () => {
   const channels = Object.keys(DISPUTE_CHANNELS) as DisputeChannel[];
@@ -30,6 +30,16 @@ describe("official bureau / CFPB / DisputeFox catalog", () => {
     expect(DISPUTE_CHANNELS.SMARTCREDIT.hasOfficialSubmitApi).toBe(false);
     expect(DISPUTE_CHANNELS.SMARTCREDIT.officialSubmitUrl).toMatch(/smartcredit\.com/);
     expect(DISPUTE_CHANNELS.SMARTCREDIT.href).toBe("/credit/smartcredit");
+  });
+
+  it("keeps case detail hrefs serializable and channel-specific", () => {
+    expect(caseDetailHref("EXPERIAN", "case_1")).toBe("/credit/experian/case_1");
+    expect(caseDetailHref("EQUIFAX", "case_1")).toBe("/credit/equifax/case_1");
+    expect(caseDetailHref("TRANSUNION", "case_1")).toBe("/credit/transunion/case_1");
+    expect(caseDetailHref("INNOVIS", "case_1")).toBe("/credit/innovis/case_1");
+    expect(caseDetailHref("CFPB", "case_1")).toBe("/escalations/cfpb/case_1");
+    expect(caseDetailHref("DISPUTEFOX", "case_1")).toBe("/credit/disputefox/case/case_1");
+    expect(caseDetailHref("SMARTCREDIT", "case_1")).toBe("/credit/smartcredit/case/case_1");
   });
 
   it("advances intake through closed", () => {

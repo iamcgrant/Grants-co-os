@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { hasPermission } from "@/lib/rbac/permissions";
-import { prisma } from "@/lib/db/prisma";
 import {
   DISPUTE_CASE_STATUSES,
   channelCatalog,
@@ -8,7 +7,7 @@ import {
   type DisputeCaseStatus,
   type DisputeChannel,
 } from "@/lib/disputes/channels";
-import { listCasesForChannel } from "@/lib/disputes/cases";
+import { loadChannelDeskSafe } from "@/lib/disputes/desk-load";
 import { NewCaseForm } from "@/components/disputes/NewCaseForm";
 import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
 import type { AuthUser } from "@/lib/auth/session";
@@ -21,12 +20,7 @@ export async function ChannelCasesView({
   user: AuthUser;
 }) {
   const catalog = channelCatalog(channel);
-  const cases = await listCasesForChannel(channel);
-  const clients = await prisma.client.findMany({
-    orderBy: { lastName: "asc" },
-    take: 200,
-    select: { id: true, grantsClientId: true, firstName: true, lastName: true },
-  });
+  const { cases, clients, loadError } = await loadChannelDeskSafe(channel);
   const canManage = hasPermission(user.role, "MANAGE_CREDIT");
   const detailBase = catalog.href;
   const openCount = cases.filter((row) => row.status !== "CLOSED").length;
@@ -56,7 +50,7 @@ export async function ChannelCasesView({
 
       {cases.length === 0 ? (
         <DeskEmptyState
-          detail={catalog.honesty}
+          detail={loadError ? `${catalog.honesty} ${loadError}` : catalog.honesty}
           nextAction={
             canManage
               ? "Open a case for a Grants client below. Official portal is a last submit step only — this desk does not scrape."
@@ -68,11 +62,7 @@ export async function ChannelCasesView({
 
       {canManage ? (
         <div className="mb-10">
-          <NewCaseForm
-            channel={channel}
-            clients={clients}
-            detailHref={(id) => `${detailBase}/${id}`}
-          />
+          <NewCaseForm channel={channel} clients={clients} />
         </div>
       ) : null}
 

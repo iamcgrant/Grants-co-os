@@ -2,16 +2,14 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { DisputeChannel } from "@/lib/disputes/channels";
+import { caseDetailHref, type DisputeChannel } from "@/lib/disputes/channels";
 
 export function NewCaseForm({
   channel,
   clients,
-  detailHref,
 }: {
   channel: DisputeChannel;
   clients: Array<{ id: string; grantsClientId: string; firstName: string; lastName: string }>;
-  detailHref: (caseId: string) => string;
 }) {
   const router = useRouter();
   const [clientId, setClientId] = useState(clients[0]?.id || "");
@@ -31,7 +29,7 @@ export function NewCaseForm({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not open case");
-      router.push(detailHref(data.case.id));
+      router.push(caseDetailHref(channel, data.case.id));
       router.refresh();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Could not open case");
