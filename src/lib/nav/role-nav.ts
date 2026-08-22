@@ -7,14 +7,82 @@ export type StaffRole =
   | "MARKETING"
   | "CLIENT";
 
+export type NavGroup = "primary" | "ops" | "finance" | "system" | "credit" | "escalations";
+
 export type NavItem = {
   href: string;
   label: string;
   short?: string;
-  group?: "primary" | "ops" | "finance" | "system";
+  group?: NavGroup;
 };
 
-/** Mobile bottom nav — keep lean */
+/** Credit & Disputes destinations — wire existing surfaces; shells only for later portals. */
+export const CREDIT_DISPUTES_NAV = {
+  hub: { href: "/credit", label: "Credit & Disputes", short: "Credit" },
+  disputeFox: { href: "/credit/disputefox", label: "DisputeFox" },
+  experian: { href: "/credit/experian", label: "Experian" },
+  smartCredit: { href: "/credit-pulse", label: "SmartCredit" },
+  creditKarma: { href: "/credit/credit-karma", label: "Credit Karma" },
+} as const;
+
+export const ESCALATIONS_NAV = {
+  cfpb: { href: "/escalations/cfpb", label: "CFPB" },
+} as const;
+
+export function hasCreditDisputesNav(role: StaffRole): boolean {
+  switch (role) {
+    case "OWNER":
+    case "ADMIN":
+    case "CUSTOMER_SERVICE":
+    case "FILE_PREPARER":
+      return true;
+    case "MANAGER":
+    case "MARKETING":
+    case "CLIENT":
+      return false;
+    default: {
+      const _exhaustive: never = role;
+      return _exhaustive;
+    }
+  }
+}
+
+export function getCreditDisputesNav(): NavItem[] {
+  return [
+    { href: CREDIT_DISPUTES_NAV.disputeFox.href, label: CREDIT_DISPUTES_NAV.disputeFox.label, group: "credit" },
+    { href: CREDIT_DISPUTES_NAV.experian.href, label: CREDIT_DISPUTES_NAV.experian.label, group: "credit" },
+    { href: CREDIT_DISPUTES_NAV.smartCredit.href, label: CREDIT_DISPUTES_NAV.smartCredit.label, group: "credit" },
+    { href: CREDIT_DISPUTES_NAV.creditKarma.href, label: CREDIT_DISPUTES_NAV.creditKarma.label, group: "credit" },
+  ];
+}
+
+export function getEscalationsNav(): NavItem[] {
+  return [{ href: ESCALATIONS_NAV.cfpb.href, label: ESCALATIONS_NAV.cfpb.label, group: "escalations" }];
+}
+
+export function navSectionLabel(group: NavGroup | undefined): string | null {
+  switch (group) {
+    case undefined:
+    case "primary":
+      return null;
+    case "ops":
+      return "Operations";
+    case "finance":
+      return "Finance";
+    case "system":
+      return "System";
+    case "credit":
+      return "Credit & Disputes";
+    case "escalations":
+      return "Escalations";
+    default: {
+      const _exhaustive: never = group;
+      return _exhaustive;
+    }
+  }
+}
+
+/** Mobile bottom nav — keep lean; Credit opens the Credit & Disputes hub. */
 export function getStaffNav(role: StaffRole): NavItem[] {
   switch (role) {
     case "OWNER":
@@ -24,7 +92,7 @@ export function getStaffNav(role: StaffRole): NavItem[] {
         { href: "/clients", label: "Clients", short: "Clients" },
         { href: "/inbox", label: "Inbox", short: "Inbox" },
         { href: "/work", label: "Work", short: "Work" },
-        { href: "/credit-pulse", label: "Credit", short: "Credit" },
+        { href: CREDIT_DISPUTES_NAV.hub.href, label: CREDIT_DISPUTES_NAV.hub.label, short: CREDIT_DISPUTES_NAV.hub.short },
         { href: "/pay", label: "Pay", short: "Pay" },
         { href: "/agents", label: "Agents", short: "Agents" },
         { href: "/more", label: "More", short: "More" },
@@ -35,7 +103,7 @@ export function getStaffNav(role: StaffRole): NavItem[] {
         { href: "/clients", label: "Clients", short: "Clients" },
         { href: "/inbox", label: "Inbox", short: "Inbox" },
         { href: "/work", label: "Care", short: "Care" },
-        { href: "/credit-pulse", label: "Credit", short: "Credit" },
+        { href: CREDIT_DISPUTES_NAV.hub.href, label: CREDIT_DISPUTES_NAV.hub.label, short: CREDIT_DISPUTES_NAV.hub.short },
         { href: "/more", label: "More", short: "More" },
       ];
     case "FILE_PREPARER":
@@ -44,16 +112,22 @@ export function getStaffNav(role: StaffRole): NavItem[] {
         { href: "/clients", label: "Clients", short: "Clients" },
         { href: "/inbox", label: "Inbox", short: "Inbox" },
         { href: "/work", label: "Files", short: "Files" },
-        { href: "/credit-pulse", label: "Credit", short: "Credit" },
+        { href: CREDIT_DISPUTES_NAV.hub.href, label: CREDIT_DISPUTES_NAV.hub.label, short: CREDIT_DISPUTES_NAV.hub.short },
         { href: "/more", label: "More", short: "More" },
       ];
-    default:
+    case "MANAGER":
+    case "MARKETING":
+    case "CLIENT":
       return [
         { href: "/home", label: "Home", short: "Home" },
         { href: "/clients", label: "Clients", short: "Clients" },
         { href: "/inbox", label: "Inbox", short: "Inbox" },
         { href: "/work", label: "Work", short: "Work" },
       ];
+    default: {
+      const _exhaustive: never = role;
+      return _exhaustive;
+    }
   }
 }
 
@@ -65,8 +139,8 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/clients", label: "Clients", group: "primary" },
       { href: "/inbox", label: "Inbox", group: "primary" },
       { href: "/work", label: "Tasks", group: "ops" },
-      { href: "/credit-pulse", label: "Credit Intelligence", group: "ops" },
-      { href: "/work?view=jona", label: "Disputes", group: "ops" },
+      ...getCreditDisputesNav(),
+      ...getEscalationsNav(),
       { href: "/pay", label: "Grants Pay", group: "finance" },
       { href: "/intelligence", label: "Reports", group: "finance" },
       { href: "/acquisition", label: "Acquisition", group: "finance" },
@@ -84,7 +158,8 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/clients", label: "Clients", group: "primary" },
       { href: "/inbox", label: "Inbox", group: "primary" },
       { href: "/work", label: "Tasks", group: "ops" },
-      { href: "/credit-pulse", label: "Credit Intelligence", group: "ops" },
+      ...getCreditDisputesNav(),
+      ...getEscalationsNav(),
       { href: "/search", label: "Search", group: "system" },
       { href: "/team-chat", label: "Team Chat", group: "system" },
       { href: "/more", label: "Settings", group: "system" },
@@ -97,8 +172,8 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/clients", label: "Clients", group: "primary" },
       { href: "/inbox", label: "Inbox", group: "primary" },
       { href: "/work", label: "File Queues", group: "ops" },
-      { href: "/work?view=jona", label: "Disputes", group: "ops" },
-      { href: "/credit-pulse", label: "Credit Intelligence", group: "ops" },
+      ...getCreditDisputesNav(),
+      ...getEscalationsNav(),
       { href: "/search", label: "Search", group: "system" },
       { href: "/team-chat", label: "Team Chat", group: "system" },
       { href: "/more", label: "Settings", group: "system" },
@@ -117,8 +192,14 @@ export function roleHomeLabel(role: StaffRole): string {
       return "Client Care";
     case "FILE_PREPARER":
       return "File Processing";
-    default:
+    case "MANAGER":
+    case "MARKETING":
+    case "CLIENT":
       return "Workspace";
+    default: {
+      const _exhaustive: never = role;
+      return _exhaustive;
+    }
   }
 }
 
@@ -136,7 +217,11 @@ export function roleDisplayName(role: StaffRole): string {
       return "Manager";
     case "MARKETING":
       return "Marketing";
-    default:
-      return role.replaceAll("_", " ");
+    case "CLIENT":
+      return "Client";
+    default: {
+      const _exhaustive: never = role;
+      return _exhaustive;
+    }
   }
 }
