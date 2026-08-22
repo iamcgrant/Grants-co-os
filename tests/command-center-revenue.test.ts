@@ -3,8 +3,10 @@ import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetSqliteFromSchema } from "./helpers/sqlite-schema";
 import {
+  commandCenterRevenueSeries,
   mapCommandCenterRevenue,
   OFFICIAL_SBTPG_FEE_SUMMARY_TY2026_2026_08_22,
+  officialSummaryFromFeeSummaryPayouts,
   sbtpgDeskTotals,
 } from "../src/lib/tax/fee-summary-mapping";
 
@@ -93,8 +95,19 @@ describe("Command Center Total Revenue mapping", () => {
     expect(home).toMatch(/data\.finance\.totalRevenueCents/);
     expect(home).toMatch(/data\.finance\.unfundedCents/);
     expect(home).toMatch(/href="\/tax\/sbtpg"/);
+    expect(home).toMatch(/Season-to-date/);
+    expect(home).toMatch(/Revenue trend/);
     expect(home).not.toMatch(/117700|117,700/);
+    expect(home).not.toMatch(/SBTPG/);
+    expect(home).not.toMatch(/taxpayer/i);
+    expect(home).not.toMatch(/SbtpgPayoutForm|SbtpgFeeSummaryIngestForm/);
     expect(home).not.toMatch(/cheerio|puppeteer|playwright/i);
+  });
+
+  it("draws the Command Center chart at the official season-to-date total, not an invented series", () => {
+    const series = commandCenterRevenueSeries(11_770_000, ["08-16", "08-22"], [0, 75000]);
+    expect(series.values).toEqual([11_770_000, 11_770_000]);
+    expect(series.values.every((value) => value === 11_770_000)).toBe(true);
   });
 
   it("maps the native SBTPG desk tiles from the official snapshot, not zeros", () => {
@@ -109,6 +122,52 @@ describe("Command Center Total Revenue mapping", () => {
     expect(desk.taxYear).toBe("2026");
     expect(desk.capturedOn).toBe("2026-08-22");
     expect(desk.totalRevenueCents).not.toBe(official.paidCents + official.unfundedCents);
+  });
+
+  it("reads FEE_SUMMARY payouts when the snapshot row is missing", () => {
+    const fromPayouts = officialSummaryFromFeeSummaryPayouts([
+      {
+        status: "PAID",
+        amountCents: 11_770_000,
+        bucket: "FEE_SUMMARY_PAID",
+        taxpayerCount: 73,
+        taxYear: "2026",
+        paidAt: "2026-08-22T12:00:00.000Z",
+      },
+      {
+        status: "UNFUNDED",
+        amountCents: 2_100_000,
+        bucket: "FEE_SUMMARY_UNFUNDED",
+        taxpayerCount: 12,
+        taxYear: "2026",
+        paidAt: "2026-08-22T12:00:00.000Z",
+      },
+    ]);
+    expect(fromPayouts?.paidCents).toBe(11_770_000);
+    expect(fromPayouts?.unfundedCents).toBe(2_100_000);
+    const desk = sbtpgDeskTotals(null, [
+      {
+        status: "PAID",
+        amountCents: 11_770_000,
+        bucket: "FEE_SUMMARY_PAID",
+        taxpayerCount: 73,
+        taxYear: "2026",
+        paidAt: "2026-08-22T12:00:00.000Z",
+      },
+      {
+        status: "UNFUNDED",
+        amountCents: 2_100_000,
+        bucket: "FEE_SUMMARY_UNFUNDED",
+        taxpayerCount: 12,
+        taxYear: "2026",
+        paidAt: "2026-08-22T12:00:00.000Z",
+      },
+    ], []);
+    expect(desk.isLive).toBe(true);
+    expect(desk.totalRevenueCents).toBe(11_770_000);
+    expect(desk.paidTaxpayerCount).toBe(73);
+    expect(desk.unfundedCents).toBe(2_100_000);
+    expect(desk.unfundedTaxpayerCount).toBe(12);
   });
 });
 
@@ -230,5 +289,17 @@ describe("persisted official Fee Summary → Command Center query", () => {
     expect(page).toMatch(/totals\.totalRevenueCents/);
     expect(page).toMatch(/totals\.unfundedCents/);
     expect(page).not.toMatch(/coming soon/i);
+  });
+
+  it("desk stays live from FEE_SUMMARY payouts after the snapshot row is removed", async () => {
+    await persistOfficialSbtpgFeeSummary({ ...OFFICIAL_SBTPG_FEE_SUMMARY_TY2026_2026_08_22 });
+    await prisma.sbtpgFeeSummarySnapshot.deleteMany();
+    const desk = await loadSbtpgDesk();
+    expect(desk.official).toBeNull();
+    expect(desk.totals.isLive).toBe(true);
+    expect(desk.totals.totalRevenueCents).toBe(11_770_000);
+    expect(desk.totals.unfundedCents).toBe(2_100_000);
+    expect(desk.totals.paidTaxpayerCount).toBe(73);
+    expect(desk.totals.unfundedTaxpayerCount).toBe(12);
   });
 });

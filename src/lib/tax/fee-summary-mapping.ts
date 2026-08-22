@@ -122,6 +122,52 @@ export function mapCommandCenterRevenue(
   };
 }
 
+export type FeeSummaryPayoutRow = {
+  status: string;
+  amountCents: number;
+  bucket?: string | null;
+  taxpayerCount?: number | null;
+  taxYear?: string | null;
+  paidAt?: Date | string | null;
+};
+
+/** Rebuild official totals from FEE_SUMMARY_* payouts when the snapshot row is missing. */
+export function officialSummaryFromFeeSummaryPayouts(
+  payouts: ReadonlyArray<FeeSummaryPayoutRow>,
+): OfficialSbtpgFeeSummary | null {
+  const paid = payouts.find((row) => row.bucket === SBTPG_BUCKET_FEE_SUMMARY_PAID);
+  if (!paid) return null;
+  const unfunded = payouts.find((row) => row.bucket === SBTPG_BUCKET_FEE_SUMMARY_UNFUNDED);
+  const capturedAt = paid.paidAt ? new Date(paid.paidAt) : null;
+  return {
+    taxYear: paid.taxYear || "",
+    capturedOn: capturedAt && !Number.isNaN(capturedAt.getTime()) ? capturedAt.toISOString().slice(0, 10) : "",
+    capturedAt: capturedAt && !Number.isNaN(capturedAt.getTime()) ? capturedAt.toISOString() : "",
+    sourceLabel: "SBTPG Fee Summary",
+    sourceUrl: null,
+    paidCents: paid.amountCents,
+    paidTaxpayerCount: paid.taxpayerCount ?? 0,
+    unfundedCents: unfunded?.amountCents ?? 0,
+    unfundedTaxpayerCount: unfunded?.taxpayerCount ?? 0,
+    fcaCents: 0,
+    fcaTaxpayerCount: 0,
+    autoCollectCents: 0,
+    notes: null,
+  };
+}
+
+/** Season-to-date chart uses the official total on every point — no invented daily split. */
+export function commandCenterRevenueSeries(
+  officialTotalCents: number | null,
+  labels: string[],
+  datedValues: number[],
+): { labels: string[]; values: number[] } {
+  if (officialTotalCents != null && officialTotalCents > 0) {
+    return { labels, values: labels.map(() => officialTotalCents) };
+  }
+  return { labels, values: datedValues };
+}
+
 export function officialFeeSummaryFromCaptureKey(key: string): OfficialSbtpgFeeSummary {
   if (key === OFFICIAL_SBTPG_FEE_SUMMARY_TY2026_2026_08_22.capturedOn || key === "TY2026-2026-08-22") {
     return { ...OFFICIAL_SBTPG_FEE_SUMMARY_TY2026_2026_08_22 };
@@ -146,9 +192,10 @@ export type SbtpgDeskTotals = {
  */
 export function sbtpgDeskTotals(
   official: OfficialSbtpgFeeSummary | null,
-  payouts: ReadonlyArray<{ status: string; amountCents: number }>,
+  payouts: ReadonlyArray<FeeSummaryPayoutRow>,
   board: ReadonlyArray<{ status: string | null }>,
 ): SbtpgDeskTotals {
+  const liveOfficial = official ?? officialSummaryFromFeeSummaryPayouts(payouts);
   const trackedCents = payouts
     .filter((row) => row.status === "PAID" || row.status === "FUNDED")
     .reduce((sum, row) => sum + row.amountCents, 0);
@@ -157,17 +204,17 @@ export function sbtpgDeskTotals(
     (row) => row.status && row.status !== "CLOSED" && row.status !== "PAID",
   ).length;
 
-  if (official) {
+  if (liveOfficial) {
     return {
       isLive: true,
-      totalRevenueCents: official.paidCents,
-      paidTaxpayerCount: official.paidTaxpayerCount,
-      unfundedCents: official.unfundedCents,
-      unfundedTaxpayerCount: official.unfundedTaxpayerCount,
+      totalRevenueCents: liveOfficial.paidCents,
+      paidTaxpayerCount: liveOfficial.paidTaxpayerCount,
+      unfundedCents: liveOfficial.unfundedCents,
+      unfundedTaxpayerCount: liveOfficial.unfundedTaxpayerCount,
       source: "SBTPG Fee Summary PAID",
       window: "season-to-date",
-      taxYear: official.taxYear,
-      capturedOn: official.capturedOn,
+      taxYear: liveOfficial.taxYear || null,
+      capturedOn: liveOfficial.capturedOn || null,
     };
   }
 

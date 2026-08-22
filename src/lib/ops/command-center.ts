@@ -6,6 +6,7 @@ import { isGhlApiReady } from "@/lib/integrations/ghl/http";
 import { integrationCredentialStatus } from "@/lib/integrations/credentials";
 import { summarizeGhlLocationInbox } from "@/lib/integrations/ghl/conversations";
 import { listSbtpgCollectedByDay } from "@/lib/tax/payouts";
+import { commandCenterRevenueSeries } from "@/lib/tax/fee-summary-mapping";
 
 const clientQueueInclude = {
   identifiers: { select: { provider: true, externalId: true, metadataJson: true } },
@@ -175,6 +176,10 @@ export async function getOwnerCommandCenter() {
     dayTotals.push(paySum + sbtpgSum);
   }
 
+  const officialSeasonTotal =
+    finance.totalRevenueWindow === "season-to-date" ? finance.totalRevenueCents : null;
+  const revenueTrend = commandCenterRevenueSeries(officialSeasonTotal, dayKeys, dayTotals);
+
   const operationalReview = attention.length > 0 ? attention : recentClients;
 
   const stageGroups = await prisma.client.groupBy({
@@ -244,7 +249,7 @@ export async function getOwnerCommandCenter() {
     attention: operationalReview,
     attentionIsExceptions: attention.length > 0,
     recentScores,
-    revenueTrend: { labels: dayKeys, values: dayTotals },
+    revenueTrend,
     stageBreakdown: stageGroups.map((g) => ({ stage: g.stage, count: g._count._all })),
     generatedAt: now.toISOString(),
     window: { today: today.toISOString(), week: week.toISOString(), month: month.toISOString() },

@@ -58,8 +58,9 @@ describe("SBTPG collected payouts", () => {
     expect(page).toMatch(/loadSbtpgDesk/);
     expect(page).not.toMatch(/cheerio|puppeteer|playwright/i);
     expect(page).not.toMatch(/https:\/\/pro\.sbtpg\.com/);
-    expect(home).toMatch(/SbtpgPayoutForm/);
-    expect(home).toMatch(/SbtpgFeeSummaryIngestForm/);
+    expect(home).not.toMatch(/SbtpgPayoutForm/);
+    expect(home).not.toMatch(/SbtpgFeeSummaryIngestForm/);
+    expect(home).not.toMatch(/SBTPG/);
     expect(home).toMatch(/totalRevenueCents/);
     expect(home).toMatch(/Total Revenue/);
   });
