@@ -5,7 +5,7 @@ import { resetSqliteFromSchema } from "./helpers/sqlite-schema";
 import {
   mapCommandCenterRevenue,
   OFFICIAL_SBTPG_FEE_SUMMARY_TY2026_2026_08_22,
-} from "../src/lib/tax/official-fee-summary";
+} from "../src/lib/tax/fee-summary-mapping";
 
 const testDb = path.join(process.cwd(), "prisma", "test-command-center-revenue.db");
 

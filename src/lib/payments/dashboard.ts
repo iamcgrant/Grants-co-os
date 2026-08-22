@@ -1,7 +1,8 @@
 import { startOfDay, startOfWeek, startOfMonth } from "date-fns";
 import { prisma } from "@/lib/db/prisma";
 import { getSbtpgCollectedTotals } from "@/lib/tax/payouts";
-import { getLatestOfficialFeeSummary, mapCommandCenterRevenue } from "@/lib/tax/official-fee-summary";
+import { mapCommandCenterRevenue } from "@/lib/tax/fee-summary-mapping";
+import { getLatestOfficialFeeSummary } from "@/lib/tax/official-fee-summary";
 
 function moneySum(
   rows: { amountCents: number }[],
