@@ -92,6 +92,26 @@ export function commasHonestHealth(input?: {
   const publicStatus = commasPublicStatus();
   const lastSuccessAt = input?.lastWebhookAt || input?.lastCheckoutAt || null;
 
+  if (!publicStatus.configured) {
+    if (lastSuccessAt) {
+      return {
+        status: "DEGRADED",
+        detail: input?.lastWebhookAt
+          ? "Payment webhook recorded · Fanbasis has no API Keys page · key absence is never CONNECTED"
+          : "Official Commas checkout recorded · Fanbasis has no API Keys page · key absence is never CONNECTED",
+        lastSuccessAt,
+        ...publicStatus,
+      };
+    }
+    return {
+      status: "ACTION_REQUIRED",
+      detail:
+        "Fanbasis has no API Keys page. Create the OS invoice and attach the official product checkout (Returning Client Restart · $550 · mXrEA). Key absence is never CONNECTED. Zapier cannot mint pay links.",
+      lastSuccessAt: null,
+      ...publicStatus,
+    };
+  }
+
   if (lastSuccessAt) {
     return {
       status: "CONNECTED",
@@ -99,16 +119,6 @@ export function commasHonestHealth(input?: {
         ? `Payment webhook processed · env=${publicStatus.environment} · live=${publicStatus.liveChargesEnabled ? "on" : "locked"}`
         : `Official Commas checkout recorded · env=${publicStatus.environment} · live=${publicStatus.liveChargesEnabled ? "on" : "locked"}`,
       lastSuccessAt,
-      ...publicStatus,
-    };
-  }
-
-  if (!publicStatus.configured) {
-    return {
-      status: "ACTION_REQUIRED",
-      detail:
-        "Fanbasis has no API Keys page. Record an official Commas checkout URL or receive a Grants Pay inbound payment webhook. Key absence is never CONNECTED.",
-      lastSuccessAt: null,
       ...publicStatus,
     };
   }

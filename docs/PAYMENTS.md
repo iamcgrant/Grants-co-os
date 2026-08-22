@@ -56,7 +56,11 @@ Statuses tracked: Pending, Paid, Failed, Canceled, Refunded, Partially Refunded,
 
 ## Inbound Zapier / GHL webhook (optional)
 
-Charles does **not** need to build the Zap in this change. When ready, point Zapier or GHL at:
+The Zapier Commas app is **triggers-only** (New Sale, refunds). It **cannot** create a checkout session or payment link. GHL/LeadConnector Zaps also cannot mint Commas pay links. Do not use Zapier as a pay-link fallback.
+
+Default official last-step product (no API key): **Returning Client Restart · $550 · product id `mXrEA`**. Staff copy the product-row checkout URL in Fanbasis and attach it in OS (or set `COMMAS_RETURNING_CLIENT_RESTART_URL` / `COMMAS_CREATOR_HANDLE` for the documented `agency-checkout` URL).
+
+Charles does **not** need to build the Zap in this change. When ready, a New Sale trigger may mark an existing OS invoice paid at:
 
 **`POST https://os.grantandconsultants.com/api/webhooks/grants-pay`**
 
@@ -136,4 +140,4 @@ Native `/setup/[token]` is the primary post-payment experience. Existing Dispute
 
 ## Health
 
-Key absence is never `CONNECTED`. A recorded official Commas checkout URL or a processed Grants Pay inbound / Commas payment webhook can become `CONNECTED` later.
+Key absence is never `CONNECTED`. A recorded official checkout or inbound payment webhook is stored as lastSuccessAt and shows `DEGRADED` until a real `COMMAS_API_KEY` exists. Do not invent one.

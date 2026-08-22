@@ -11,6 +11,7 @@ import {
   isOfficialCommasCheckoutUrl,
   parseOfficialCommasCheckoutUrl,
 } from "./commas-checkout-url";
+import { commasProductById, defaultCommasProduct, officialProductCheckoutUrl } from "./commas-catalog";
 
 function appBaseUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -40,6 +41,7 @@ export type CreatePaymentRequestInput = {
   sendEmail?: boolean;
   sendSms?: boolean;
   commasCheckoutUrl?: string;
+  commasProductId?: string;
 };
 
 /**
@@ -55,9 +57,11 @@ export async function createPaymentRequest(input: CreatePaymentRequestInput) {
   const client = await prisma.client.findUnique({ where: { id: input.clientId } });
   if (!client) throw new Error("Client not found");
 
+  const product = commasProductById(input.commasProductId) || defaultCommasProduct();
+  const serviceName = input.serviceName || product.name;
   const recordedCheckoutUrl = input.commasCheckoutUrl?.trim()
     ? parseOfficialCommasCheckoutUrl(input.commasCheckoutUrl)
-    : null;
+    : officialProductCheckoutUrl(product.id);
 
   const provider = getPaymentProvider();
   const publicId = await nextPaymentRequestPublicId();
@@ -71,12 +75,12 @@ export async function createPaymentRequest(input: CreatePaymentRequestInput) {
         clientId: client.id,
         status: "DUE",
         amountCents: input.amountCents,
-        description: input.description || input.serviceName || "Grants & Co service",
+        description: input.description || serviceName || "Grants & Co service",
         dueAt: input.dueAt || null,
         items: {
           create: [
             {
-              description: input.serviceName || input.description || "Service",
+              description: serviceName || input.description || "Service",
               quantity: 1,
               unitCents: input.amountCents,
               totalCents: input.amountCents,
@@ -99,7 +103,7 @@ export async function createPaymentRequest(input: CreatePaymentRequestInput) {
       invoiceId: invoice.id,
       status: "PENDING",
       amountCents: input.amountCents,
-      serviceName: input.serviceName || null,
+      serviceName,
       description: input.description || invoice.description,
       dueAt: input.dueAt || invoice.dueAt,
       notes: input.notes || null,
@@ -108,12 +112,11 @@ export async function createPaymentRequest(input: CreatePaymentRequestInput) {
       recurringDays: input.recurringDays || null,
       provider: recordedCheckoutUrl ? "commas" : provider.name,
       createdByUserId: input.actorId || null,
-      metadataJson: recordedCheckoutUrl
-        ? JSON.stringify({
-            commasCheckoutSource: "staff_recorded",
-            commasCheckoutUrl: recordedCheckoutUrl,
-          })
-        : null,
+      metadataJson: JSON.stringify({
+        commasProductId: product.id,
+        commasCheckoutSource: recordedCheckoutUrl ? "staff_recorded" : null,
+        commasCheckoutUrl: recordedCheckoutUrl,
+      }),
     },
   });
 
@@ -131,7 +134,7 @@ export async function createPaymentRequest(input: CreatePaymentRequestInput) {
         amountCents: input.amountCents,
         successUrl,
         cancelUrl,
-        title: input.serviceName || "Grants & Co",
+        title: serviceName || "Grants & Co",
         description: input.description || invoice.description || undefined,
         type: input.recurring ? "subscription" : "onetime_non_reusable",
         frequencyDays: input.recurringDays || undefined,
