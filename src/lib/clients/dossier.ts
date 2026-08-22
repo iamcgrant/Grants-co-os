@@ -23,6 +23,7 @@ export type ClientDossierIntegrations = {
   grantsClientId: string;
   ghlContactId: IntegrationFieldState;
   disputeFoxClientId: IntegrationFieldState;
+  smartCreditClientId: IntegrationFieldState;
   intakeStatus: IntegrationFieldState;
   credit: IntegrationFieldState;
   payments: IntegrationFieldState;
@@ -75,6 +76,29 @@ function fieldFromIdentifier(
   };
 }
 
+/** Staff-recorded ids (SmartCredit has no live list API). Never hide a recorded member id. */
+function fieldFromStaffRecorded(ident: Ident | undefined): IntegrationFieldState {
+  if (!ident) {
+    return {
+      state: "AWAITING_INTEGRATION",
+      value: null,
+      detail: "Not attached in OS",
+    };
+  }
+  if (isSeedIdentifier(ident.metadataJson) && getGcEnvironment() === "development") {
+    return {
+      state: "DEV_SAMPLE",
+      value: ident.externalId,
+      detail: "Development sample — not live SmartCredit data",
+    };
+  }
+  return {
+    state: "UNMATCHED",
+    value: ident.externalId,
+    detail: "Staff-recorded on Grants master · no live SmartCredit API",
+  };
+}
+
 export function buildClientDossierIntegrations(input: {
   grantsClientId: string;
   identifiers: Ident[];
@@ -89,6 +113,7 @@ export function buildClientDossierIntegrations(input: {
 
   const ghl = input.identifiers.find((i) => i.provider === "GHL");
   const df = input.identifiers.find((i) => i.provider === "DISPUTEFOX");
+  const smartCredit = input.identifiers.find((i) => i.provider === "SMARTCREDIT");
 
   // Intake Status — OS stage is source of truth; GHL field key intake_status maps here.
   const stageLabel = (input.stage || "NEW_ENROLLMENT").replaceAll("_", " ");
@@ -180,6 +205,7 @@ export function buildClientDossierIntegrations(input: {
     grantsClientId: input.grantsClientId,
     ghlContactId: fieldFromIdentifier(ghl, ghlReady),
     disputeFoxClientId: fieldFromIdentifier(df, dfReady),
+    smartCreditClientId: fieldFromStaffRecorded(smartCredit),
     intakeStatus,
     credit,
     payments,

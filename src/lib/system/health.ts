@@ -6,6 +6,7 @@ import { probeGhlSmsEmailPath, probeGhlVoiceHealth } from "@/lib/integrations/gh
 import { probeTelegramTeam } from "@/lib/integrations/telegram/workspace";
 import { getGcEnvironment } from "@/lib/integrations/env";
 import { probeDisputeFoxApi } from "@/lib/integrations/disputefox/probe";
+import { probeSmartCreditHealth } from "@/lib/credit/smartcredit-health";
 
 export type HealthStatus = "CONNECTED" | "DEGRADED" | "ACTION_REQUIRED" | "OFFLINE";
 export type DatabaseEngine = "Postgres" | "SQLite";
@@ -95,6 +96,7 @@ export async function collectSystemHealth(): Promise<{
     openExceptions,
     lastPulse,
     disputeFoxProbe,
+    smartCreditProbe,
   ] = await Promise.all([
     prisma.webhookEvent.findFirst({
       where: { status: "PROCESSED" },
@@ -133,6 +135,7 @@ export async function collectSystemHealth(): Promise<{
     prisma.exceptionTicket.count({ where: { status: "OPEN" } }),
     prisma.fridayPulseRun.findFirst({ orderBy: { createdAt: "desc" } }),
     probeDisputeFoxApi(),
+    probeSmartCreditHealth(),
   ]);
 
   let databaseStatus: HealthStatus = "CONNECTED";
@@ -175,9 +178,13 @@ export async function collectSystemHealth(): Promise<{
     detail: disputeFoxProbe.detail,
     lastSuccessAt: disputeFoxProbe.lastSuccessAt,
   } as const;
-  const smartCredit = smartCreditHealth(
-    Boolean(process.env.SMARTCREDIT_SPONSOR_URL?.trim() || process.env.SMARTCREDIT_SPONSOR_CODE?.trim()),
-  );
+  const smartCredit = {
+    component: "smartcredit",
+    label: "SmartCredit",
+    status: smartCreditProbe.status,
+    detail: smartCreditProbe.detail,
+    lastSuccessAt: smartCreditProbe.lastSuccessAt,
+  } as const;
 
   const components: HealthComponent[] = [
     {
@@ -461,25 +468,6 @@ function ghlWebhookHealth(
     label: "GHL webhook",
     status: "ACTION_REQUIRED",
     detail: "No processed GHL webhook — inbound is pull-only",
-    lastSuccessAt: null,
-  };
-}
-
-function smartCreditHealth(sponsorConfigured: boolean): Omit<HealthComponent, "lastCheckedAt"> {
-  if (sponsorConfigured) {
-    return {
-      component: "smartcredit",
-      label: "SmartCredit",
-      status: "DEGRADED",
-      detail: "Sponsor attribution configured · no live score sync",
-      lastSuccessAt: null,
-    };
-  }
-  return {
-    component: "smartcredit",
-    label: "SmartCredit",
-    status: "ACTION_REQUIRED",
-    detail: "SMARTCREDIT_SPONSOR_URL recommended for affiliate attribution · no live score sync",
     lastSuccessAt: null,
   };
 }

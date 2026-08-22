@@ -68,7 +68,7 @@ function creditHubBlurb(href: string): string {
     case CREDIT_DISPUTES_NAV.innovis.href:
       return DISPUTE_CHANNELS.INNOVIS.honesty;
     case CREDIT_DISPUTES_NAV.smartCredit.href:
-      return "Existing SmartCredit / Friday Pulse workflow.";
+      return DISPUTE_CHANNELS.SMARTCREDIT.honesty;
     case CREDIT_DISPUTES_NAV.creditKarma.href:
       return "Client-assisted score entry. No Credit Karma scrape.";
     default:

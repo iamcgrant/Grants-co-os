@@ -2,34 +2,26 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { assertPermission } from "@/lib/rbac/permissions";
-import { startSmartCreditEnrollment, SmartCreditWorkspaceError } from "@/lib/credit/smartcredit-workspace";
+import { attachSmartCreditClient, SmartCreditWorkspaceError } from "@/lib/credit/smartcredit-workspace";
 
 const schema = z.object({
-  clientId: z.string(),
+  clientId: z.string().min(1),
+  externalId: z.string().min(1),
 });
 
-/**
- * Start SmartCredit sponsored enrollment for a Grants client.
- * Attribution comes from SMARTCREDIT_SPONSOR_URL / SMARTCREDIT_SPONSOR_CODE — never hard-coded.
- * Does not invent a SmartCredit member id.
- */
 export async function POST(req: Request) {
   try {
     const user = await requireUser();
     assertPermission(user.role, "MANAGE_CREDIT");
     const body = schema.parse(await req.json());
-    const enrollment = await startSmartCreditEnrollment({
+    const result = await attachSmartCreditClient({
       clientId: body.clientId,
+      externalId: body.externalId,
       actorId: user.id,
     });
-
     return NextResponse.json({
-      enrollmentUrl: enrollment.enrollmentUrl,
-      sponsorConfigured: enrollment.sponsorConfigured,
-      recordedAt: enrollment.recordedAt,
-      message: enrollment.sponsorConfigured
-        ? "Sponsored enrollment last-step ready"
-        : "Sponsor link not configured yet — set SMARTCREDIT_SPONSOR_URL to preserve affiliate payouts",
+      identifier: result.identifier,
+      client: result.client,
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Error";

@@ -4,6 +4,7 @@ export type DisputeChannel =
   | "EQUIFAX"
   | "TRANSUNION"
   | "INNOVIS"
+  | "SMARTCREDIT"
   | "CFPB";
 
 export type DisputeCaseStatus = "INTAKE" | "PACKET" | "READY" | "SUBMITTED" | "RESULTS" | "CLOSED";
@@ -132,6 +133,27 @@ export const DISPUTE_CHANNELS: Record<DisputeChannel, ChannelCatalog> = {
     checklist: [
       ...SHARED_PACKET_CHECKS,
       { key: "section", label: "Innovis item identified", required: true },
+    ],
+  },
+  SMARTCREDIT: {
+    channel: "SMARTCREDIT",
+    label: "SmartCredit",
+    href: "/credit/smartcredit",
+    eyebrow: "Credit & Disputes",
+    hasOfficialSubmitApi: false,
+    hasOfficialPortal: true,
+    officialSubmitUrl: "https://www.smartcredit.com/",
+    canSubmitInApp: false,
+    scrape: false,
+    eOscarAvailable: false,
+    honesty:
+      "No public SmartCredit score or client-list API. Sponsor URL is affiliate attribution only — never CONNECTED on key presence. This workspace is the OS case file: attach the Grants client, record launch/session, packet, status, and results. Official SmartCredit portal is the last enrollment/login step only.",
+    checklist: [
+      { key: "attached", label: "Client attached in Grants OS (no invented SmartCredit id)", required: true },
+      { key: "enrollment", label: "Enrollment recorded or existing member attached", required: true },
+      { key: "items", label: "Monitoring items / accounts listed", required: true },
+      { key: "authorization", label: "Authorization on file", required: true },
+      { key: "narrative", label: "Session / packet notes complete", required: true },
     ],
   },
   CFPB: {

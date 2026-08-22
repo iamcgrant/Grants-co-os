@@ -56,7 +56,7 @@ export async function getCaseById(id: string) {
           firstName: true,
           lastName: true,
           stage: true,
-          identifiers: { where: { provider: "DISPUTEFOX" }, take: 1 },
+          identifiers: { where: { provider: { in: ["DISPUTEFOX", "SMARTCREDIT"] } } },
         },
       },
       items: { orderBy: { createdAt: "asc" } },

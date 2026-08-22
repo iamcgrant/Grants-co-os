@@ -24,7 +24,7 @@ export const CREDIT_DISPUTES_NAV = {
   equifax: { href: "/credit/equifax", label: "Equifax" },
   transunion: { href: "/credit/transunion", label: "TransUnion" },
   innovis: { href: "/credit/innovis", label: "Innovis" },
-  smartCredit: { href: "/credit-pulse", label: "SmartCredit" },
+  smartCredit: { href: "/credit/smartcredit", label: "SmartCredit" },
   creditKarma: { href: "/credit/credit-karma", label: "Credit Karma" },
 } as const;
 

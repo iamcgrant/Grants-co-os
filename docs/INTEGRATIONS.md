@@ -7,7 +7,7 @@ All integrations are adapters beneath Grants & Co OS.
 | GoHighLevel | `LiveGoHighLevelProvider` when `GHL_API_KEY` is set (`GHL_LOCATION_ID` from host secrets); else mock | **Only phone / SMS / email backend** |
 | DisputeFox | `MockDisputeFoxProvider` + inbound attach onto existing masters | **Local roster attach** (26 Charles-confirmed clients). Live path **fails closed** without `DISPUTEFOX_API_KEY`. Zap `374413762` stays **OFF**. |
 | Credit Repair Cloud | `MockCreditRepairCloudProvider` + inbound compare (`npm run crc:inbound-compare`) | **Not connected.** Local CSV dry-run + Phase 2 class-gated write **plans**. Live path **fails closed** without `CRC_API_KEY`. Five write flags default **false**. `CRC_RECOVERY_WRITES_ENABLED` is **ignored**. |
-| SmartCredit | `MockSmartCreditProvider` | Mock — sponsored enrollment + scores |
+| SmartCredit | Native OS workspace (`/credit/smartcredit`) | **In-OS desk** — attach, session, packet/results. No public score API. Sponsor URL is attribution only. |
 | Credit Karma | `MockCreditKarmaConnector` | Mock — **read only** |
 | Experian | `MockExperianConnector` | Mock — weekly score |
 | Payments | `PAYMENT_PROVIDER=mock` default; Commas primary adapter when `COMMAS_API_KEY` set; Authorize.Net optional secondary | Mock until secrets · live charges locked (`COMMAS_LIVE_CHARGES`) |
@@ -86,14 +86,20 @@ CRC was the primary system for ~5 years. The 26-master inbound GHL/DF path is **
 4. Backfill only when the new-system field is blank and CRC has a verified value. Conflicts go to the review queue.
 5. Live pull (`--live`) without `CRC_API_KEY` **fails closed**. Phase 2 class-gated flags (`CRC_WRITE_*_ENABLED`) default **false**. `CRC_RECOVERY_WRITES_ENABLED` is **ignored** (never a write-everything switch). No messages. Zap `374413762` stays OFF. Friday Update Router stays unpublished. No live GHL/DF/OS clients.
 
-### SmartCredit (affiliate payouts)
-**Yes — your personal sponsor/partner signup link is required** so Grants & Co is credited every time a client enrolls.
+### SmartCredit (native workspace + affiliate payouts)
+Staff work the case in Grants OS at `/credit/smartcredit`. SmartCredit is the background platform — not a bookmark page.
 
-Provide either:
+There is **no public SmartCredit score or client-list API**. Do not scrape. Official portal is the last enrollment/login step only.
+
+**Health:** `CONNECTED` only after a live `SMARTCREDIT_API_PROBE_URL` GET, or a recorded OS operation (session, enrollment, submitted case). `SMARTCREDIT_SPONSOR_URL` / `SMARTCREDIT_API_KEY` presence is never `CONNECTED`.
+
+**Attribution (still required for enroll payouts):**
 1. Full sponsor URL → `SMARTCREDIT_SPONSOR_URL` (best)  
    Example shape: `https://www.smartcredit.com/join/?pid=YOUR_PID`
 2. And/or sponsor code → `SMARTCREDIT_SPONSOR_CODE`
 
-Where: SmartCredit partner/affiliate dashboard → copy your sponsored enrollment link.
+Optional future partner API (not required for the desk):
+- `SMARTCREDIT_API_KEY`
+- `SMARTCREDIT_API_PROBE_URL` (https GET only)
 
 The OS keeps your `pid` (or other affiliate params) intact and appends `gc_ref=<GrantsClientId>` for internal tracking.

@@ -31,6 +31,7 @@ describe("Client 360 dossier integrations", () => {
     expect(d.ghlContactId.state).toBe("AWAITING_INTEGRATION");
     expect(formatIntegrationField(d.ghlContactId)).toBe("Awaiting Integration");
     expect(d.disputeFoxClientId.state).toBe("AWAITING_INTEGRATION");
+    expect(d.smartCreditClientId.state).toBe("AWAITING_INTEGRATION");
     expect(d.ghlMessages.state).toBe("AWAITING_INTEGRATION");
   });
 
@@ -80,5 +81,24 @@ describe("Client 360 dossier integrations", () => {
     expect(d.ghlContactId.state).toBe("LIVE");
     expect(d.ghlContactId.value).toBe("abc123live");
     expect(d.credit.state).toBe("AWAITING_INTEGRATION");
+  });
+
+  it("surfaces a staff-recorded SmartCredit id without claiming a live API", () => {
+    const d = buildClientDossierIntegrations({
+      grantsClientId: "GC-000184",
+      identifiers: [
+        {
+          provider: "SMARTCREDIT",
+          externalId: "sc_member_184",
+          metadataJson: JSON.stringify({ source: "staff_recorded" }),
+        },
+      ],
+      hasCreditScores: false,
+      hasPaymentRecords: false,
+      creditConnectionStatuses: [],
+    });
+    expect(d.smartCreditClientId.state).toBe("UNMATCHED");
+    expect(d.smartCreditClientId.value).toBe("sc_member_184");
+    expect(d.smartCreditClientId.detail).toMatch(/no live SmartCredit API/);
   });
 });

@@ -12,6 +12,8 @@ const ENV_KEYS = [
   "DISPUTEFOX_API_PROBE_URL",
   "SMARTCREDIT_SPONSOR_URL",
   "SMARTCREDIT_SPONSOR_CODE",
+  "SMARTCREDIT_API_KEY",
+  "SMARTCREDIT_API_PROBE_URL",
   "COMMAS_API_KEY",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_TEAM_CHAT_IDS",
@@ -91,6 +93,10 @@ describe("system health + universal search", () => {
     await prisma.webhookEvent.deleteMany();
     await prisma.integrationSyncEvent.deleteMany();
     await prisma.clientIdentifier.deleteMany({ where: { provider: "DISPUTEFOX" } });
+    await prisma.creditConnection.updateMany({
+      where: { provider: "SMARTCREDIT" },
+      data: { lastSyncedAt: null },
+    });
 
     process.env.GHL_API_KEY = "pk_test_not_a_real_key";
     process.env.GHL_LOCATION_ID = "loc_test";
@@ -166,6 +172,13 @@ describe("system health + universal search", () => {
     const sentEmailAt = new Date("2026-03-03T17:00:00.000Z");
     const ghlWebhookAt = new Date("2026-03-04T18:00:00.000Z");
     const dfAttachedAt = new Date("2026-03-05T19:00:00.000Z");
+    await prisma.integrationSyncEvent.deleteMany({
+      where: { entityType: { in: ["SMARTCREDIT_SESSION", "SMARTCREDIT_ENROLLMENT"] } },
+    });
+    await prisma.creditConnection.updateMany({
+      where: { provider: "SMARTCREDIT" },
+      data: { lastSyncedAt: null },
+    });
 
     const client = await prisma.client.create({
       data: {
@@ -266,6 +279,29 @@ describe("system health + universal search", () => {
     expect(component(health, "smartcredit").lastSuccessAt).toBeNull();
     expect(component(health, "credit_karma").status).toBe("DEGRADED");
     expect(component(health, "telegram").status).toBe("ACTION_REQUIRED");
+  });
+
+  it("marks SmartCredit CONNECTED only after a recorded workspace operation", async () => {
+    const client = await prisma.client.create({
+      data: {
+        grantsClientId: "GC-SCHEALTH",
+        email: "sc.health@example.com",
+        emailNormalized: "sc.health@example.com",
+        firstName: "Smart",
+        lastName: "Health",
+      },
+    });
+    const { recordSmartCreditSession } = await import("@/lib/credit/smartcredit-workspace");
+    await recordSmartCreditSession({
+      clientId: client.id,
+      kind: "PACKET",
+      notes: "Packet assembled in OS",
+    });
+    const { collectSystemHealth } = await import("@/lib/system/health");
+    const health = await collectSystemHealth();
+    expect(component(health, "smartcredit").status).toBe("CONNECTED");
+    expect(component(health, "smartcredit").lastSuccessAt).toBeTruthy();
+    expect(component(health, "smartcredit").detail).toMatch(/Recorded SmartCredit workspace operation/);
   });
 
   it("marks SMS/email/voice CONNECTED only after live probes succeed", async () => {
