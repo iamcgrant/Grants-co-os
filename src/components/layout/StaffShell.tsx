@@ -2,12 +2,9 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { getDesktopNav, getStaffNav, navSectionLabel, roleDisplayName, TAX_NAV } from "@/lib/nav/role-nav";
 import { sidebarClickHref } from "@/lib/nav/official-logins";
+import { isPortalDeskLocation } from "@/lib/nav/portal-desks";
 import type { AuthUserView } from "@/lib/auth/types";
 import type { NavItem, StaffRole } from "@/lib/nav/role-nav";
-
-function isExternalHref(href: string) {
-  return href.startsWith("https://") || href.startsWith("http://");
-}
 
 function SidebarDest({
   item,
@@ -21,24 +18,14 @@ function SidebarDest({
   "data-active"?: boolean;
 }) {
   const clickHref = sidebarClickHref(item);
-  if (isExternalHref(clickHref)) {
-    return (
-      <a
-        href={clickHref}
-        className={className}
-        data-active={dataActive}
-        data-nav={item.label}
-        data-nav-href={clickHref}
-        data-os-workspace={item.href}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        {children}
-      </a>
-    );
-  }
   return (
-    <Link href={clickHref} className={className} data-active={dataActive} data-nav={item.label} data-nav-href={clickHref}>
+    <Link
+      href={clickHref}
+      className={className}
+      data-active={dataActive}
+      data-nav={item.label}
+      data-nav-href={clickHref}
+    >
       {children}
     </Link>
   );
@@ -68,6 +55,7 @@ export function StaffShell({
   const cols = Math.min(Math.max(mobileNav.length, 4), 7);
   const pathBase = pathname.split("?")[0];
   const isOwner = user.role === "OWNER" || user.role === "ADMIN";
+  const portalDesk = isPortalDeskLocation(pathname);
 
   function isActive(href: string) {
     const base = href.split("?")[0];
@@ -93,7 +81,7 @@ export function StaffShell({
   }
 
   return (
-    <div className="min-h-dvh gc-app-shell">
+    <div className={`gc-app-shell${portalDesk ? " is-portal-desk" : ""}`} data-portal-chrome={portalDesk || undefined}>
       {process.env.NODE_ENV !== "production" || process.env.GC_ENV === "development" ? (
         <div className="gc-dev-banner">Development environment · sample data isolated from production</div>
       ) : null}
@@ -135,45 +123,47 @@ export function StaffShell({
       </aside>
 
       <div className="gc-main">
-        <header className="gc-topbar">
-          <div className="gc-topbar-inner">
-            <div className="md:hidden">
-              <BrandLogo href="/home" size="sm" />
-            </div>
-            <form action="/search" className="gc-search-wrap" method="get">
-              <input
-                name="q"
-                className="gc-search"
-                placeholder="Search clients, invoices, payments, IDs…"
-                aria-label="Global search"
-              />
-            </form>
-            <div className="gc-topbar-actions">
-              {isOwner && (
-                <Link href="/credit-pulse" className="gc-btn gc-btn-outline text-xs py-2 px-3">
-                  Friday Pulse
+        {portalDesk ? null : (
+          <header className="gc-topbar">
+            <div className="gc-topbar-inner">
+              <div className="md:hidden">
+                <BrandLogo href="/home" size="sm" />
+              </div>
+              <form action="/search" className="gc-search-wrap" method="get">
+                <input
+                  name="q"
+                  className="gc-search"
+                  placeholder="Search clients, invoices, payments, IDs…"
+                  aria-label="Global search"
+                />
+              </form>
+              <div className="gc-topbar-actions">
+                {isOwner && (
+                  <Link href="/credit-pulse" className="gc-btn gc-btn-outline text-xs py-2 px-3">
+                    Friday Pulse
+                  </Link>
+                )}
+                <Link href="/clients" className="gc-btn gc-btn-gold text-xs py-2 px-3">
+                  + New Client
                 </Link>
-              )}
-              <Link href="/clients" className="gc-btn gc-btn-gold text-xs py-2 px-3">
-                + New Client
-              </Link>
-              <Link href="/inbox" className="gc-icon-btn" title="Inbox">
-                Inbox
-              </Link>
-              <Link href="/more#systems" className="gc-icon-btn" title="Systems">
-                Systems
-              </Link>
+                <Link href="/inbox" className="gc-icon-btn" title="Inbox">
+                  Inbox
+                </Link>
+                <Link href="/more#systems" className="gc-icon-btn" title="Systems">
+                  Systems
+                </Link>
+              </div>
+              <div className="hidden sm:block text-right min-w-[7.5rem]">
+                <p className="text-sm font-medium leading-tight">
+                  {user.firstName} {user.lastName}
+                </p>
+                <p className="text-[0.58rem] tracking-[0.12em] uppercase text-[var(--gc-ice)]">
+                  {roleDisplayName(user.role as StaffRole)}
+                </p>
+              </div>
             </div>
-            <div className="hidden sm:block text-right min-w-[7.5rem]">
-              <p className="text-sm font-medium leading-tight">
-                {user.firstName} {user.lastName}
-              </p>
-              <p className="text-[0.58rem] tracking-[0.12em] uppercase text-[var(--gc-ice)]">
-                {roleDisplayName(user.role as StaffRole)}
-              </p>
-            </div>
-          </div>
-        </header>
+          </header>
+        )}
 
         <div className="gc-content">{children}</div>
       </div>

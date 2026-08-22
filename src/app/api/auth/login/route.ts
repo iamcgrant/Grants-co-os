@@ -7,6 +7,7 @@ import { writeAuditLog } from "@/lib/audit/log";
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
+  rememberMe: z.boolean().optional().default(true),
 });
 
 export async function POST(req: Request) {
@@ -34,6 +35,7 @@ export async function POST(req: Request) {
 
     await createSession(user.id, {
       userAgent: req.headers.get("user-agent") || undefined,
+      rememberMe: body.rememberMe,
     });
 
     await writeAuditLog({

@@ -16,7 +16,7 @@ export type NavItem = {
   label: string;
   short?: string;
   group?: NavGroup;
-  /** Official https portal the sidebar click opens in a new tab. Native href stays the OS workspace. */
+  /** Official https login/home the in-OS portal desk loads. Sidebar href stays the OS route. */
   officialLastStepUrl?: string;
 };
 

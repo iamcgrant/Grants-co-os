@@ -68,11 +68,13 @@ describe("work Gmail official inbox", () => {
     expect(String(fetchImpl.mock.calls[1]?.[0])).toMatch(/gmail\.googleapis\.com/);
   });
 
-  it("native inbox does not scrape", () => {
+  it("Gmail sidebar desk is an in-OS portal and does not scrape", () => {
     const page = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/inbox/page.tsx"), "utf8");
     const nav = fs.readFileSync(path.join(process.cwd(), "src/lib/nav/role-nav.ts"), "utf8");
-    expect(page).toMatch(/GmailWorkInbox/);
+    expect(page).toMatch(/GuardedPortalDesk/);
+    expect(page).toMatch(/deskId: "gmail"/);
     expect(page).not.toMatch(/cheerio|puppeteer|playwright/i);
+    expect(page).not.toMatch(/GHL_API_KEY|GmailWorkInbox/);
     expect(nav).toMatch(/\/inbox\?tab=gmail/);
     expect(nav).toMatch(/label: "Telegram"/);
   });

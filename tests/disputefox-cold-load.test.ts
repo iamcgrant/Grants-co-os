@@ -112,7 +112,7 @@ describe("DisputeFox first-load / cold isolate", () => {
     expect(desk.loadError).toMatch(/could not load/);
   });
 
-  it("sends a first-byte empty desk without waiting on the board", async () => {
+  it("sends a first-byte portal desk without waiting on the board", async () => {
     listDisputeFoxBoard.mockImplementation(() => new Promise(() => {}));
     const Page = (await import("../src/app/(staff)/credit/disputefox/page")).default;
     const started = Date.now();
@@ -120,9 +120,9 @@ describe("DisputeFox first-load / cold isolate", () => {
     expect(Date.now() - started).toBeLessThan(1500);
     const html = renderToStaticMarkup(createElement("div", null, tree));
     expect(html).toMatch(/DisputeFox/);
-    expect(html).toMatch(/Honest empty desk/);
-    expect(html).toMatch(/Open login/);
+    expect(html).toMatch(/data-portal-desk="disputefox"/);
     expect(html).not.toMatch(/This page couldn't load|A server error occurred/i);
+    expect(html).not.toMatch(/API health|DEGRADED|Honest empty desk/);
   });
 
   it("renders /credit/disputefox without throwing when the board hangs", async () => {
@@ -133,18 +133,15 @@ describe("DisputeFox first-load / cold isolate", () => {
     expect(Date.now() - started).toBeLessThan(5000);
     const html = renderToStaticMarkup(createElement("div", null, tree));
     expect(html).toMatch(/DisputeFox/);
-    expect(html).toMatch(/Honest empty desk/);
-    expect(html).toMatch(/Open login/);
-    expect(html).toMatch(/DEGRADED|OFFLINE|could not load/);
+    expect(html).toMatch(/data-portal-desk="disputefox"/);
     expect(html).not.toMatch(/This page couldn't load|A server error occurred/i);
+    expect(html).not.toMatch(/API health|DEGRADED/);
   });
 
   it("does not await the board in the default page export", () => {
     const src = fs.readFileSync("src/app/(staff)/credit/disputefox/page.tsx", "utf8");
-    expect(src).toMatch(/Suspense/);
-    expect(src).toMatch(/emptyDisputeFoxDesk/);
-    expect(src).toMatch(/maxDuration/);
-    const defaultFn = src.slice(src.indexOf("export default async function"));
-    expect(defaultFn).not.toMatch(/await loadDisputeFoxDeskSafe/);
+    expect(src).toMatch(/GuardedPortalDesk/);
+    expect(src).toMatch(/deskId: "disputefox"/);
+    expect(src).not.toMatch(/loadDisputeFoxDeskSafe|emptyDisputeFoxDesk|probeDisputeFox/);
   });
 });

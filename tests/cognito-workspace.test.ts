@@ -41,13 +41,12 @@ describe("official Cognito Forms workspace", () => {
     }
   });
 
-  it("page uses official API pull and does not scrape", () => {
+  it("desk is the official Cognito home and the API client does not scrape", () => {
     const page = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/cognito/page.tsx"), "utf8");
-    expect(page).toMatch(/CognitoPullForm/);
-    expect(page).toMatch(/listCachedCognitoBoard/);
-    expect(page).toMatch(/Access denied/);
+    expect(page).toMatch(/GuardedPortalDesk/);
+    expect(page).toMatch(/deskId: "cognito"/);
     expect(page).not.toMatch(/cheerio|puppeteer|playwright/i);
-    expect(page).not.toMatch(/Open portal|open portal/i);
+    expect(page).not.toMatch(/CognitoPullForm|COGNITO_API_KEY|API health/);
     const client = fs.readFileSync(path.join(process.cwd(), "src/lib/integrations/cognito/client.ts"), "utf8");
     const config = fs.readFileSync(path.join(process.cwd(), "src/lib/integrations/cognito/config.ts"), "utf8");
     expect(config).toMatch(/www\.cognitoforms\.com\/api/);

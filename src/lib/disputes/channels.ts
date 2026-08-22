@@ -52,7 +52,7 @@ export const DISPUTE_CHANNELS: Record<DisputeChannel, ChannelCatalog> = {
     eyebrow: "Credit & Disputes",
     hasOfficialSubmitApi: false,
     hasOfficialPortal: true,
-    officialSubmitUrl: "https://pulse.disputeprocess.com",
+    officialSubmitUrl: "https://pulse.disputeprocess.com/jsp/client/login.jsp",
     canSubmitInApp: false,
     scrape: false,
     eOscarAvailable: false,

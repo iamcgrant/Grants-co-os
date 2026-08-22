@@ -5,8 +5,8 @@
 
 export const COGNITO_API_KEY_ENV = "COGNITO_API_KEY";
 export const COGNITO_API_BASE = "https://www.cognitoforms.com/api";
-/** Official Cognito Forms staff login — last-step only. No scrape. */
-export const COGNITO_OFFICIAL_LOGIN_URL = "https://www.cognitoforms.com/login";
+/** Official Cognito Forms Grants home — staff sign-in. No scrape. */
+export { COGNITO_OFFICIAL_LOGIN_URL } from "@/lib/nav/official-login-urls";
 
 export function getCognitoApiKey(): string | null {
   return process.env[COGNITO_API_KEY_ENV]?.trim() || null;

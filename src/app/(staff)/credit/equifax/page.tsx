@@ -1,8 +1,5 @@
-import { renderChannelDeskSafe } from "@/components/disputes/ChannelCasesView";
-import { requireCreditStaff } from "@/lib/disputes/access";
+import { GuardedPortalDesk } from "@/components/desk/GuardedPortalDesk";
 
 export default async function EquifaxCasesPage() {
-  const { user, denied } = await requireCreditStaff();
-  if (denied || !user) return <p>Access denied.</p>;
-  return renderChannelDeskSafe("EQUIFAX", user);
+  return GuardedPortalDesk({ deskId: "equifax", gate: "credit" });
 }
