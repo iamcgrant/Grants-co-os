@@ -58,7 +58,9 @@ describe("SBTPG collected payouts", () => {
     expect(page).not.toMatch(/cheerio|puppeteer|playwright/i);
     expect(page).not.toMatch(/https:\/\/pro\.sbtpg\.com/);
     expect(home).toMatch(/SbtpgPayoutForm/);
-    expect(home).toMatch(/sbtpgCollectedAllCents/);
+    expect(home).toMatch(/SbtpgFeeSummaryIngestForm/);
+    expect(home).toMatch(/totalRevenueCents/);
+    expect(home).toMatch(/Total Revenue/);
   });
 
   it("counts PAID/FUNDED official payouts in Command Center collected totals", async () => {

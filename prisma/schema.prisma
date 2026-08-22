@@ -240,21 +240,26 @@ model ClientIdentifier {
 
 /// Official SBTPG payout / refund totals recorded in OS. No scrape.
 model SbtpgPayout {
-  id           String    @id @default(cuid())
-  clientId     String?
-  externalId   String?
-  amountCents  Int
-  currency     String    @default("USD")
-  status       String    @default("PAID")
-  taxYear      String?
-  paidAt       DateTime?
-  periodStart  DateTime?
-  periodEnd    DateTime?
-  source       String    @default("staff_recorded")
-  notes        String?
-  recordedById String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  clientId       String?
+  externalId     String?
+  amountCents    Int
+  currency       String    @default("USD")
+  status         String    @default("PAID")
+  taxYear        String?
+  paidAt         DateTime?
+  periodStart    DateTime?
+  periodEnd      DateTime?
+  source         String    @default("staff_recorded")
+  /// dated = real paid date; season_to_date = official Fee Summary total (never a daily split).
+  windowKind     String    @default("dated")
+  /// PAYOUT | FEE_SUMMARY_PAID | FEE_SUMMARY_UNFUNDED | FCA | AUTO_COLLECT
+  bucket         String    @default("PAYOUT")
+  taxpayerCount  Int?
+  notes          String?
+  recordedById   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
@@ -262,6 +267,31 @@ model SbtpgPayout {
   @@index([clientId])
   @@index([createdAt])
   @@index([externalId])
+  @@index([windowKind, bucket])
+}
+
+/// Staff-captured official SBTPG dashboard Fee Summary. No scrape. No invented daily split.
+model SbtpgFeeSummarySnapshot {
+  id                    String   @id @default(cuid())
+  taxYear               String
+  capturedOn            String
+  capturedAt            DateTime
+  sourceLabel           String   @default("SBTPG Fee Summary")
+  sourceUrl             String?
+  paidCents             Int
+  paidTaxpayerCount     Int
+  unfundedCents         Int
+  unfundedTaxpayerCount Int
+  fcaCents              Int      @default(0)
+  fcaTaxpayerCount      Int      @default(0)
+  autoCollectCents      Int      @default(0)
+  notes                 String?
+  recordedById          String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([taxYear, capturedOn])
+  @@index([taxYear, capturedAt])
 }
 
 model Address {

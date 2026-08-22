@@ -16,6 +16,7 @@ import { DonutChart, LineChart } from "@/components/ui/charts";
 import { GhlSyncPanel } from "@/components/integrations/GhlSyncPanel";
 import { GhlConversationPullPanel } from "@/components/integrations/GhlConversationPullPanel";
 import { SbtpgPayoutForm } from "@/components/tax/SbtpgPayoutForm";
+import { SbtpgFeeSummaryIngestForm } from "@/components/tax/SbtpgFeeSummaryIngestForm";
 import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
 import { hasPermission } from "@/lib/rbac/permissions";
 
@@ -28,7 +29,7 @@ export default async function HomePage() {
   if (user.role === Role.OWNER || user.role === Role.ADMIN) {
     const data = await getOwnerCommandCenter();
     const sparkCollect = data.revenueTrend.values.map((v) => Math.max(v, 0));
-    const monthLabel = formatUsd(data.finance.collectedMonthCents);
+    const monthLabel = formatUsd(data.finance.totalRevenueCents);
     const payoutClients = await prisma.client.findMany({
       orderBy: { lastName: "asc" },
       take: 200,
@@ -49,7 +50,8 @@ export default async function HomePage() {
                 ? `${data.ops.ghlLinked} linked · ${data.ops.ghlLiveLinked} live API`
                 : "Awaiting Integration"}
               {" · "}
-              SBTPG collected {formatUsd(data.finance.sbtpgCollectedAllCents)}
+              Total Revenue {formatUsd(data.finance.totalRevenueCents)} ·{" "}
+              {data.finance.totalRevenueTaxpayerCount} taxpayers · {data.finance.totalRevenueWindow}
             </p>
           </div>
           <div className="hidden xl:flex flex-wrap gap-2">
@@ -68,28 +70,35 @@ export default async function HomePage() {
         {/* KPI strip — always 4 across on desktop */}
         <div className="gc-dash-grid gc-dash-grid-4">
           <MetricTile
-            label="Collected today"
-            value={formatUsd(data.finance.collectedTodayCents)}
+            label="Total Revenue"
+            value={formatUsd(data.finance.totalRevenueCents)}
             href="/tax/sbtpg"
             spark={sparkCollect.slice(-7)}
-            hint={`SBTPG ${formatUsd(data.finance.sbtpgCollectedTodayCents)} · Pay ${formatUsd(data.finance.grantsPayTodayCents)}`}
-            trend="↑ activity"
+            hint={`${data.finance.totalRevenueTaxpayerCount} taxpayers · ${data.finance.totalRevenueSource}`}
+            trend={data.finance.totalRevenueWindow === "season-to-date" ? "Season-to-date" : "Recorded payouts"}
+            tone="ok"
+          />
+          <MetricTile
+            label="Unfunded"
+            value={formatUsd(data.finance.unfundedCents)}
+            href="/tax/sbtpg"
+            hint={`${data.finance.unfundedTaxpayerCount} taxpayers · not in Total Revenue`}
+            tone="warn"
+          />
+          <MetricTile
+            label="Collected today"
+            value={
+              data.finance.sbtpgCollectedTodayCents === 0 && data.finance.grantsPayTodayCents === 0
+                ? "—"
+                : formatUsd(data.finance.collectedTodayCents)
+            }
+            href="/tax/sbtpg"
+            hint={
+              data.finance.hasOfficialDailySplit
+                ? `SBTPG ${formatUsd(data.finance.sbtpgCollectedTodayCents)} · Pay ${formatUsd(data.finance.grantsPayTodayCents)}`
+                : "No official daily split"
+            }
             tone="ice"
-          />
-          <MetricTile
-            label="Collected this week"
-            value={formatUsd(data.finance.collectedWeekCents)}
-            href="/tax/sbtpg"
-            spark={sparkCollect}
-            hint={`SBTPG ${formatUsd(data.finance.sbtpgCollectedWeekCents)} · Pay ${formatUsd(data.finance.grantsPayWeekCents)}`}
-            tone="ok"
-          />
-          <MetricTile
-            label="SBTPG collected"
-            value={formatUsd(data.finance.sbtpgCollectedAllCents)}
-            href="/tax/sbtpg"
-            hint={`${data.finance.sbtpgPayoutCount} recorded payouts`}
-            tone="ok"
           />
           <MetricTile
             label="Active clients"
@@ -136,22 +145,35 @@ export default async function HomePage() {
 
           <Panel
             title="Revenue trend"
-            eyebrow="Collected · Grants Pay + SBTPG · 14 days"
+            eyebrow="Total Revenue · SBTPG Fee Summary PAID · season-to-date"
             className="gc-span-7"
             action={<span className="display text-xl text-[var(--gc-ice)]">{monthLabel}</span>}
           >
             <p className="text-xs text-[var(--gc-muted)] mb-3">
-              Month collected = succeeded Grants Pay charges + OS-recorded SBTPG PAID/FUNDED payouts. No portal scrape.
+              Total Revenue is official SBTPG Fee Summary PAID. Today/week stay empty without a dated
+              payout or Grants Pay charge — season-to-date is not split. UNFUNDED is pending only. No
+              portal scrape.
             </p>
             <LineChart
               series={[{ name: "Collected", color: "#b2d4ff", values: data.revenueTrend.values }]}
               labels={data.revenueTrend.labels}
             />
             <div className="gc-dash-grid gc-dash-grid-4 mt-4">
+              <MetricTile
+                label="Collected this week"
+                value={
+                  data.finance.sbtpgCollectedWeekCents === 0 && data.finance.grantsPayWeekCents === 0
+                    ? "—"
+                    : formatUsd(data.finance.collectedWeekCents)
+                }
+                hint="No official weekly split"
+              />
+              <MetricTile
+                label="FCA"
+                value={`${formatUsd(data.finance.fcaCents)} · ${data.finance.fcaTaxpayerCount}`}
+              />
+              <MetricTile label="Auto Collect" value={formatUsd(data.finance.autoCollectCents)} />
               <MetricTile label="Pending settlement" value={formatUsd(data.finance.pendingSettlementCents)} />
-              <MetricTile label="Refunds (month)" value={formatUsd(data.finance.refundsMonthCents)} />
-              <MetricTile label="Chargebacks open" value={formatUsd(data.finance.chargebacksOpenCents)} tone="danger" />
-              <MetricTile label="Payouts paid" value={formatUsd(data.finance.payoutsPaidCents)} tone="ok" />
             </div>
           </Panel>
         </div>
@@ -266,10 +288,13 @@ export default async function HomePage() {
           <div className="space-y-4">
             <Panel title="Record SBTPG collected" eyebrow="Official payouts">
               <p className="text-sm text-[var(--gc-muted)] mb-4">
-                Command Center collected today / this week includes these OS-recorded SBTPG totals. Official
-                portal is last-step only.
+                Total Revenue reads official Fee Summary PAID from Postgres. Today/week stay empty unless a
+                dated payout exists. Official portal is last-step only.
               </p>
-              <SbtpgPayoutForm clients={payoutClients} />
+              <div className="space-y-4">
+                <SbtpgFeeSummaryIngestForm />
+                <SbtpgPayoutForm clients={payoutClients} />
+              </div>
             </Panel>
             <GhlSyncPanel canSync />
             <GhlConversationPullPanel canSync />

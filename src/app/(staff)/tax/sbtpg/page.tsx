@@ -8,6 +8,8 @@ import { SBTPG_STATUSES, taxDeskCatalog, taxStatusLabel } from "@/lib/tax/catalo
 import { TaxDeskAttachForm } from "@/components/tax/TaxDeskAttachForm";
 import { TaxDeskSessionForm } from "@/components/tax/TaxDeskSessionForm";
 import { SbtpgPayoutForm } from "@/components/tax/SbtpgPayoutForm";
+import { SbtpgFeeSummaryIngestForm } from "@/components/tax/SbtpgFeeSummaryIngestForm";
+import { getLatestOfficialFeeSummary } from "@/lib/tax/official-fee-summary";
 import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
 import { formatUsd } from "@/lib/payments/dashboard";
 import { listSbtpgPayouts } from "@/lib/tax/payouts";
@@ -17,7 +19,7 @@ export default async function SbtpgWorkspacePage() {
   if (denied || !user) return <p>Access denied.</p>;
 
   const catalog = taxDeskCatalog("SBTPG");
-  const [board, probe, clients, payouts] = await Promise.all([
+  const [board, probe, clients, payouts, official] = await Promise.all([
     listTaxDeskBoard("SBTPG"),
     probeSbtpgHealth(),
     prisma.client.findMany({
@@ -26,6 +28,7 @@ export default async function SbtpgWorkspacePage() {
       select: { id: true, grantsClientId: true, firstName: true, lastName: true },
     }),
     listSbtpgPayouts(),
+    getLatestOfficialFeeSummary(),
   ]);
   const canManage = hasPermission(user.role, "MANAGE_OPERATIONS");
   const openCount = board.filter((row) => row.status && row.status !== "CLOSED" && row.status !== "PAID").length;
@@ -42,10 +45,15 @@ export default async function SbtpgWorkspacePage() {
 
       <div className="gc-grid-dense gc-grid-dense-4 mb-8">
         {[
+          ["Total Revenue", official ? formatUsd(official.paidCents) : formatUsd(trackedCents)],
+          ["Paid taxpayers", official ? String(official.paidTaxpayerCount) : String(paidCount)],
+          [
+            "Unfunded",
+            official
+              ? `${formatUsd(official.unfundedCents)} · ${official.unfundedTaxpayerCount}`
+              : String(openCount),
+          ],
           ["Clients", String(board.length)],
-          ["Open payouts", String(openCount)],
-          ["Funded / paid", String(paidCount)],
-          ["Tracked", formatUsd(trackedCents)],
         ].map(([label, value]) => (
           <div key={label} className="gc-card">
             <p className="text-[0.62rem] tracking-[0.14em] uppercase text-[var(--gc-muted)] mb-2">{label}</p>
@@ -74,6 +82,7 @@ export default async function SbtpgWorkspacePage() {
 
       {canManage ? (
         <div className="mb-10 space-y-6">
+          <SbtpgFeeSummaryIngestForm />
           <SbtpgPayoutForm clients={clients} />
           <div className="grid gap-6 lg:grid-cols-2">
             <TaxDeskAttachForm desk="SBTPG" clients={clients} />

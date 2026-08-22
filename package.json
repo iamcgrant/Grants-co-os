@@ -33,7 +33,8 @@
     "smoke:production": "tsx scripts/production-smoke.ts",
     "launch:readiness": "tsx scripts/launch-readiness.ts",
     "desktop:linux": "node scripts/prepare-desktop-shell.mjs && cd desktop && npm install && npm run build",
-    "owner:setup-link": "tsx scripts/owner-setup-link.ts"
+    "owner:setup-link": "tsx scripts/owner-setup-link.ts",
+    "sbtpg:ingest-fee-summary": "tsx scripts/ingest-sbtpg-fee-summary.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
