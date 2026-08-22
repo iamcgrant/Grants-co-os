@@ -4,23 +4,48 @@ const api = window.spikeChrome;
 
 const deskNav = document.getElementById("desk-nav");
 const tabStrip = document.getElementById("tab-strip");
-const urlBar = document.getElementById("url-bar");
-const loadingDot = document.getElementById("loading-dot");
 const noticeEl = document.getElementById("notice");
 const noticeText = document.getElementById("notice-text");
 const btnBack = document.getElementById("btn-back");
-const btnForward = document.getElementById("btn-forward");
 const btnReload = document.getElementById("btn-reload");
+const btnIdentity = document.getElementById("btn-identity");
+const identityLabel = document.getElementById("identity-label");
+const identityPop = document.getElementById("identity-pop");
+const identityTitle = document.getElementById("identity-title");
+const identityHost = document.getElementById("identity-host");
+const overflowMenu = document.getElementById("overflow-menu");
+const btnMenu = document.getElementById("btn-menu");
 const btnOpen = document.getElementById("btn-open-browser");
-const btnClear = document.getElementById("btn-clear");
-const btnClose = document.getElementById("btn-close");
+const menuClear = document.getElementById("menu-clear");
+const menuAbout = document.getElementById("menu-about");
 const noticeDismiss = document.getElementById("notice-dismiss");
+const surface = document.getElementById("surface");
+const surfaceTitle = document.getElementById("surface-title");
+const surfaceCopy = document.getElementById("surface-copy");
+const wordmark = document.getElementById("wordmark");
+const surfaceWordmark = document.getElementById("surface-wordmark");
 
-/** @type {{ activeDeskId: string, desks: Array<{id:string,title:string,startUrl:string,open:boolean}>, url: string, loading: boolean, canGoBack: boolean, canGoForward: boolean, notice: {kind:string,message:string}|null } | null} */
+/** @type {object | null} */
 let state = null;
 
 function currentDeskId() {
   return state?.activeDeskId || "os";
+}
+
+function currentDesk() {
+  return state?.desks?.find((desk) => desk.id === currentDeskId()) || null;
+}
+
+function applyWordmark(dataUrl) {
+  for (const img of [wordmark, surfaceWordmark]) {
+    if (dataUrl) {
+      img.src = dataUrl;
+      img.hidden = false;
+    } else {
+      img.removeAttribute("src");
+      img.hidden = true;
+    }
+  }
 }
 
 function renderNav() {
@@ -43,13 +68,6 @@ function renderTabs() {
   if (!state) return;
   tabStrip.replaceChildren();
   const open = state.desks.filter((desk) => desk.open);
-  if (open.length === 0) {
-    const empty = document.createElement("span");
-    empty.className = "url-bar";
-    empty.textContent = "No open desk";
-    tabStrip.append(empty);
-    return;
-  }
   for (const desk of open) {
     const tab = document.createElement("div");
     tab.className = "tab";
@@ -74,17 +92,48 @@ function renderTabs() {
   }
 }
 
+function surfaceCopyFor(kind) {
+  switch (kind) {
+    case "loading":
+      return { title: "Grant & Co OS", copy: "Opening this workspace." };
+    case "welcome":
+      return { title: "Grant & Co OS", copy: "Choose a desk from the sidebar." };
+    case "error":
+      return { title: "This workspace could not load", copy: state?.notice?.message || "The official site did not finish loading." };
+    case "blocked":
+      return { title: "Navigation stayed here", copy: state?.notice?.message || "That destination is outside the approved host list." };
+    case "cert":
+      return { title: "Secure connection failed", copy: state?.notice?.message || "The certificate for this site was not accepted." };
+    case "crashed":
+      return { title: "This workspace stopped", copy: state?.notice?.message || "The page renderer closed unexpectedly." };
+    case "ready":
+      return { title: "", copy: "" };
+    default: {
+      const _exhaustive = kind;
+      void _exhaustive;
+      return { title: "Grant & Co OS", copy: "Opening your workspace." };
+    }
+  }
+}
+
 function renderChrome() {
   if (!state) return;
-  const hasView = state.desks.some((desk) => desk.id === state.activeDeskId && desk.open);
-  urlBar.textContent = hasView ? state.url || "Loading…" : "Select a desk";
-  loadingDot.hidden = !state.loading;
-  btnBack.disabled = !hasView || !state.canGoBack;
-  btnForward.disabled = !hasView || !state.canGoForward;
-  btnReload.disabled = !hasView;
-  btnClose.disabled = !hasView;
-  btnOpen.disabled = !state.activeDeskId;
-  btnClear.disabled = !state.activeDeskId;
+  const desk = currentDesk();
+  const hasView = Boolean(desk?.open);
+  const canGoBack = Boolean(hasView && state.canGoBack);
+  btnBack.hidden = !canGoBack;
+  btnBack.disabled = !canGoBack;
+  btnReload.disabled = !hasView || desk?.kind === "local-trusted";
+  identityLabel.textContent = desk?.title || "Grant & Co OS";
+  btnIdentity.disabled = !desk;
+  identityTitle.textContent = desk?.title || "";
+  identityHost.textContent = desk?.kind === "local-trusted"
+    ? "Trusted local workspace"
+    : (desk?.allowedHosts?.[0] || desk?.startUrl || "");
+
+  const fallback = Boolean(state.openInBrowserAvailable);
+  btnOpen.hidden = !fallback;
+  menuClear.hidden = desk?.kind === "local-trusted";
 
   if (state.notice?.message) {
     noticeEl.hidden = false;
@@ -94,6 +143,18 @@ function renderChrome() {
     noticeEl.hidden = true;
     noticeText.textContent = "";
   }
+
+  const kind = state.surface || (hasView && !state.loading ? "ready" : "loading");
+  const copy = surfaceCopyFor(kind);
+  surface.className = `viewport-well ${kind}`;
+  surface.hidden = kind === "ready";
+  surfaceTitle.textContent = copy.title;
+  surfaceCopy.textContent = copy.copy;
+}
+
+function hideMenus() {
+  identityPop.hidden = true;
+  overflowMenu.hidden = true;
 }
 
 function render(next) {
@@ -104,16 +165,33 @@ function render(next) {
 }
 
 btnBack.addEventListener("click", () => api.nav("back"));
-btnForward.addEventListener("click", () => api.nav("forward"));
 btnReload.addEventListener("click", () => api.nav("reload"));
-btnClose.addEventListener("click", () => api.closeDesk(currentDeskId()));
+btnIdentity.addEventListener("click", () => {
+  overflowMenu.hidden = true;
+  identityPop.hidden = !identityPop.hidden;
+});
+btnMenu.addEventListener("click", () => {
+  identityPop.hidden = true;
+  overflowMenu.hidden = !overflowMenu.hidden;
+});
+menuClear.addEventListener("click", () => {
+  hideMenus();
+  api.clearSiteData(currentDeskId());
+});
+menuAbout.addEventListener("click", () => {
+  hideMenus();
+  api.openAbout();
+});
 btnOpen.addEventListener("click", () => api.openInBrowser(currentDeskId()));
-btnClear.addEventListener("click", () => api.clearSiteData(currentDeskId()));
 noticeDismiss.addEventListener("click", () => api.dismissNotice());
 
 if (!api) {
-  urlBar.textContent = "Chrome preload missing — refuse to continue.";
+  surfaceTitle.textContent = "Grant & Co OS";
+  surfaceCopy.textContent = "This workspace could not start.";
 } else {
   api.onState(render);
   api.getState().then(render);
+  if (api.getBrand) {
+    api.getBrand().then((brand) => applyWordmark(brand?.wordmarkDataUrl || null));
+  }
 }

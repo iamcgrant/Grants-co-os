@@ -78,8 +78,12 @@ desktop/src-tauri/target/
 desktop/src-tauri/icons/android/
 desktop/src-tauri/icons/ios/
 
-# Disposable Electron spike (not a Tauri replacement)
+# Grant & Co OS desktop (local helper checkout and unsigned output)
 desktop-electron/node_modules
 desktop-electron/dist
 desktop-electron/out
 desktop-electron/.tmp
+desktop-electron/vendor/platform-imessage/
+desktop-electron/native/messages-helper/bin/*
+!desktop-electron/native/messages-helper/bin/.gitkeep
+desktop-electron/native/messages-helper/.build/
