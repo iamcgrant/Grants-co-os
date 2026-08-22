@@ -23,11 +23,14 @@ const { attachDownloadHandler } = require("./downloads");
 const SMOKE = process.argv.includes("--smoke");
 const CHROME_PRELOAD = path.join(__dirname, "..", "chrome", "preload.js");
 const CHROME_PAGE = path.join(__dirname, "..", "chrome", "index.html");
+let smokePassed = false;
 
 /** Linux smoke VMs often lack user-namespace sandboxing. Windows `npm start` does not set this. */
 if (SMOKE && process.platform === "linux") {
+  app.disableHardwareAcceleration();
   app.commandLine.appendSwitch("no-sandbox");
   app.commandLine.appendSwitch("disable-gpu");
+  app.commandLine.appendSwitch("disable-dev-shm-usage");
 }
 
 /** @type {import('electron').BaseWindow | null} */
@@ -78,7 +81,6 @@ function snapshot() {
   let loading = false;
   let canGoBack = false;
   let canGoForward = false;
-  let lastError = "";
 
   if (contents && !contents.isDestroyed()) {
     url = contents.getURL() || url;
@@ -108,7 +110,6 @@ function snapshot() {
     loading,
     canGoBack,
     canGoForward,
-    lastError,
     notice,
   };
 }
@@ -351,6 +352,7 @@ function registerIpc() {
   ipcMain.handle("chrome:open-browser", (_event, id) => openOfficialInBrowser(String(id)));
   ipcMain.handle("chrome:dismiss-notice", () => {
     notice = null;
+    layoutViews();
     pushState();
     return snapshot();
   });
@@ -387,9 +389,21 @@ function createWindow() {
   });
 
   chromeView.webContents.once("did-finish-load", () => {
+    if (SMOKE) {
+      smokePassed = true;
+      if (mainWindow) mainWindow.show();
+      const [width, height] = contentSize();
+      console.log(`SMOKE_OK chrome=${width}x${height} desks=${DESKS.length}`);
+      setTimeout(() => app.quit(), 800);
+      return;
+    }
     showDesk("os");
     if (mainWindow) mainWindow.show();
     pushState();
+  });
+
+  chromeView.webContents.on("render-process-gone", (_event, details) => {
+    console.error("chrome renderer gone", details);
   });
 
   layoutViews();
@@ -405,8 +419,12 @@ app.whenReady().then(() => {
   registerIpc();
   createWindow();
   if (SMOKE) {
-    console.log("SMOKE_OK");
-    setTimeout(() => app.quit(), 2500);
+    setTimeout(() => {
+      if (!smokePassed) {
+        console.error("SMOKE_FAIL chrome did not finish load");
+        app.exit(1);
+      }
+    }, 10000);
   }
 });
 

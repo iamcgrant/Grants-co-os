@@ -82,3 +82,4 @@ desktop/src-tauri/icons/ios/
 desktop-electron/node_modules
 desktop-electron/dist
 desktop-electron/out
+desktop-electron/.tmp

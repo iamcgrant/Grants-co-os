@@ -74,8 +74,9 @@ describe("spike source invariants", () => {
 
   it("does not implement a grantscoos return or cookie export", () => {
     const main = fs.readFileSync(path.join(root, "src/main/index.js"), "utf8");
-    assert.doesNotMatch(main, /grantscoos:\/\//);
+    assert.doesNotMatch(main, /setAsDefaultProtocolClient|registerStringProtocol|registerHttpProtocol|registerSchemesAsPrivileged/);
     assert.doesNotMatch(main, /cookies\.get|cookies\.set|ses\.cookies/);
+    assert.match(main, /There is no grantscoos/);
     assert.match(main, /WebContentsView/);
     assert.match(main, /unprivilegedWebPreferences/);
   });
