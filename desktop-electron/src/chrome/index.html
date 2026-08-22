@@ -7,48 +7,71 @@
       content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Grants &amp; Co OS — Electron spike</title>
+    <title>Grant &amp; Co OS</title>
     <link rel="stylesheet" href="./chrome.css" />
   </head>
   <body>
     <div class="shell">
       <aside class="sidebar" aria-label="Desks">
-        <p class="eyebrow">Grants &amp; Co</p>
-        <h1>OS spike</h1>
-        <p class="sidebar-note">Local chrome only. Vendor pages never load here.</p>
+        <div class="brand">
+          <img class="brand-mark" src="./icons/os.svg" alt="" />
+          <div class="brand-copy">
+            <p class="eyebrow">Grant &amp; Co Consultants</p>
+            <h1>Grant &amp; Co OS</h1>
+          </div>
+        </div>
+        <p class="sidebar-section">Desks</p>
         <nav id="desk-nav" class="desk-nav"></nav>
       </aside>
       <div class="main">
-        <div class="banner" role="status">
-          DISPOSABLE FEASIBILITY SPIKE — not production, not a Tauri replacement.
-          Login/SSO/MFA results are unproven until Windows + authorized accounts.
-        </div>
-        <div class="tabs" id="tab-strip" role="tablist" aria-label="Open desks"></div>
-        <div class="toolbar">
-          <div class="nav-group">
-            <button type="button" id="btn-back" aria-label="Back" disabled>Back</button>
-            <button type="button" id="btn-forward" aria-label="Forward" disabled>Forward</button>
-            <button type="button" id="btn-reload" aria-label="Reload" disabled>Reload</button>
+        <header class="header" id="os-header">
+          <div class="header-nav">
+            <button type="button" id="btn-back" class="icon-btn" hidden aria-label="Back">
+              <img src="./icons/back.svg" alt="" />
+            </button>
+            <button type="button" id="btn-reload" class="icon-btn" hidden aria-label="Refresh">
+              <img src="./icons/refresh.svg" alt="" />
+            </button>
           </div>
-          <div class="url-group">
-            <span id="loading-dot" class="loading-dot" hidden></span>
-            <span id="url-bar" class="url-bar">Select a desk</span>
+          <div class="vendor-wrap">
+            <button type="button" id="vendor-chip" class="vendor-chip" hidden aria-haspopup="dialog" aria-expanded="false">
+              <img id="vendor-icon" alt="" />
+              <span id="vendor-name"></span>
+            </button>
+            <div id="vendor-popover" class="popover" hidden role="dialog" aria-label="Desk details">
+              <p id="popover-secure" class="popover-secure">
+                <img src="./icons/lock.svg" alt="" />
+                <span id="popover-lock">HTTPS</span>
+              </p>
+              <p class="popover-label">Secure hostname</p>
+              <p id="popover-host" class="popover-value"></p>
+              <p class="popover-label">Official start host</p>
+              <p id="popover-official" class="popover-value"></p>
+            </div>
           </div>
-          <div class="action-group">
-            <button type="button" id="btn-open-browser">Open securely in browser</button>
-            <button type="button" id="btn-clear">Clear site data and sign out</button>
-            <button type="button" id="btn-close" aria-label="Close desk">Close</button>
+          <div class="tabs" id="tab-strip" role="tablist" aria-label="Open desks"></div>
+          <div class="header-more">
+            <button type="button" id="btn-more" class="icon-btn" hidden aria-label="Desk menu" aria-haspopup="menu" aria-expanded="false">
+              <img src="./icons/more.svg" alt="" />
+            </button>
+            <div id="overflow-menu" class="menu" hidden role="menu">
+              <button type="button" id="menu-open-browser" role="menuitem">Open in browser</button>
+              <button type="button" id="menu-clear" role="menuitem">Clear site data and sign out</button>
+              <button type="button" id="menu-forward" role="menuitem" hidden>Forward</button>
+            </div>
           </div>
-        </div>
+        </header>
         <div id="notice" class="notice" hidden>
-          <p id="notice-text"></p>
+          <div class="notice-body">
+            <p id="notice-text"></p>
+            <button type="button" id="notice-open-browser" class="notice-open" hidden>
+              Open securely in browser
+            </button>
+          </div>
           <button type="button" id="notice-dismiss">Dismiss</button>
         </div>
         <div class="viewport-well">
-          <p>
-            Official sites load in an unprivileged WebContentsView over this well.
-            This chrome renderer has no live OS page and no vendor page.
-          </p>
+          <p>Open a desk from the sidebar. Official sites load here.</p>
         </div>
       </div>
     </div>

@@ -42,10 +42,10 @@ For each desk, mark only after a Windows session:
 
 These still should be confirmed on Windows. Linux smoke only proves the process starts.
 
-- [ ] Banner states this is a disposable spike, not production / not Tauri
+- [ ] Window / HTML title is Grant & Co OS; no address bar; no disposable-spike banner
 - [ ] Sidebar lists only OS Home + the six approved vendors
 - [ ] Chrome HTML is local; live OS is not in the preload renderer
-- [ ] Back / forward / reload / close update the active desk
+- [ ] Back icon (when canGoBack), refresh, tab ×, and the ••• menu update the active desk
 - [ ] Loading indicator appears while a view is loading
 - [ ] Failed main-frame load shows an error notice in chrome (no injected vendor script)
 - [ ] Permission prompts from a vendor page are denied and noticed
