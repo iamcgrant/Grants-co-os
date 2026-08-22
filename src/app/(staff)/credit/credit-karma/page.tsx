@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { CREDIT_DISPUTES_NAV } from "@/lib/nav/role-nav";
 import { requireCreditStaff } from "@/lib/disputes/access";
 import { ClientAssistedScoreForm } from "@/components/credit/ClientAssistedScoreForm";
+import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
 import { hasPermission } from "@/lib/rbac/permissions";
 
 export default async function CreditKarmaAssistedPage() {
@@ -22,6 +23,12 @@ export default async function CreditKarmaAssistedPage() {
         Client-assisted score entry. Staff record what the client reports from their Credit Karma
         account. No scraping, applications, offers, disputes, or settings changes.
       </p>
+      {clients.length === 0 ? (
+        <DeskEmptyState
+          detail="No Grants clients to attach a client-assisted Credit Karma score to. This desk does not scrape Credit Karma."
+          nextAction="Add or pull a Grants client, then record the score the client reports."
+        />
+      ) : null}
       {hasPermission(user.role, "MANAGE_CREDIT") ? (
         <ClientAssistedScoreForm clients={clients} />
       ) : (

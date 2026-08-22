@@ -75,6 +75,7 @@ describe("native Cloud Tax Office + SBTPG desks", () => {
     const sbtpg = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/sbtpg/page.tsx"), "utf8");
     expect(sbtpg).toMatch(/listTaxDeskBoard/);
     expect(sbtpg).toMatch(/TaxDeskAttachForm/);
+    expect(sbtpg).toMatch(/SbtpgPayoutForm/);
   });
 
   it("attaches a Cloud Tax Office return without inventing an id", async () => {
@@ -99,7 +100,7 @@ describe("native Cloud Tax Office + SBTPG desks", () => {
       where: { eventType: { in: ["CLOUD_TAX_OFFICE_SESSION", "CLOUD_TAX_OFFICE_ATTACHED"] } },
     });
     const before = await probeTaxDeskHealth("CLOUD_TAX_OFFICE");
-    expect(before.status).toBe("DEGRADED");
+    expect(before.status).toBe("ACTION_REQUIRED");
     expect(before.lastSuccessAt).toBeNull();
 
     const client = await seedClient("sess");

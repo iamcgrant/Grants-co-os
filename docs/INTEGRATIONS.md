@@ -34,13 +34,28 @@ All integrations are adapters beneath Grants & Co OS.
 
 ## Telegram team desk (not client comms)
 
-1. `/team-chat` is a native OS inbox for Simon / CS / disputes. It does not replace Telegram and does not route through GHL.
+1. `/team-chat` is a native OS inbox for Simon / CS / disputes. Desktop sidebar label is **Telegram** (not only More).
 2. Required env: **`TELEGRAM_BOT_TOKEN`**. Optional: **`TELEGRAM_TEAM_CHAT_IDS`** (comma-separated chat ids the bot may read/send).
-3. Health is CONNECTED only after `getMe` + visible team chats succeed. Without the bot token the native Team UI still ships and shows ACTION REQUIRED.
+3. Health is CONNECTED only after `getMe` + visible team chats succeed. Without the bot token the native Telegram screen still ships and shows ACTION REQUIRED.
+
+## Work Gmail (official API · not client SMS)
+
+1. Native inbox at `/inbox?tab=gmail` (desktop sidebar **Gmail**).
+2. Required env (host secrets only): **`GMAIL_CLIENT_ID`**, **`GMAIL_CLIENT_SECRET`**, **`GMAIL_REFRESH_TOKEN`**. Optional **`GMAIL_USER`** (mailbox; defaults to `me`).
+3. Official Gmail API list/read only. No scrape. Fail-closed without `GMAIL_*`. GHL remains the only phone/SMS/email client backend.
 
 ## GHL conversations → Grants OS inbox (linked masters only)
 
-1. Pull via `POST /api/integrations/ghl/conversations/sync` (Owners/managers) or `npm run ghl:inbound-conversations`. `dryRun: true` / `--dry-run` previews without inbox writes.
+1. Pull via `POST /api/integrations/ghl/conversations/sync` (Owners/managers) or:
+
+   ```bash
+   npm run ghl:inbound-conversations -- --dry-run
+   npm run ghl:inbound-conversations -- --apply
+   npm run ghl:inbound-sync -- --dry-run
+   npm run ghl:inbound-sync -- --apply
+   ```
+
+   `dryRun: true` / `--dry-run` previews without inbox writes. Inbox **GHL** tab lists location conversations in-OS (`GET /api/integrations/ghl/conversations`).
 2. Only already-linked GHL identifiers are eligible. Unlinked GHL contacts are ignored — this path never creates a Grants Client and never creates a GHL contact.
 3. Messages are recorded on the client's OS `CLIENT` conversation with `deliveryStatus=RECORDED` and unique `(provider=GHL, externalId=GHL message id)`. Re-pulls skip duplicates.
 4. Opt-out / DND flags present on the conversation or message payload are stored on the GHL identifier metadata and on the imported message metadata. They are never used to send.
@@ -126,7 +141,9 @@ There is **no supported Cloud Tax Office list/read API**. Do not scrape. Officia
 
 Staff track tax-client refunds in Grants OS at `/tax/sbtpg`. Official `pro.sbtpg.com` is last-step login only. No supported list API. No scrape.
 
-**Health:** `CONNECTED` only after a recorded OS attach/session.
+Record or import official payout totals (`SbtpgPayout` / `POST /api/tax/sbtpg/payouts`). Command Center **Collected today / this week / month** includes OS-recorded **PAID** and **FUNDED** SBTPG amounts plus Grants Pay succeeded charges.
+
+**Health:** `CONNECTED` only after a recorded OS attach/session/payout. Empty desk is `ACTION_REQUIRED`.
 
 ## Commas invoices from Client 360 / Grants Pay
 

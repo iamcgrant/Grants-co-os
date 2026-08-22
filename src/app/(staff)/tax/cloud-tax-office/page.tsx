@@ -7,6 +7,7 @@ import { probeCloudTaxOfficeHealth } from "@/lib/tax/health";
 import { CLOUD_TAX_STATUSES, taxDeskCatalog, taxStatusLabel } from "@/lib/tax/catalog";
 import { TaxDeskAttachForm } from "@/components/tax/TaxDeskAttachForm";
 import { TaxDeskSessionForm } from "@/components/tax/TaxDeskSessionForm";
+import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
 
 export default async function CloudTaxOfficePage() {
   const { user, denied } = await requireTaxStaff();
@@ -58,6 +59,13 @@ export default async function CloudTaxOfficePage() {
         ) : null}
       </div>
 
+      {board.length === 0 ? (
+        <DeskEmptyState
+          detail={catalog.honesty}
+          nextAction="Attach a Grants client and record a return session. Official Cloud Tax Office is last-step only."
+        />
+      ) : null}
+
       {canManage ? (
         <div className="mb-10 grid gap-6 lg:grid-cols-2">
           <TaxDeskAttachForm desk="CLOUD_TAX_OFFICE" clients={clients} />
@@ -67,7 +75,7 @@ export default async function CloudTaxOfficePage() {
         <p className="text-sm text-[var(--gc-muted)] mb-10">View only — processing can record attach and sessions.</p>
       )}
 
-      {CLOUD_TAX_STATUSES.map((status) => {
+      {(board.length > 0 ? CLOUD_TAX_STATUSES : []).map((status) => {
         const rows = board.filter((row) => row.status === status);
         return (
           <section key={status} className="mb-8">

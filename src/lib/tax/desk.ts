@@ -16,6 +16,7 @@ import {
   type TaxDeskStatus,
   type TaxSessionKind,
 } from "./catalog";
+import { recordSbtpgPayout } from "./payouts";
 
 export class TaxDeskError extends Error {
   constructor(
@@ -223,6 +224,19 @@ export async function recordTaxDeskSession(input: {
     entityId: client.id,
     metadata: { kind: input.kind, grantsClientId: client.grantsClientId, desk: input.desk },
   });
+
+  if (input.desk === "SBTPG" && typeof input.amountCents === "number" && input.amountCents > 0) {
+    await recordSbtpgPayout({
+      amountCents: input.amountCents,
+      status: status || "PAID",
+      clientId: client.id,
+      externalId: identifier?.externalId ?? null,
+      taxYear,
+      source: "staff_recorded",
+      notes: notes || result,
+      recordedById: input.actorId,
+    });
+  }
 
   return {
     client,

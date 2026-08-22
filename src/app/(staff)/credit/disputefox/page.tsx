@@ -6,6 +6,7 @@ import { listDisputeFoxBoard } from "@/lib/disputes/cases";
 import { DISPUTE_CASE_STATUSES, channelCatalog, statusLabel } from "@/lib/disputes/channels";
 import { probeDisputeFoxApi } from "@/lib/integrations/disputefox/probe";
 import { NewCaseForm } from "@/components/disputes/NewCaseForm";
+import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
 
 export default async function DisputeFoxWorkspacePage() {
   const { user, denied } = await requireCreditStaff();
@@ -52,6 +53,13 @@ export default async function DisputeFoxWorkspacePage() {
         <p className="text-sm text-[var(--gc-muted)] mt-2">{probe.detail}</p>
       </div>
 
+      {board.length === 0 ? (
+        <DeskEmptyState
+          detail={catalog.honesty}
+          nextAction="Open a DisputeFox case for a Grants client. Live list/get stays off. No scrape."
+        />
+      ) : null}
+
       {canManage ? (
         <div className="mb-10">
           <NewCaseForm
@@ -62,7 +70,7 @@ export default async function DisputeFoxWorkspacePage() {
         </div>
       ) : null}
 
-      {DISPUTE_CASE_STATUSES.map((status) => {
+      {(board.length > 0 ? DISPUTE_CASE_STATUSES : []).map((status) => {
         const rows = board.filter((row) => row.case?.status === status);
         return (
           <section key={status} className="mb-8">

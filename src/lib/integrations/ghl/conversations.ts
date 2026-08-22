@@ -508,3 +508,138 @@ export async function pullGhlConversationsForLinkedMasters(input: ConversationPu
       : "Inbound conversation pull onto linked master inboxes only. No GHL writes or sends.",
   };
 }
+
+export type GhlLocationInboxThread = {
+  conversationId: string;
+  contactId: string | null;
+  lastMessageBody: string | null;
+  lastMessageType: string | null;
+  lastMessageDirection: string | null;
+  lastMessageAt: string | null;
+  channel: "SMS" | "EMAIL" | "CALL" | "OTHER";
+  grantsClientId: string | null;
+  clientName: string | null;
+  clientId: string | null;
+};
+
+function locationThreadChannel(conversation: GhlApiConversation): GhlLocationInboxThread["channel"] {
+  const raw = String(conversation.lastMessageType || "").toUpperCase();
+  if (raw.includes("EMAIL")) return "EMAIL";
+  if (raw.includes("CALL") || raw.includes("VOICE")) return "CALL";
+  if (raw.includes("SMS") || raw.includes("IMESSAGE") || raw.includes("WHATSAPP")) return "SMS";
+  return "OTHER";
+}
+
+/**
+ * Location-wide GHL conversation list for the staff inbox.
+ * Does not create Grants clients or GHL contacts.
+ */
+export async function listGhlLocationInbox(limit = 40): Promise<{
+  ready: boolean;
+  failedClosed?: boolean;
+  missingScope?: boolean;
+  threads: GhlLocationInboxThread[];
+  requiredSecrets?: string[];
+  requiredScope?: string;
+  additionalScopesNeeded?: string[];
+  message: string;
+}> {
+  if (!isGhlApiReady()) {
+    return {
+      ready: false,
+      failedClosed: true,
+      threads: [],
+      requiredSecrets: [GHL_API_KEY_ENV],
+      requiredScope: GHL_CONVERSATIONS_READONLY_SCOPE,
+      additionalScopesNeeded: [GHL_CONVERSATIONS_MESSAGE_READONLY_SCOPE],
+      message: `Fail-closed: ${GHL_API_KEY_ENV} is not set. Add it to host secrets to list GHL conversations in-OS.`,
+    };
+  }
+
+  try {
+    const found = await searchGhlConversations({ limit });
+    const linked = await listLinkedGhlMasters();
+    const byContact = new Map(linked.map((row) => [row.externalId, row.client]));
+    const threads = found.conversations.map((conversation) => {
+      const contactId = String(conversation.contactId || "").trim() || null;
+      const client = contactId ? byContact.get(contactId) : undefined;
+      return {
+        conversationId: conversation.id,
+        contactId,
+        lastMessageBody: conversation.lastMessageBody || null,
+        lastMessageType: conversation.lastMessageType || null,
+        lastMessageDirection: conversation.lastMessageDirection || null,
+        lastMessageAt: conversation.lastMessageDate || null,
+        channel: locationThreadChannel(conversation),
+        grantsClientId: client?.grantsClientId ?? null,
+        clientName: client ? `${client.firstName} ${client.lastName}` : null,
+        clientId: client?.id ?? null,
+      };
+    });
+    return {
+      ready: true,
+      threads,
+      requiredScope: GHL_CONVERSATIONS_READONLY_SCOPE,
+      additionalScopesNeeded: [GHL_CONVERSATIONS_MESSAGE_READONLY_SCOPE],
+      message: threads.length
+        ? `Loaded ${threads.length} GHL conversation(s) from the location.`
+        : "GHL API reached · no conversations at this location yet.",
+    };
+  } catch (err) {
+    if (err instanceof GhlApiError && isGhlAuthScopeError(err)) {
+      return {
+        ready: false,
+        failedClosed: true,
+        missingScope: true,
+        threads: [],
+        requiredScope: err.requiredScope || GHL_CONVERSATIONS_READONLY_SCOPE,
+        additionalScopesNeeded: [GHL_CONVERSATIONS_MESSAGE_READONLY_SCOPE],
+        message:
+          `Fail-closed: GHL token cannot list conversations. Required PIT scope: ${
+            err.requiredScope || GHL_CONVERSATIONS_READONLY_SCOPE
+          }.`,
+      };
+    }
+    return {
+      ready: false,
+      failedClosed: true,
+      threads: [],
+      requiredScope: GHL_CONVERSATIONS_READONLY_SCOPE,
+      message: err instanceof Error ? err.message : "GHL conversation list failed",
+    };
+  }
+}
+
+export async function summarizeGhlLocationInbox(): Promise<{
+  ready: boolean;
+  conversations: number;
+  inboundEmail: number;
+  missed: number;
+  message: string;
+}> {
+  const inbox = await listGhlLocationInbox(100);
+  if (!inbox.ready) {
+    return {
+      ready: false,
+      conversations: 0,
+      inboundEmail: 0,
+      missed: 0,
+      message: inbox.message,
+    };
+  }
+  let inboundEmail = 0;
+  let missed = 0;
+  for (const thread of inbox.threads) {
+    const direction = String(thread.lastMessageDirection || "").toLowerCase();
+    const inbound = direction === "inbound" || direction === "in";
+    if (thread.channel === "EMAIL" && inbound) inboundEmail += 1;
+    if (inbound) missed += 1;
+  }
+  return {
+    ready: true,
+    conversations: inbox.threads.length,
+    inboundEmail,
+    missed,
+    message: inbox.message,
+  };
+}

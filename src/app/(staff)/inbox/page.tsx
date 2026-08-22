@@ -10,19 +10,37 @@ import { isGhlApiReady } from "@/lib/integrations/ghl/http";
 import { getGcEnvironment } from "@/lib/integrations/env";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { GhlConversationPullPanel } from "@/components/integrations/GhlConversationPullPanel";
+import { GhlLocationInbox } from "@/components/inbox/GhlLocationInbox";
+import { GmailWorkInbox } from "@/components/inbox/GmailWorkInbox";
 
 export default async function InboxPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; c?: string }>;
+  searchParams: Promise<{ tab?: string; c?: string; client?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  const { tab: tabRaw, c } = await searchParams;
-  const tab = tabRaw === "team" ? "team" : tabRaw === "client" ? "client" : "all";
-  const conversations = await listInbox(user.id, tab);
+  const { tab: tabRaw, c, client: clientRaw } = await searchParams;
+  const tab =
+    tabRaw === "team"
+      ? "team"
+      : tabRaw === "client"
+        ? "client"
+        : tabRaw === "ghl"
+          ? "ghl"
+          : tabRaw === "gmail"
+            ? "gmail"
+            : "all";
+  const inboxTab = tab === "ghl" || tab === "gmail" ? "client" : tab;
+  const conversations = await listInbox(user.id, inboxTab);
   const ghlReady = isGhlApiReady();
   const dataPlane = getGcEnvironment();
+  const ghlClient = clientRaw
+    ? await prisma.client.findFirst({
+        where: { OR: [{ id: clientRaw }, { grantsClientId: clientRaw }] },
+        select: { id: true, firstName: true, lastName: true, grantsClientId: true },
+      })
+    : null;
 
   const active = c
     ? await prisma.conversation.findUnique({
@@ -56,17 +74,30 @@ export default async function InboxPage({
             {ghlReady ? "LeadConnector configured" : "Awaiting GHL_API_KEY"}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href="/inbox?tab=all" className={`gc-btn text-xs ${tab === "all" ? "gc-btn-primary" : "gc-btn-outline"}`}>All</Link>
           <Link href="/inbox?tab=client" className={`gc-btn text-xs ${tab === "client" ? "gc-btn-primary" : "gc-btn-outline"}`}>Client</Link>
-          <Link href="/team-chat" className="gc-btn gc-btn-outline text-xs">Team</Link>
+          <Link href="/inbox?tab=ghl" className={`gc-btn text-xs ${tab === "ghl" ? "gc-btn-primary" : "gc-btn-outline"}`}>GHL</Link>
+          <Link href="/inbox?tab=gmail" className={`gc-btn text-xs ${tab === "gmail" ? "gc-btn-primary" : "gc-btn-outline"}`}>Gmail</Link>
+          <Link href="/team-chat" className="gc-btn gc-btn-outline text-xs">Telegram</Link>
         </div>
       </div>
 
-      {hasPermission(user.role, "MANAGE_OPERATIONS") && (
+      {tab !== "gmail" && hasPermission(user.role, "MANAGE_OPERATIONS") && (
         <GhlConversationPullPanel canSync />
       )}
 
+      {tab === "gmail" ? <GmailWorkInbox /> : null}
+      {tab === "ghl" && !ghlClient ? <GhlLocationInbox /> : null}
+      {tab === "ghl" && ghlClient ? (
+        <GhlClientDesk
+          clientId={ghlClient.id}
+          clientName={`${ghlClient.firstName} ${ghlClient.lastName}`}
+        />
+      ) : null}
+      {tab === "all" ? <GhlLocationInbox /> : null}
+
+      {tab === "gmail" || tab === "ghl" ? null : (
       <div className="grid lg:grid-cols-[340px_1fr] gap-4 min-h-[68vh]">
         <Panel className="!p-0 overflow-hidden">
           <div className="divide-y divide-[var(--gc-border)] max-h-[70vh] overflow-y-auto">
@@ -124,7 +155,7 @@ export default async function InboxPage({
                 <div>
                   <p className="font-medium">{active.subject || "Internal"}</p>
                   <p className="text-xs text-[var(--gc-muted)]">
-                    OS internal notes · Telegram team chat is under Team
+                    OS internal notes · Telegram team chat is under Telegram
                   </p>
                 </div>
               </div>
@@ -152,6 +183,7 @@ export default async function InboxPage({
           )}
         </section>
       </div>
+      )}
     </div>
   );
 }
