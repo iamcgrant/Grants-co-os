@@ -43,8 +43,10 @@ const deskViews = new Map();
 const preparedPartitions = new Set();
 
 let activeDeskId = "os";
-/** @type {{ kind: string, message: string } | null} */
+/** @type {{ kind: string, message: string, allowBrowser?: boolean } | null} */
 let notice = null;
+/** Official start URL was actually requested for this desk. */
+const officialAttempted = new Set();
 
 function contentSize() {
   if (!mainWindow) return [1280, 800];
@@ -101,9 +103,7 @@ function snapshot() {
       title: desk.title,
       startUrl: desk.startUrl,
       allowedHosts: [...desk.allowedHosts],
-      group: desk.group ?? null,
       kind: desk.kind,
-      href: desk.href,
       open: deskViews.has(desk.id),
     })),
     openIds,
@@ -136,7 +136,7 @@ function authReturnMessage(desk, host) {
   );
 }
 
-function handleUnknownNavigation(desk, decision, { openExternal }) {
+function handleUnknownNavigation(desk, decision) {
   if (decision.action === "block") {
     setNotice({
       kind: "error",
@@ -145,14 +145,9 @@ function handleUnknownNavigation(desk, decision, { openExternal }) {
     });
     return;
   }
-  if (openExternal && decision.url) {
-    openHttpsInSystemBrowser(decision.url).catch(() => {});
-  }
-  setNotice({
-    kind: "warn",
-    message: authReturnMessage(desk, decision.host),
-    allowBrowser: true,
-  });
+  // Hostname changed off the exact provider/IdP list. Stay on the official
+  // page. Do not open the system browser — that is only after a real load failure.
+  void desk;
 }
 
 function attachNavigationGuards(contents, desk) {
@@ -169,7 +164,7 @@ function attachNavigationGuards(contents, desk) {
         },
       };
     }
-    handleUnknownNavigation(desk, decision, { openExternal: decision.action === "system-browser" });
+    handleUnknownNavigation(desk, decision);
     return { action: "deny" };
   });
 
@@ -177,21 +172,24 @@ function attachNavigationGuards(contents, desk) {
     const decision = classifyNavigation(url, desk.allowedHosts);
     if (decision.action === "allow") return;
     event.preventDefault();
-    handleUnknownNavigation(desk, decision, { openExternal: decision.action === "system-browser" });
+    handleUnknownNavigation(desk, decision);
   });
 
   contents.on("will-redirect", (event, url) => {
     const decision = classifyNavigation(url, desk.allowedHosts);
     if (decision.action === "allow") return;
     event.preventDefault();
-    handleUnknownNavigation(desk, decision, { openExternal: decision.action === "system-browser" });
+    handleUnknownNavigation(desk, decision);
   });
 
   contents.on("will-attach-webview", (event) => {
     event.preventDefault();
   });
 
-  contents.on("did-start-loading", () => pushState());
+  contents.on("did-start-loading", () => {
+    officialAttempted.add(desk.id);
+    pushState();
+  });
   contents.on("did-stop-loading", () => pushState());
   contents.on("did-navigate", () => pushState());
   contents.on("did-navigate-in-page", () => pushState());
@@ -202,7 +200,7 @@ function attachNavigationGuards(contents, desk) {
     setNotice({
       kind: "error",
       message: `${desk.title} failed to load: ${desc || "unknown error"}`,
-      allowBrowser: desk.kind === "vendor",
+      allowBrowser: desk.kind === "vendor" && officialAttempted.has(desk.id),
     });
   });
 }

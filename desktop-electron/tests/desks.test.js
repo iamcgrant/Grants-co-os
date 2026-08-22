@@ -6,7 +6,6 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {
   DESKS,
-  OWNER_NAV,
   OFFICIAL,
   OS_HOME_START_URL,
   OS_HOST,
@@ -15,98 +14,103 @@ const {
 } = require("../src/main/desks");
 const { unprivilegedWebPreferences, chromeWebPreferences } = require("../src/main/security");
 
+const EXPECTED = [
+  ["os", "Home", OS_HOME_START_URL, OS_HOST],
+  ["ghl", "GHL", OFFICIAL.ghl, "app.gohighlevel.com"],
+  ["telegram", "Telegram", OFFICIAL.telegram, "web.telegram.org"],
+  ["experian", "Experian", OFFICIAL.experian, "www.experian.com"],
+  ["equifax", "Equifax", OFFICIAL.equifax, "www.equifax.com"],
+  ["disputefox", "DisputeFox", OFFICIAL.disputefox, "pulse.disputeprocess.com"],
+  ["cloud-tax", "Cloud Tax", OFFICIAL.cloudTax, "grantandco.cloudtaxoffice.com"],
+  ["cfpb", "CFPB", OFFICIAL.cfpb, "www.consumerfinance.gov"],
+];
+
+const FORBIDDEN_SIDEBAR = [
+  "Gmail",
+  "Dialer",
+  "Clients",
+  "Inbox",
+  "SBTPG",
+  "Tasks",
+  "TransUnion",
+  "Innovis",
+  "SmartCredit",
+  "Credit Karma",
+  "Cognito",
+  "Pay",
+  "Reports",
+  "Messages",
+];
+
 const FALLBACK_ROUTES = [
   "/inbox?tab=ghl",
-  "/inbox?tab=gmail",
   "/team-chat",
   "/credit/experian",
   "/credit/equifax",
   "/credit/disputefox",
-  "/credit/transunion",
   "/escalations/cfpb",
   "/tax/cloud-tax-office",
 ];
 
-const LOCKED_VENDORS = [
-  ["ghl", OFFICIAL.ghl, "app.gohighlevel.com"],
-  ["telegram", OFFICIAL.telegram, "web.telegram.org"],
-  ["experian", OFFICIAL.experian, "www.experian.com"],
-  ["equifax", OFFICIAL.equifax, "www.equifax.com"],
-  ["disputefox", OFFICIAL.disputefox, "pulse.disputeprocess.com"],
-  ["cloud-tax", OFFICIAL.cloudTax, "grantandco.cloudtaxoffice.com"],
-  ["cfpb", OFFICIAL.cfpb, "www.consumerfinance.gov"],
-  ["gmail", OFFICIAL.gmail, "mail.google.com"],
-  ["cognito", OFFICIAL.cognito, "www.cognitoforms.com"],
-];
-
-describe("owner desktop catalog", () => {
-  it("ships the complete OWNER sidebar, not a six-vendor subset", () => {
-    assert.equal(DESKS.length, OWNER_NAV.length);
-    assert.ok(DESKS.length > 8);
+describe("locked 8-desk sidebar", () => {
+  it("ships exactly Home plus the seven official vendor desks", () => {
+    assert.equal(DESKS.length, 8);
+    assert.deepEqual(
+      DESKS.map((desk) => desk.id),
+      EXPECTED.map((row) => row[0]),
+    );
     assert.deepEqual(
       DESKS.map((desk) => desk.title),
-      OWNER_NAV.map((item) => item.label),
+      EXPECTED.map((row) => row[1]),
     );
+    for (const title of FORBIDDEN_SIDEBAR) {
+      assert.equal(
+        DESKS.some((desk) => desk.title === title),
+        false,
+        title,
+      );
+    }
   });
 
-  it("starts OS Home on the first-party login with gc_shell=app", () => {
+  it("locks official start URLs and exact provider hosts", () => {
+    for (const [id, title, startUrl, host] of EXPECTED) {
+      const desk = deskById(id);
+      assert.ok(desk, id);
+      assert.equal(desk.title, title);
+      assert.equal(desk.startUrl, startUrl);
+      assert.ok(desk.allowedHosts.includes(host), `${id} missing ${host}`);
+      assert.match(desk.partition, /^persist:gc-/);
+    }
     const home = deskById("os");
-    assert.ok(home);
-    assert.equal(home.startUrl, OS_HOME_START_URL);
     assert.equal(home.startUrl, "https://os.grantandconsultants.com/login?gc_shell=app");
     assert.deepEqual([...home.allowedHosts], [OS_HOST]);
     assert.equal(home.partition, OS_PARTITION);
     assert.equal(home.kind, "os");
+    assert.ok(deskById("ghl").allowedHosts.includes("accounts.google.com"));
   });
 
-  it("loads first-party OS pages on os.grantandconsultants.com with gc_shell=app", () => {
-    const firstParty = DESKS.filter((desk) => desk.kind === "os" && desk.id !== "os");
-    assert.ok(firstParty.length > 0);
-    for (const desk of firstParty) {
-      assert.match(desk.startUrl, /^https:\/\/os\.grantandconsultants\.com\//);
-      assert.match(desk.startUrl, /[?&]gc_shell=app/);
-      assert.equal(desk.partition, OS_PARTITION);
-      assert.deepEqual([...desk.allowedHosts], [OS_HOST]);
-    }
-    const clients = deskById("clients");
-    assert.equal(clients.startUrl, "https://os.grantandconsultants.com/clients?gc_shell=app");
-    const karma = deskById("credit-karma");
-    assert.equal(
-      karma.startUrl,
-      "https://os.grantandconsultants.com/credit/credit-karma?gc_shell=app",
-    );
-  });
-
-  it("loads locked vendor desks at official https URLs, never OS fallback routes", () => {
-    for (const [id, startUrl, host] of LOCKED_VENDORS) {
-      const desk = deskById(id);
-      assert.ok(desk, id);
-      assert.equal(desk.startUrl, startUrl);
-      assert.equal(desk.kind, "vendor");
-      assert.deepEqual([...desk.allowedHosts], [host]);
-      assert.equal(desk.partition, `persist:gc-${id}`);
-      assert.equal(desk.startUrl.startsWith("https://"), true);
-      assert.doesNotMatch(desk.startUrl, /os\.grantandconsultants\.com/);
-    }
+  it("never loads OS portal fallback routes as a vendor desk", () => {
     for (const desk of DESKS) {
       if (desk.kind !== "vendor") continue;
-      for (const fallback of FALLBACK_ROUTES) {
-        assert.notEqual(
-          new URL(desk.startUrl).pathname + new URL(desk.startUrl).search,
-          fallback,
-          `${desk.title} must not load ${fallback}`,
-        );
-      }
+      assert.equal(desk.startUrl.startsWith("https://"), true);
+      assert.doesNotMatch(desk.startUrl, /os\.grantandconsultants\.com/);
       assert.doesNotMatch(desk.startUrl, /\/credit\/experian/);
       assert.doesNotMatch(desk.startUrl, /tab=ghl/);
+      assert.doesNotMatch(desk.startUrl, /\/team-chat/);
+      for (const fallback of FALLBACK_ROUTES) {
+        const parsed = new URL(desk.startUrl);
+        assert.notEqual(parsed.pathname + parsed.search, fallback, `${desk.title} ${fallback}`);
+      }
     }
+    assert.equal(deskById("experian").startUrl, "https://www.experian.com/consumer/upload/");
+    assert.equal(deskById("ghl").startUrl, "https://app.gohighlevel.com/");
+    assert.equal(deskById("cfpb").startUrl, "https://www.consumerfinance.gov/complaint/");
   });
 
-  it("gives vendor desks their own partitions and shares persist:gc-os for first-party pages", () => {
+  it("gives each vendor its own partition and Home persist:gc-os", () => {
     const vendorPartitions = DESKS.filter((desk) => desk.kind === "vendor").map((desk) => desk.partition);
     assert.equal(new Set(vendorPartitions).size, vendorPartitions.length);
-    const osPartitions = DESKS.filter((desk) => desk.kind === "os").map((desk) => desk.partition);
-    assert.ok(osPartitions.every((partition) => partition === OS_PARTITION));
+    assert.equal(deskById("os").partition, OS_PARTITION);
   });
 });
 
@@ -152,5 +156,8 @@ describe("desktop chrome invariants", () => {
     assert.match(main, /unprivilegedWebPreferences/);
     assert.match(main, /Grant & Co OS/);
     assert.doesNotMatch(main, /Electron spike|prototype/i);
+    assert.match(main, /officialAttempted/);
+    assert.match(main, /did-fail-load/);
+    assert.doesNotMatch(main, /openExternal: decision\.action === "system-browser"/);
   });
 });

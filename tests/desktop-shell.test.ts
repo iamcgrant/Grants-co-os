@@ -13,8 +13,7 @@ import {
   resolveDesktopShellMode,
   withDesktopShellQuery,
 } from "@/lib/nav/desktop-shell";
-import { getOwnerDesktopDesks } from "@/lib/nav/desktop-os-desks";
-import { getDesktopNav } from "@/lib/nav/role-nav";
+import { ELECTRON_SIDEBAR_DESKS } from "@/lib/nav/desktop-os-desks";
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children?: ReactNode }) =>
@@ -40,13 +39,11 @@ const electronDesks = require("../desktop-electron/src/main/desks") as {
   DESKS: Array<{
     id: string;
     title: string;
-    href: string;
     startUrl: string;
     partition: string;
     allowedHosts: string[];
     kind: "os" | "vendor";
   }>;
-  OWNER_NAV: Array<{ href: string; label: string; officialLastStepUrl?: string }>;
 };
 
 describe("desktop shell detection", () => {
@@ -97,6 +94,7 @@ describe("StaffShell desktop presentation", () => {
     );
     expect(html).toContain("Command Center");
     expect(html).toContain('data-page="home"');
+    expect(html).toContain("gc-desktop-shell");
     expect(html).not.toContain("gc-sidebar");
     expect(html).not.toContain("gc-topbar");
     expect(html).not.toContain("gc-nav-mobile");
@@ -126,17 +124,27 @@ describe("StaffShell desktop presentation", () => {
 });
 
 describe("desktop-electron catalog lockstep", () => {
-  it("matches getDesktopNav(OWNER) labels, hrefs, and official vendor URLs", () => {
-    const nav = getDesktopNav("OWNER");
-    const expected = getOwnerDesktopDesks();
-    expect(electronDesks.OWNER_NAV.map((item) => item.label)).toEqual(nav.map((item) => item.label));
-    expect(electronDesks.OWNER_NAV.map((item) => item.href)).toEqual(nav.map((item) => item.href));
-    expect(electronDesks.OWNER_NAV.map((item) => item.officialLastStepUrl ?? null)).toEqual(
-      nav.map((item) => item.officialLastStepUrl ?? null),
+  it("is exactly the 8 proven desks, not getDesktopNav(OWNER)", () => {
+    expect(electronDesks.DESKS).toHaveLength(8);
+    expect(electronDesks.DESKS.map((desk) => desk.id)).toEqual(
+      ELECTRON_SIDEBAR_DESKS.map((desk) => desk.id),
     );
-    expect(electronDesks.DESKS.map((desk) => desk.id)).toEqual(expected.map((desk) => desk.id));
-    expect(electronDesks.DESKS.map((desk) => desk.startUrl)).toEqual(expected.map((desk) => desk.startUrl));
-    expect(electronDesks.DESKS.map((desk) => desk.kind)).toEqual(expected.map((desk) => desk.kind));
+    expect(electronDesks.DESKS.map((desk) => desk.title)).toEqual([
+      "Home",
+      "GHL",
+      "Telegram",
+      "Experian",
+      "Equifax",
+      "DisputeFox",
+      "Cloud Tax",
+      "CFPB",
+    ]);
+    expect(electronDesks.DESKS.map((desk) => desk.startUrl)).toEqual(
+      ELECTRON_SIDEBAR_DESKS.map((desk) => desk.startUrl),
+    );
+    expect(electronDesks.DESKS.some((desk) => desk.title === "Gmail")).toBe(false);
+    expect(electronDesks.DESKS.some((desk) => desk.title === "Clients")).toBe(false);
+    expect(electronDesks.DESKS.some((desk) => desk.title === "Cognito")).toBe(false);
   });
 
   it("never uses OS iframe fallback routes as vendor start URLs", () => {
@@ -147,6 +155,9 @@ describe("desktop-electron catalog lockstep", () => {
     expect(vendor.find((desk) => desk.title === "GHL")?.startUrl).toBe("https://app.gohighlevel.com/");
     expect(vendor.find((desk) => desk.title === "Telegram")?.startUrl).toBe(
       "https://web.telegram.org/a/",
+    );
+    expect(vendor.find((desk) => desk.title === "CFPB")?.startUrl).toBe(
+      "https://www.consumerfinance.gov/complaint/",
     );
     for (const desk of vendor) {
       expect(desk.startUrl.startsWith("https://"), desk.title).toBe(true);

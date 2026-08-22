@@ -53,7 +53,11 @@ export function StaffShell({
   desktopShell?: boolean;
 }) {
   if (desktopShell) {
-    return children;
+    return (
+      <div className="gc-desktop-shell" data-desktop-shell="app">
+        {children}
+      </div>
+    );
   }
 
   const mobileNav = getStaffNav(user.role as StaffRole);

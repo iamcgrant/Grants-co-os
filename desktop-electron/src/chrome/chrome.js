@@ -16,44 +16,15 @@ function currentDeskId() {
   return state?.activeDeskId || "os";
 }
 
-function sectionLabel(group) {
-  switch (group) {
-    case "ops":
-      return "Operations";
-    case "finance":
-      return "Finance";
-    case "system":
-      return "System";
-    case "credit":
-      return "Credit & Disputes";
-    case "escalations":
-      return "Escalations";
-    case "tax":
-      return "Tax";
-    default:
-      return null;
-  }
-}
-
 function renderNav() {
   if (!state) return;
   deskNav.replaceChildren();
-  let lastGroup = "";
   for (const desk of state.desks) {
-    const section = sectionLabel(desk.group);
-    const showSection = Boolean(section && desk.group && desk.group !== lastGroup);
-    if (desk.group) lastGroup = desk.group;
-    if (showSection && section) {
-      const heading = document.createElement("p");
-      heading.className = "nav-section";
-      heading.textContent = section;
-      deskNav.append(heading);
-    }
     const button = document.createElement("button");
     button.type = "button";
     button.dataset.desk = desk.id;
     button.textContent = desk.title;
-    button.classList.toggle("active", desk.id === state.activeDeskId && desk.open);
+    button.classList.toggle("active", desk.id === state.activeDeskId);
     button.addEventListener("click", () => {
       api.selectDesk(desk.id);
     });

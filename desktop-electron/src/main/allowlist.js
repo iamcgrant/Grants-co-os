@@ -28,7 +28,10 @@ function isExactAllowedHost(hostname, allowedHosts) {
 }
 
 /**
- * @returns {{ action: 'allow' | 'system-browser' | 'block', reason: string, host?: string, url?: string }}
+ * Unknown https hosts stay on the last allowed page. A hostname change is
+ * not a system-browser fallback — only provider + exact IdP hosts are allowed.
+ *
+ * @returns {{ action: 'allow' | 'stay' | 'block', reason: string, host?: string, url?: string }}
  */
 function classifyNavigation(urlString, allowedHosts) {
   const parsed = parseHttpsUrl(urlString);
@@ -46,7 +49,7 @@ function classifyNavigation(urlString, allowedHosts) {
   const host = parsed.hostname.toLowerCase();
   if (!isExactAllowedHost(host, allowedHosts)) {
     return {
-      action: "system-browser",
+      action: "stay",
       reason: "host-not-allowlisted",
       host,
       url: parsed.toString(),
