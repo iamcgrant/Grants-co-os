@@ -23,5 +23,7 @@ describe("stay signed in", () => {
     expect(desk).not.toMatch(/sandbox=/);
     expect(desk).not.toMatch(/credentialless/);
     expect(desk).toMatch(/target="_self"/);
+    expect(desk).toMatch(/location\.assign/);
+    expect(desk).not.toMatch(/refuses an in-desk embed/);
   });
 });
