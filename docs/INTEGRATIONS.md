@@ -4,7 +4,7 @@ All integrations are adapters beneath Grants & Co OS.
 
 | Provider | Module | Status |
 |----------|--------|--------|
-| GoHighLevel | `LiveGoHighLevelProvider` when `GHL_API_KEY` is set (`GHL_LOCATION_ID` defaults to `[REDACTED]`); else mock | **Live inbound onto existing master records only** |
+| GoHighLevel | `LiveGoHighLevelProvider` when `GHL_API_KEY` is set (`GHL_LOCATION_ID` from host secrets); else mock | **Only phone / SMS / email backend** |
 | DisputeFox | `MockDisputeFoxProvider` + inbound attach onto existing masters | **Local roster attach** (26 Charles-confirmed clients). Live path **fails closed** without `DISPUTEFOX_API_KEY`. Zap `374413762` stays **OFF**. |
 | Credit Repair Cloud | `MockCreditRepairCloudProvider` + inbound compare (`npm run crc:inbound-compare`) | **Not connected.** Local CSV dry-run + Phase 2 class-gated write **plans**. Live path **fails closed** without `CRC_API_KEY`. Five write flags default **false**. `CRC_RECOVERY_WRITES_ENABLED` is **ignored**. |
 | SmartCredit | `MockSmartCreditProvider` | Mock — sponsored enrollment + scores |
@@ -23,11 +23,17 @@ All integrations are adapters beneath Grants & Co OS.
 
 ## GHL outbound SMS / email (fail-closed)
 
-1. Staff inbox client replies call `sendGhlOutboundMessage` (`src/lib/integrations/ghl/outbound.ts`) via `postMessage`.
+1. Staff Inbox and Client 360 render GHL threads in-OS (`loadGhlClientDesk`) and send via `sendGhlClientMessage` → `POST /conversations/messages`.
 2. Requires a linked `ClientIdentifier` provider `GHL` and PIT scope **`conversations/message.write`** (recommended: `conversations.write`).
-3. Live probe with current key: `POST /conversations/messages` → **401** “token is not authorized for this scope” for SMS, Email, and MMS-shaped payloads.
-4. Phone / browser dialer: `LeadConnectorTelephonyAdapter` reports `browserDialer: false`; phone-system and voice-ai GETs also **401**. Softphone remains outside OS until scopes/API exist.
-5. Fail-closed: OS records `deliveryStatus=FAILED` + `ACTION_REQUIRED` metadata — never pretends SENT.
+3. Live probe with current key: `POST /conversations/messages` → **401** “token is not authorized for this scope” for SMS, Email, and MMS-shaped payloads until the PIT is reissued.
+4. Voice: in-OS Dialer at `/dialer` uses existing GHL numbers (`GET /phone-system/numbers`). CONNECTED only after number list + voice session probes succeed. Required PIT: **`phone-system.readonly`** and **`phone-system.voice`**. Do not buy numbers or add Twilio/Telnyx.
+5. Fail-closed: OS records `deliveryStatus=FAILED` + `ACTION_REQUIRED` metadata — never pretends SENT. System Health is green only after a live send/receive probe, never because a key exists.
+
+## Telegram team desk (not client comms)
+
+1. `/team-chat` is a native OS inbox for Simon / CS / disputes. It does not replace Telegram and does not route through GHL.
+2. Required env: **`TELEGRAM_BOT_TOKEN`**. Optional: **`TELEGRAM_TEAM_CHAT_IDS`** (comma-separated chat ids the bot may read/send).
+3. Health is CONNECTED only after `getMe` + visible team chats succeed. Without the bot token the native Team UI still ships and shows ACTION REQUIRED.
 
 ## GHL conversations → Grants OS inbox (linked masters only)
 
@@ -38,8 +44,8 @@ All integrations are adapters beneath Grants & Co OS.
 5. Inbound pull **does not** publish workflows or change A2P/phone/Sendara. Outbound send is a separate adapter (see above).
 6. Without `GHL_API_KEY` the path **fails closed**. If the current PIT cannot list conversations/messages, it **fails closed** and reports the extra scope name: `conversations.readonly` (message bodies also need `conversations/message.readonly`). Do not invent scopes — reissue the Private Integration with the required permissions.
 
-Known location: `[REDACTED]`  
-URL: https://app.gohighlevel.com/v2/location/[REDACTED]/
+Known location: set `GHL_LOCATION_ID` in host secrets (production Grants location).  
+URL: `https://app.gohighlevel.com/v2/location/<GHL_LOCATION_ID>/`
 
 Development seed identifiers are tagged `{ source: "seed", dataPlane: "development" }` and labeled as dev samples — never presented as live CRM data.
 

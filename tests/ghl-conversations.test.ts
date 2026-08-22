@@ -350,10 +350,9 @@ describe("GHL → Grants inbox conversation pull (linked masters only)", () => {
     expect(await prisma.conversation.count()).toBe(0);
   });
 
-  it("GHL integration sources have zero outbound send path", () => {
+  it("GHL inbound modules keep zero outbound send path", () => {
     const dir = path.join(process.cwd(), "src/lib/integrations/ghl");
-    for (const file of fs.readdirSync(dir)) {
-      if (!file.endsWith(".ts")) continue;
+    for (const file of ["http.ts", "conversations.ts", "sync.ts", "location.ts"]) {
       const src = fs.readFileSync(path.join(dir, file), "utf8");
       expect(src).not.toMatch(/\b(sendMessage|sendSms|sendEmail|sendIMessage|publishWorkflow)\s*\(/);
       expect(src).not.toMatch(/method:\s*["']POST["'][\s\S]*conversations\/messages/);

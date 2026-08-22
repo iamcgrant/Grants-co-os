@@ -2,9 +2,17 @@ import { describe, expect, it } from "vitest";
 import { presentIncomingCall, getTelephonyProvider } from "@/lib/communications/telephony";
 
 describe("telephony adapter honesty", () => {
-  it("does not claim browser dialer when unsupported", () => {
+  it("exposes an in-OS dialer and fails closed without a GHL voice session", async () => {
     const provider = getTelephonyProvider();
-    expect(provider.capabilities().browserDialer).toBe(false);
+    expect(provider.capabilities().browserDialer).toBe(true);
+    const started = await provider.startOutboundSession({
+      toE164: "+15551234567",
+      staffUserId: "staff_1",
+    });
+    expect(started.ok).toBe(false);
+    if (!started.ok) {
+      expect(started.reason).toMatch(/GHL_API_KEY|phone-system|voice/i);
+    }
   });
 
   it("presents master client on inbound screen-pop", () => {
