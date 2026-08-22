@@ -2,7 +2,7 @@
 
 ## Compatible targets
 
-- **Vercel** (`vercel.json` — cron every 5m → `/api/automations/run`, region `iad1`)
+- **Vercel** (`vercel.json` — daily cron `0 12 * * *` (noon UTC) → `/api/automations/run`, region `iad1`)
 - **Docker** (`Dockerfile`) — full control of workers
 - Any Node 22 host with PostgreSQL (Neon or Supabase via Vercel Marketplace — **not** discontinued Vercel Postgres)
 
