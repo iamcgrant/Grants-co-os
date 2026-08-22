@@ -121,4 +121,23 @@ describe("desktop chrome invariants", () => {
     assert.match(main, /officialAttempted/);
     assert.match(main, /did-fail-load/);
   });
+
+  it("ships Grant & Co OS production package identity", () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+    assert.equal(pkg.name, "grant-co-os");
+    assert.equal(pkg.version, "1.0.0");
+    assert.equal(pkg.description, "Grant & Co OS desktop for Grant & Co Consultants");
+    assert.equal(pkg.build.appId, "com.grantandconsultants.os");
+    assert.equal(pkg.build.productName, "Grant & Co OS");
+    assert.equal(pkg.build.copyright, "Grant & Co Consultants");
+    assert.equal(pkg.build.mac.identity, null);
+    assert.equal(pkg.build.mac.hardenedRuntime, true);
+    assert.equal(pkg.build.mac.artifactName, "Grant-and-Co-OS-Mac.${ext}");
+    assert.equal(pkg.build.mac.extendInfo.CFBundleIdentifier, "com.grantandconsultants.os");
+    assert.match(pkg.scripts["build:mac"], /electron-builder --mac dir --arm64/);
+    assert.match(pkg.scripts["dist:mac"], /electron-builder --mac dmg --arm64/);
+    assert.ok(pkg.scripts["helper:fetch"]);
+    assert.ok(pkg.scripts["helper:build"]);
+    assert.doesNotMatch(JSON.stringify(pkg), /spike|prototype|DISPOSABLE|electron-spike/i);
+  });
 });
