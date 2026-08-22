@@ -6,7 +6,7 @@ export async function requireCreditStaff() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   if (!hasPermission(user.role, "MANAGE_CREDIT") && !hasPermission(user.role, "VIEW_CREDIT_DOCS")) {
-    return { user: null as const, denied: true as const };
+    return { user: null, denied: true as const };
   }
   return { user, denied: false as const };
 }
