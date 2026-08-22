@@ -25,8 +25,10 @@ import {
   HOSTS_THAT_REFUSE_EMBED,
   OFFICIAL_PORTAL_URLS,
   PORTAL_DESKS,
+  PORTAL_EMBED_INVESTIGATION,
   hostRefusesEmbed,
   portalDeskById,
+  portalDeskCanEmbed,
   portalDeskForLocation,
 } from "@/lib/nav/portal-desks";
 import { DISPUTE_CHANNELS } from "@/lib/disputes/channels";
@@ -81,17 +83,36 @@ describe("official portal URL constants", () => {
         "app.gohighlevel.com",
         "www.experian.com",
         "web.telegram.org",
-        "grantandco.cloudtaxoffice.com",
         "www.equifax.com",
         "www.transunion.com",
         "www.consumerfinance.gov",
       ]),
     );
+    expect(hosts).not.toContain("grantandco.cloudtaxoffice.com");
     expect(hostRefusesEmbed(OFFICIAL_GHL_LOGIN_URL)).toBe(true);
     expect(hostRefusesEmbed(EXPERIAN_BACKDOOR_SUBMIT_PORTAL_URL)).toBe(true);
     expect(hostRefusesEmbed(OFFICIAL_TELEGRAM_LOGIN_URL)).toBe(true);
+    expect(hostRefusesEmbed(DISPUTE_CHANNELS.EQUIFAX.officialSubmitUrl as string)).toBe(true);
     expect(hostRefusesEmbed(OFFICIAL_DISPUTEFOX_LOGIN_URL)).toBe(false);
     expect(hostRefusesEmbed(COGNITO_OFFICIAL_LOGIN_URL)).toBe(false);
+    expect(hostRefusesEmbed(OFFICIAL_CLOUD_TAX_OFFICE_URL)).toBe(false);
+    expect(portalDeskById("cloud-tax-office").embed).toBe("try");
+    expect(portalDeskCanEmbed(portalDeskById("ghl"))).toBe(false);
+    expect(portalDeskCanEmbed(portalDeskById("telegram"))).toBe(false);
+    expect(portalDeskCanEmbed(portalDeskById("experian"))).toBe(false);
+    expect(portalDeskCanEmbed(portalDeskById("equifax"))).toBe(false);
+    expect(portalDeskCanEmbed(portalDeskById("disputefox"))).toBe(true);
+    expect(portalDeskCanEmbed(portalDeskById("cloud-tax-office"))).toBe(true);
+    expect(PORTAL_EMBED_INVESTIGATION.ghl).toMatch(/SAMEORIGIN/);
+    expect(PORTAL_EMBED_INVESTIGATION.telegram).toMatch(/deny/);
+    expect(PORTAL_EMBED_INVESTIGATION.experian).toMatch(/frame-ancestors 'none'/);
+    expect(PORTAL_EMBED_INVESTIGATION.equifax).toMatch(/frame-ancestors 'self'/);
+    expect(PORTAL_EMBED_INVESTIGATION.proxy).toMatch(/No cookie-safe TOS-safe vendor reverse proxy/);
+    const vercel = fs.readFileSync(path.join(process.cwd(), "vercel.json"), "utf8");
+    expect(vercel).toMatch(/"rewrites":\s*\[\s*\]/);
+    const proxy = fs.readFileSync(path.join(process.cwd(), "src/proxy.ts"), "utf8");
+    expect(proxy).toMatch(/x-gc-pathname/);
+    expect(proxy).not.toMatch(/gohighlevel|telegram\.org|experian\.com|equifax\.com/i);
   });
 });
 
@@ -153,7 +174,31 @@ describe("in-OS portal navigation", () => {
     );
   });
 
-  it("loads every official login only in the desk iframe and never leaves the OS", () => {
+  it("sidebar clicks never assign window.location to a vendor origin", () => {
+    const guarded = [
+      "src/components/layout/StaffShell.tsx",
+      "src/components/layout/StaffShellClient.tsx",
+      "src/lib/nav/official-logins.ts",
+      "src/lib/nav/role-nav.ts",
+      "src/components/desk/PortalDesk.tsx",
+      "src/components/desk/GuardedPortalDesk.tsx",
+    ];
+    for (const file of guarded) {
+      const src = fs.readFileSync(path.join(process.cwd(), file), "utf8");
+      expect(src, file).not.toMatch(/window\.location|location\.assign|location\.replace|location\.href\s*=/);
+    }
+
+    const html = renderToStaticMarkup(
+      createElement(StaffShell, { user: OWNER, pathname: "/home" }, createElement("div")),
+    );
+    expect(html).not.toMatch(/window\.location|location\.assign|location\.replace/);
+    for (const desk of PORTAL_DESKS) {
+      expect(html, desk.id).not.toContain(`href="${desk.officialUrl}"`);
+      expect(html, desk.id).toContain(`data-nav-href="${desk.osHref}"`);
+    }
+  });
+
+  it("loads embeddable official logins in the desk iframe and never leaves the OS", () => {
     const src = fs.readFileSync(path.join(process.cwd(), "src/components/desk/PortalDesk.tsx"), "utf8");
     expect(src).not.toMatch(/window\.location|location\.assign|location\.replace|location\.href\s*=/);
     expect(src).not.toMatch(/target="_blank"|target="_self"/);
@@ -162,14 +207,27 @@ describe("in-OS portal navigation", () => {
     for (const desk of PORTAL_DESKS) {
       const html = renderToStaticMarkup(createElement(PortalDesk, { deskId: desk.id }));
       expect(html, desk.id).toContain(`data-portal-desk="${desk.id}"`);
-      expect(html, desk.id).toContain(`src="${desk.officialUrl}"`);
-      expect(html, desk.id).toMatch(/<iframe/i);
+      expect(html, desk.id).toContain(`data-official-url="${desk.officialUrl}"`);
       expect(html, desk.id).toContain("Return to OS");
       expect(html, desk.id).toContain('href="/home"');
       expect(html, desk.id).not.toMatch(/target="_blank"|target="_self"/);
       expect(html, desk.id).not.toContain(`href="${desk.officialUrl}"`);
       expect(html, desk.id).not.toMatch(/Continue|refuses an in-desk embed|OFFICIAL LOGIN/i);
       expect(html, desk.id).not.toMatch(/GHL_API_KEY|TELEGRAM_BOT_TOKEN|API health|DEGRADED/);
+
+      if (portalDeskCanEmbed(desk)) {
+        expect(html, desk.id).toContain(`data-embed-policy="pane"`);
+        expect(html, desk.id).toContain(`src="${desk.officialUrl}"`);
+        expect(html, desk.id).toMatch(/<iframe/i);
+        expect(html, desk.id).not.toContain('data-portal-stage="desk"');
+      } else {
+        expect(html, desk.id).toContain(`data-embed-policy="desk"`);
+        expect(html, desk.id).toContain('data-portal-stage="desk"');
+        expect(html, desk.id).toContain("Grants &amp; Co");
+        expect(html, desk.id).toContain(desk.officialUrl);
+        expect(html, desk.id).toMatch(/does not invent a proxy or a key/);
+        expect(html, desk.id).not.toMatch(/<iframe/i);
+      }
     }
   });
 
