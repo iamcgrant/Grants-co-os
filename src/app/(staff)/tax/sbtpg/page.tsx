@@ -7,14 +7,17 @@ import { probeSbtpgHealth } from "@/lib/tax/health";
 import { SBTPG_STATUSES, taxDeskCatalog, taxStatusLabel } from "@/lib/tax/catalog";
 import { TaxDeskAttachForm } from "@/components/tax/TaxDeskAttachForm";
 import { TaxDeskSessionForm } from "@/components/tax/TaxDeskSessionForm";
+import { SbtpgPayoutForm } from "@/components/tax/SbtpgPayoutForm";
+import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
 import { formatUsd } from "@/lib/payments/dashboard";
+import { listSbtpgPayouts } from "@/lib/tax/payouts";
 
 export default async function SbtpgWorkspacePage() {
   const { user, denied } = await requireTaxStaff();
   if (denied || !user) return <p>Access denied.</p>;
 
   const catalog = taxDeskCatalog("SBTPG");
-  const [board, probe, clients] = await Promise.all([
+  const [board, probe, clients, payouts] = await Promise.all([
     listTaxDeskBoard("SBTPG"),
     probeSbtpgHealth(),
     prisma.client.findMany({
@@ -22,11 +25,14 @@ export default async function SbtpgWorkspacePage() {
       take: 200,
       select: { id: true, grantsClientId: true, firstName: true, lastName: true },
     }),
+    listSbtpgPayouts(),
   ]);
   const canManage = hasPermission(user.role, "MANAGE_OPERATIONS");
   const openCount = board.filter((row) => row.status && row.status !== "CLOSED" && row.status !== "PAID").length;
   const paidCount = board.filter((row) => row.status === "PAID" || row.status === "FUNDED").length;
-  const trackedCents = board.reduce((sum, row) => sum + (row.amountCents ?? 0), 0);
+  const trackedCents = payouts
+    .filter((row) => row.status === "PAID" || row.status === "FUNDED")
+    .reduce((sum, row) => sum + row.amountCents, 0);
 
   return (
     <div className="gc-fade-up">
@@ -59,16 +65,52 @@ export default async function SbtpgWorkspacePage() {
         ) : null}
       </div>
 
+      {board.length === 0 && payouts.length === 0 ? (
+        <DeskEmptyState
+          detail="No OS-recorded SBTPG payouts yet. Official pro.sbtpg.com is last-step only — this desk does not scrape."
+          nextAction="Attach a Grants client, record a payout session, or import official payout totals so Command Center collected is not $0."
+        />
+      ) : null}
+
       {canManage ? (
-        <div className="mb-10 grid gap-6 lg:grid-cols-2">
-          <TaxDeskAttachForm desk="SBTPG" clients={clients} />
-          <TaxDeskSessionForm desk="SBTPG" clients={clients} />
+        <div className="mb-10 space-y-6">
+          <SbtpgPayoutForm clients={clients} />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <TaxDeskAttachForm desk="SBTPG" clients={clients} />
+            <TaxDeskSessionForm desk="SBTPG" clients={clients} />
+          </div>
         </div>
       ) : (
         <p className="text-sm text-[var(--gc-muted)] mb-10">View only — processing can record attach and sessions.</p>
       )}
 
-      {SBTPG_STATUSES.map((status) => {
+      {payouts.length > 0 ? (
+        <section className="mb-10">
+          <h2 className="text-2xl mb-3">
+            Recorded payouts <span className="text-[var(--gc-muted)] text-base">({payouts.length})</span>
+          </h2>
+          <div className="divide-y divide-[var(--gc-border)] gc-panel px-4">
+            {payouts.map((row) => (
+              <div key={row.id} className="py-4 flex justify-between gap-4">
+                <div>
+                  <p className="font-medium">{formatUsd(row.amountCents)}</p>
+                  <p className="text-sm text-[var(--gc-muted)]">
+                    {row.client
+                      ? `${row.client.firstName} ${row.client.lastName} · ${row.client.grantsClientId}`
+                      : "Firm / period total"}
+                    {row.externalId ? ` · ${row.externalId}` : ""}
+                    {row.paidAt ? ` · ${row.paidAt.toLocaleDateString()}` : ""}
+                    {row.notes ? ` · ${row.notes}` : ""}
+                  </p>
+                </div>
+                <span className="gc-status">{row.status}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {board.length > 0 && SBTPG_STATUSES.map((status) => {
         const rows = board.filter((row) => row.status === status);
         return (
           <section key={status} className="mb-8">

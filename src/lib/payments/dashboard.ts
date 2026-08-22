@@ -1,5 +1,6 @@
 import { startOfDay, startOfWeek, startOfMonth } from "date-fns";
 import { prisma } from "@/lib/db/prisma";
+import { getSbtpgCollectedTotals } from "@/lib/tax/payouts";
 
 function moneySum(
   rows: { amountCents: number }[],
@@ -80,14 +81,32 @@ export async function getFinanceDashboard() {
     0,
   );
 
-  const collectedMonthCents = moneySum(collectedMonth);
+  const grantsPayTodayCents = moneySum(collectedToday);
+  const grantsPayWeekCents = moneySum(collectedWeek);
+  const grantsPayMonthCents = moneySum(collectedMonth);
+  const sbtpg = await getSbtpgCollectedTotals(now, {
+    today: todayStart,
+    week: weekStart,
+    month: monthStart,
+  });
+  const collectedTodayCents = grantsPayTodayCents + sbtpg.collectedTodayCents;
+  const collectedWeekCents = grantsPayWeekCents + sbtpg.collectedWeekCents;
+  const collectedMonthCents = grantsPayMonthCents + sbtpg.collectedMonthCents;
   const refundsMonthCents = moneySum(refunds);
   const netProcessed = collectedMonthCents - refundsMonthCents;
 
   return {
-    collectedTodayCents: moneySum(collectedToday),
-    collectedWeekCents: moneySum(collectedWeek),
+    collectedTodayCents,
+    collectedWeekCents,
     collectedMonthCents,
+    grantsPayTodayCents,
+    grantsPayWeekCents,
+    grantsPayMonthCents,
+    sbtpgCollectedTodayCents: sbtpg.collectedTodayCents,
+    sbtpgCollectedWeekCents: sbtpg.collectedWeekCents,
+    sbtpgCollectedMonthCents: sbtpg.collectedMonthCents,
+    sbtpgCollectedAllCents: sbtpg.collectedAllCents,
+    sbtpgPayoutCount: sbtpg.payoutCount,
     outstandingCents,
     failedPaymentsCents: moneySum(failed),
     pendingSettlementCents: moneySum(pendingSettlement),
@@ -102,10 +121,11 @@ export async function getFinanceDashboard() {
     asOf: now.toISOString(),
     notes: {
       collected:
-        "Payment successful — funds authorized/captured by processor (not bank deposit).",
+        "Grants Pay succeeded charges plus OS-recorded SBTPG PAID/FUNDED payouts (not a portal scrape).",
       settled: "Settlement confirmed by processor.",
       payout: "Payout to merchant account — separate from settlement.",
       deposited: "Bank deposit confirmation requires processor payout reconciliation.",
+      sbtpg: "SBTPG collected is OS-recorded official payout totals only. No scrape of pro.sbtpg.com.",
     },
   };
 }

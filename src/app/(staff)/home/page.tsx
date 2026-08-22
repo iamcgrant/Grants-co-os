@@ -15,6 +15,8 @@ import { MetricTile, Panel, StatRow } from "@/components/ui/density";
 import { DonutChart, LineChart } from "@/components/ui/charts";
 import { GhlSyncPanel } from "@/components/integrations/GhlSyncPanel";
 import { GhlConversationPullPanel } from "@/components/integrations/GhlConversationPullPanel";
+import { SbtpgPayoutForm } from "@/components/tax/SbtpgPayoutForm";
+import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
 import { hasPermission } from "@/lib/rbac/permissions";
 
 const STAGE_COLORS = ["#b2d4ff", "#f5b82a", "#67a671", "#6887d6", "#fdd79a", "#ff6b6b", "#94a1b2", "#ffffff"];
@@ -27,6 +29,11 @@ export default async function HomePage() {
     const data = await getOwnerCommandCenter();
     const sparkCollect = data.revenueTrend.values.map((v) => Math.max(v, 0));
     const monthLabel = formatUsd(data.finance.collectedMonthCents);
+    const payoutClients = await prisma.client.findMany({
+      orderBy: { lastName: "asc" },
+      take: 200,
+      select: { id: true, grantsClientId: true, firstName: true, lastName: true },
+    });
 
     return (
       <div className="gc-fade-up space-y-3">
@@ -39,8 +46,10 @@ export default async function HomePage() {
               {" · "}
               GHL{" "}
               {data.integrationHealth.ghlReady
-                ? `${data.ops.ghlLiveLinked} live linked`
+                ? `${data.ops.ghlLinked} linked · ${data.ops.ghlLiveLinked} live API`
                 : "Awaiting Integration"}
+              {" · "}
+              SBTPG collected {formatUsd(data.finance.sbtpgCollectedAllCents)}
             </p>
           </div>
           <div className="hidden xl:flex flex-wrap gap-2">
@@ -51,7 +60,7 @@ export default async function HomePage() {
               Work board
             </Link>
             <Link href="/team-chat" className="gc-btn gc-btn-ice text-xs">
-              Team chat
+              Telegram
             </Link>
           </div>
         </div>
@@ -61,37 +70,45 @@ export default async function HomePage() {
           <MetricTile
             label="Collected today"
             value={formatUsd(data.finance.collectedTodayCents)}
-            href="/pay"
+            href="/tax/sbtpg"
             spark={sparkCollect.slice(-7)}
+            hint={`SBTPG ${formatUsd(data.finance.sbtpgCollectedTodayCents)} · Pay ${formatUsd(data.finance.grantsPayTodayCents)}`}
             trend="↑ activity"
             tone="ice"
           />
           <MetricTile
             label="Collected this week"
             value={formatUsd(data.finance.collectedWeekCents)}
-            href="/pay"
+            href="/tax/sbtpg"
             spark={sparkCollect}
+            hint={`SBTPG ${formatUsd(data.finance.sbtpgCollectedWeekCents)} · Pay ${formatUsd(data.finance.grantsPayWeekCents)}`}
+            tone="ok"
+          />
+          <MetricTile
+            label="SBTPG collected"
+            value={formatUsd(data.finance.sbtpgCollectedAllCents)}
+            href="/tax/sbtpg"
+            hint={`${data.finance.sbtpgPayoutCount} recorded payouts`}
             tone="ok"
           />
           <MetricTile
             label="Active clients"
             value={data.ops.activeClients}
             href="/clients"
-            hint={`${data.ops.newClients} new this week`}
+            hint={`${data.ops.ghlLinked} GHL linked · ${data.ops.newClients} new`}
             tone="ice"
-          />
-          <MetricTile
-            label="Outstanding"
-            value={formatUsd(data.finance.outstandingCents)}
-            href="/pay?filter=failed"
-            trend={data.finance.failedPaymentsCents ? `Failed ${formatUsd(data.finance.failedPaymentsCents)}` : "Clear"}
-            tone={data.finance.failedPaymentsCents ? "danger" : "default"}
           />
         </div>
 
         {/* Multi-panel row */}
         <div className="gc-dash-grid gc-dash-grid-12">
           <Panel title="Operational overview" eyebrow="Clients" className="gc-span-5" action={<Link href="/work" className="text-[0.65rem] uppercase tracking-wider text-[var(--gc-ice)]">Open</Link>}>
+            {data.ops.activeClients === 0 ? (
+              <DeskEmptyState
+                detail="No Grants clients in this data plane yet. Totals stay honest zeros until a client exists or an official SBTPG payout is recorded."
+                nextAction="Add a client, pull GHL contacts onto existing masters, or record an official SBTPG payout below."
+              />
+            ) : null}
             <div className="flex flex-col sm:flex-row gap-5 items-center">
               <DonutChart
                 size={132}
@@ -104,7 +121,7 @@ export default async function HomePage() {
                         color: STAGE_COLORS[i % STAGE_COLORS.length],
                         label: s.stage,
                       }))
-                    : [{ value: 1, color: "#2e3e68" }]
+                    : [{ value: 1, color: "#2e3e68", label: "Empty" }]
                 }
               />
               <div className="flex-1 w-full">
@@ -119,11 +136,13 @@ export default async function HomePage() {
 
           <Panel
             title="Revenue trend"
-            eyebrow="Grants Pay · 14 days"
+            eyebrow="Collected · Grants Pay + SBTPG · 14 days"
             className="gc-span-7"
             action={<span className="display text-xl text-[var(--gc-ice)]">{monthLabel}</span>}
           >
-            <p className="text-xs text-[var(--gc-muted)] mb-3">Month collected (succeeded charges — not bank deposits)</p>
+            <p className="text-xs text-[var(--gc-muted)] mb-3">
+              Month collected = succeeded Grants Pay charges + OS-recorded SBTPG PAID/FUNDED payouts. No portal scrape.
+            </p>
             <LineChart
               series={[{ name: "Collected", color: "#b2d4ff", values: data.revenueTrend.values }]}
               labels={data.revenueTrend.labels}
@@ -165,10 +184,16 @@ export default async function HomePage() {
             </div>
           </Panel>
 
-          <Panel title="Needs attention" eyebrow="Exceptions" className="gc-span-5">
+          <Panel
+            title={data.attentionIsExceptions ? "Needs attention" : "Operational review"}
+            eyebrow={data.attentionIsExceptions ? "Exceptions" : "Live clients"}
+            className="gc-span-5"
+          >
             <div className="divide-y divide-[var(--gc-border)] max-h-[280px] overflow-y-auto">
               {data.attention.length === 0 && (
-                <p className="py-4 text-sm text-[var(--gc-muted)]">No urgent exceptions.</p>
+                <p className="py-4 text-sm text-[var(--gc-muted)]">
+                  No clients in OS yet. Pull GHL contacts onto masters or add a Grants client.
+                </p>
               )}
               {data.attention.map((c) => (
                 <Link key={c.id} href={`/clients/${c.grantsClientId}`} className="py-3 flex justify-between gap-3 block">
@@ -220,12 +245,32 @@ export default async function HomePage() {
                 ))}
               <StatRow label="Pulse pending" value={data.communication.pulsePending} href="/credit-pulse" />
               <StatRow label="Client msgs (7d)" value={data.communication.unreadClientMessages} href="/inbox" />
+              <StatRow
+                label="GHL inbox"
+                value={data.communication.ghlConversations}
+                href="/inbox?tab=ghl"
+                tone={data.communication.ghlInboxReady ? "default" : "warn"}
+              />
+              <StatRow label="GHL inbound email" value={data.communication.ghlInboundEmail} href="/inbox?tab=ghl" />
+              <StatRow
+                label="GHL missed / inbound"
+                value={data.communication.ghlMissed}
+                href="/inbox?tab=ghl"
+                tone={data.communication.ghlMissed ? "warn" : "default"}
+              />
             </div>
           </Panel>
         </div>
 
         {hasPermission(user.role, "MANAGE_OPERATIONS") && (
           <div className="space-y-4">
+            <Panel title="Record SBTPG collected" eyebrow="Official payouts">
+              <p className="text-sm text-[var(--gc-muted)] mb-4">
+                Command Center collected today / this week includes these OS-recorded SBTPG totals. Official
+                portal is last-step only.
+              </p>
+              <SbtpgPayoutForm clients={payoutClients} />
+            </Panel>
             <GhlSyncPanel canSync />
             <GhlConversationPullPanel canSync />
           </div>

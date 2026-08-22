@@ -4,6 +4,8 @@ import { startOfDay, startOfWeek, startOfMonth, subDays } from "date-fns";
 import { getGcEnvironment } from "@/lib/integrations/env";
 import { isGhlApiReady } from "@/lib/integrations/ghl/http";
 import { integrationCredentialStatus } from "@/lib/integrations/credentials";
+import { summarizeGhlLocationInbox } from "@/lib/integrations/ghl/conversations";
+import { listSbtpgCollectedByDay } from "@/lib/tax/payouts";
 
 const clientQueueInclude = {
   identifiers: { select: { provider: true, externalId: true, metadataJson: true } },
@@ -26,6 +28,7 @@ export async function getOwnerCommandCenter() {
   const month = startOfMonth(now);
 
   const finance = await getFinanceDashboard();
+  const fourteenDaysAgo = subDays(today, 13);
 
   const [
     activeClients,
@@ -43,7 +46,11 @@ export async function getOwnerCommandCenter() {
     integrations,
     pulsePending,
     pulseFailed,
+    ghlLinked,
     ghlLiveLinked,
+    ghlInbox,
+    recentClients,
+    sbtpgTrend,
   ] = await Promise.all([
     prisma.client.count({ where: { status: "ACTIVE" } }),
     prisma.client.count({ where: { createdAt: { gte: week } } }),
@@ -94,9 +101,29 @@ export async function getOwnerCommandCenter() {
     prisma.integrationConnection.findMany({ orderBy: { provider: "asc" } }),
     prisma.fridayPulseItem.count({ where: { updateStatus: "PENDING" } }),
     prisma.fridayPulseItem.count({ where: { updateStatus: "FAILED" } }),
+    prisma.clientIdentifier.count({ where: { provider: "GHL" } }),
     prisma.clientIdentifier.count({
       where: { provider: "GHL", metadataJson: { contains: '"source":"ghl_api"' } },
     }),
+    summarizeGhlLocationInbox(),
+    prisma.client.findMany({
+      where: { status: "ACTIVE" },
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+      take: 8,
+      select: {
+        id: true,
+        grantsClientId: true,
+        firstName: true,
+        lastName: true,
+        stage: true,
+        nextAction: true,
+        nextActionOwner: true,
+        urgency: true,
+        nextDueAt: true,
+        identifiers: { select: { provider: true, metadataJson: true } },
+      },
+    }),
+    listSbtpgCollectedByDay(fourteenDaysAgo),
   ]);
 
   const attention = await prisma.client.findMany({
@@ -129,8 +156,6 @@ export async function getOwnerCommandCenter() {
     take: 6,
   });
 
-  // Last 14 days collected for trend chart (real transaction sums)
-  const fourteenDaysAgo = subDays(today, 13);
   const recentTxns = await prisma.paymentTransaction.findMany({
     where: { status: "SUCCEEDED", createdAt: { gte: fourteenDaysAgo } },
     select: { amountCents: true, createdAt: true },
@@ -141,11 +166,16 @@ export async function getOwnerCommandCenter() {
     const d = subDays(today, i);
     const key = d.toISOString().slice(0, 10);
     dayKeys.push(key.slice(5));
-    const sum = recentTxns
+    const paySum = recentTxns
       .filter((t) => t.createdAt.toISOString().slice(0, 10) === key)
       .reduce((s, t) => s + t.amountCents, 0);
-    dayTotals.push(sum);
+    const sbtpgSum = sbtpgTrend
+      .filter((t) => t.at.toISOString().slice(0, 10) === key)
+      .reduce((s, t) => s + t.amountCents, 0);
+    dayTotals.push(paySum + sbtpgSum);
   }
+
+  const operationalReview = attention.length > 0 ? attention : recentClients;
 
   const stageGroups = await prisma.client.groupBy({
     by: ["stage"],
@@ -180,6 +210,7 @@ export async function getOwnerCommandCenter() {
       readyForSimon,
       readyForJona,
       stuckClients,
+      ghlLinked,
       ghlLiveLinked,
     },
     team: {
@@ -195,16 +226,23 @@ export async function getOwnerCommandCenter() {
       internalUnread,
       pulsePending,
       pulseFailed,
+      ghlConversations: ghlInbox.conversations,
+      ghlInboundEmail: ghlInbox.inboundEmail,
+      ghlMissed: ghlInbox.missed,
+      ghlInboxReady: ghlInbox.ready,
+      ghlInboxMessage: ghlInbox.message,
     },
     integrations,
     integrationHealth: {
       dataPlane: getGcEnvironment(),
       ghlReady,
+      ghlLinked,
       ghlLiveLinked,
       disputeFoxReady: creds.disputeFoxApi,
       smartCreditSponsor: creds.smartCreditSponsor,
     },
-    attention,
+    attention: operationalReview,
+    attentionIsExceptions: attention.length > 0,
     recentScores,
     revenueTrend: { labels: dayKeys, values: dayTotals },
     stageBreakdown: stageGroups.map((g) => ({ stage: g.stage, count: g._count._all })),

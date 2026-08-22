@@ -212,6 +212,7 @@ model Client {
   exceptionTickets    ExceptionTicket[]
   referredByPartner   Partner?              @relation("PartnerReferredClients", fields: [referredByPartnerId], references: [id], onDelete: SetNull)
   partnerReferrals    PartnerReferral[]
+  sbtpgPayouts        SbtpgPayout[]
 
   @@unique([emailNormalized])
   @@index([phoneNormalized])
@@ -235,6 +236,32 @@ model ClientIdentifier {
 
   @@unique([provider, externalId])
   @@index([clientId])
+}
+
+/// Official SBTPG payout / refund totals recorded in OS. No scrape.
+model SbtpgPayout {
+  id           String    @id @default(cuid())
+  clientId     String?
+  externalId   String?
+  amountCents  Int
+  currency     String    @default("USD")
+  status       String    @default("PAID")
+  taxYear      String?
+  paidAt       DateTime?
+  periodStart  DateTime?
+  periodEnd    DateTime?
+  source       String    @default("staff_recorded")
+  notes        String?
+  recordedById String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([status, paidAt])
+  @@index([clientId])
+  @@index([createdAt])
+  @@index([externalId])
 }
 
 model Address {
