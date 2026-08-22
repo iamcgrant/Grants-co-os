@@ -230,7 +230,10 @@ describe("Credit & Disputes navigation", () => {
     expect(tax).toMatch(/loginUrl=\{catalog\.officialLastStepUrl\}/);
     expect(cognito).toMatch(/loginUrl=\{COGNITO_OFFICIAL_LOGIN_URL\}/);
     const empty = fs.readFileSync(path.join(process.cwd(), "src/components/desk/DeskEmptyState.tsx"), "utf8");
-    expect(empty).toMatch(/Open login/);
+    const login = fs.readFileSync(path.join(process.cwd(), "src/components/desk/OfficialLoginLink.tsx"), "utf8");
+    expect(empty).toMatch(/OfficialLoginLink/);
+    expect(login).toMatch(/Open login/);
     expect(empty).not.toMatch(/iframe/i);
+    expect(login).not.toMatch(/iframe/i);
   });
 });
