@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Role } from "../src/generated/prisma/enums";
 import { DISPUTE_CHANNELS, type DisputeChannel } from "../src/lib/disputes/channels";
-import { assertNoFunctionPropsToClientComponents } from "./helpers/rsc-client-props";
+import { assertNoFunctionPropsToClientComponents, resolveAsyncServerTree } from "./helpers/rsc-client-props";
 
 const owner = {
   id: "owner-1",
@@ -150,7 +150,7 @@ describe("credit / escalation desk pages", () => {
   it("does not pass functions into client NewCaseForm (the production Flight 500)", async () => {
     const { ChannelCasesView } = await import("../src/components/disputes/ChannelCasesView");
     const { NewCaseForm } = await import("../src/components/disputes/NewCaseForm");
-    const tree = await ChannelCasesView({ channel: "EXPERIAN", user: owner });
+    const tree = await resolveAsyncServerTree(await ChannelCasesView({ channel: "EXPERIAN", user: owner }));
     expect(() => assertNoFunctionPropsToClientComponents(tree, [NewCaseForm])).not.toThrow();
   });
 
@@ -159,7 +159,7 @@ describe("credit / escalation desk pages", () => {
     const { SmartCreditAttachForm } = await import("../src/components/credit/SmartCreditAttachForm");
     const { SmartCreditSessionForm } = await import("../src/components/credit/SmartCreditSessionForm");
     const Page = (await importPage()).default;
-    const tree = await Page();
+    const tree = await resolveAsyncServerTree(await Page());
     assertNoFunctionPropsToClientComponents(tree, [NewCaseForm, SmartCreditAttachForm, SmartCreditSessionForm]);
     const html = renderToStaticMarkup(createElement("div", null, tree));
     expect(html, href).not.toMatch(/This page couldn't load|A server error occurred/i);
@@ -174,7 +174,7 @@ describe("credit / escalation desk pages", () => {
     listCasesForChannel.mockRejectedValue(new Error('relation "DisputeCase" does not exist'));
     const { ChannelCasesView } = await import("../src/components/disputes/ChannelCasesView");
     const { NewCaseForm } = await import("../src/components/disputes/NewCaseForm");
-    const tree = await ChannelCasesView({ channel: "EQUIFAX", user: owner });
+    const tree = await resolveAsyncServerTree(await ChannelCasesView({ channel: "EQUIFAX", user: owner }));
     assertNoFunctionPropsToClientComponents(tree, [NewCaseForm]);
     const html = renderToStaticMarkup(createElement("div", null, tree));
     expect(html).toMatch(/Equifax/);
@@ -193,8 +193,8 @@ describe("credit / escalation desk pages", () => {
 
     const DisputeFox = (await import("../src/app/(staff)/credit/disputefox/page")).default;
     const SmartCredit = (await import("../src/app/(staff)/credit/smartcredit/page")).default;
-    const foxTree = await DisputeFox();
-    const scTree = await SmartCredit();
+    const foxTree = await resolveAsyncServerTree(await DisputeFox());
+    const scTree = await resolveAsyncServerTree(await SmartCredit());
     assertNoFunctionPropsToClientComponents(foxTree, [NewCaseForm]);
     assertNoFunctionPropsToClientComponents(scTree, [NewCaseForm, SmartCreditAttachForm, SmartCreditSessionForm]);
 

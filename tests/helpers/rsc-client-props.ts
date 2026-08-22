@@ -1,4 +1,4 @@
-import { isValidElement, type ReactNode } from "react";
+import { cloneElement, isValidElement, type ReactNode } from "react";
 
 type ComponentType = ((...args: never[]) => unknown) & { name?: string };
 
@@ -7,6 +7,28 @@ type ComponentType = ((...args: never[]) => unknown) & { name?: string };
  * into Client Components. Regular `renderToStaticMarkup` does not, so tests
  * have to walk the tree the same way the RSC payload encoder would.
  */
+/** Next awaits async Server Component children; renderToStaticMarkup does not. */
+export async function resolveAsyncServerTree(node: ReactNode): Promise<ReactNode> {
+  if (node == null || typeof node === "boolean" || typeof node === "string" || typeof node === "number") {
+    return node;
+  }
+  if (Array.isArray(node)) {
+    return Promise.all(node.map((child) => resolveAsyncServerTree(child)));
+  }
+  if (!isValidElement(node)) return node;
+
+  const type = node.type;
+  if (typeof type === "function" && type.constructor.name === "AsyncFunction") {
+    const resolved = await (type as (props: unknown) => Promise<ReactNode>)(node.props);
+    return resolveAsyncServerTree(resolved);
+  }
+
+  const props = node.props as { children?: ReactNode };
+  if (!Object.prototype.hasOwnProperty.call(props, "children")) return node;
+  const children = await resolveAsyncServerTree(props.children);
+  return cloneElement(node, undefined, children);
+}
+
 export function assertNoFunctionPropsToClientComponents(
   node: ReactNode,
   clientTypes: Iterable<ComponentType>,
