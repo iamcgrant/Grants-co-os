@@ -72,7 +72,7 @@ describe("native Cloud Tax Office + SBTPG desks", () => {
     expect(tax).toMatch(/TaxDeskAttachForm/);
     expect(tax).toMatch(/TaxDeskSessionForm/);
     const sbtpg = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/sbtpg/page.tsx"), "utf8");
-    expect(sbtpg).toMatch(/listTaxDeskBoard/);
+    expect(sbtpg).toMatch(/loadSbtpgDesk/);
     expect(sbtpg).toMatch(/TaxDeskAttachForm/);
     expect(sbtpg).toMatch(/SbtpgPayoutForm/);
   });

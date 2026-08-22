@@ -73,6 +73,13 @@ export default async function MorePage() {
             Cloud Tax Office, Cognito submissions, and SBTPG payouts — native OS, not portal bookmarks.
           </p>
         </Link>
+        <Link href="/tax/sbtpg" className="gc-card hover:bg-white/[0.06] transition-colors" data-nav="SBTPG">
+          <p className="gc-eyebrow mb-2">Tax</p>
+          <p className="text-xl display">SBTPG</p>
+          <p className="text-sm text-[var(--gc-muted)] mt-2">
+            Live in-OS payout desk. Fee Summary PAID is Total Revenue. Official portal is last-step only.
+          </p>
+        </Link>
         <Link href="/credit-pulse" className="gc-card hover:bg-white/[0.06] transition-colors">
           <p className="gc-eyebrow mb-2">Credit</p>
           <p className="text-xl display">Friday Pulse</p>

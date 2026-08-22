@@ -591,6 +591,7 @@ a {
     flex-direction: column;
     gap: 0.12rem;
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
   }
 
@@ -603,6 +604,12 @@ a {
     font-size: 0.8rem;
     letter-spacing: 0.02em;
     color: var(--gc-muted);
+    cursor: pointer;
+    pointer-events: auto;
+  }
+
+  .gc-sidebar-section {
+    display: block;
   }
 
   .gc-sidebar-link:hover {

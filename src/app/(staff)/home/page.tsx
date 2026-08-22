@@ -15,8 +15,6 @@ import { MetricTile, Panel, StatRow } from "@/components/ui/density";
 import { DonutChart, LineChart } from "@/components/ui/charts";
 import { GhlSyncPanel } from "@/components/integrations/GhlSyncPanel";
 import { GhlConversationPullPanel } from "@/components/integrations/GhlConversationPullPanel";
-import { SbtpgPayoutForm } from "@/components/tax/SbtpgPayoutForm";
-import { SbtpgFeeSummaryIngestForm } from "@/components/tax/SbtpgFeeSummaryIngestForm";
 import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
 import { hasPermission } from "@/lib/rbac/permissions";
 
@@ -30,11 +28,6 @@ export default async function HomePage() {
     const data = await getOwnerCommandCenter();
     const sparkCollect = data.revenueTrend.values.map((v) => Math.max(v, 0));
     const monthLabel = formatUsd(data.finance.totalRevenueCents);
-    const payoutClients = await prisma.client.findMany({
-      orderBy: { lastName: "asc" },
-      take: 200,
-      select: { id: true, grantsClientId: true, firstName: true, lastName: true },
-    });
 
     return (
       <div className="gc-fade-up space-y-3">
@@ -50,8 +43,7 @@ export default async function HomePage() {
                 ? `${data.ops.ghlLinked} linked · ${data.ops.ghlLiveLinked} live API`
                 : "Awaiting Integration"}
               {" · "}
-              Total Revenue {formatUsd(data.finance.totalRevenueCents)} ·{" "}
-              {data.finance.totalRevenueTaxpayerCount} taxpayers · {data.finance.totalRevenueWindow}
+              Grants &amp; Co total revenue {formatUsd(data.finance.totalRevenueCents)} · season-to-date
             </p>
           </div>
           <div className="hidden xl:flex flex-wrap gap-2">
@@ -74,15 +66,15 @@ export default async function HomePage() {
             value={formatUsd(data.finance.totalRevenueCents)}
             href="/tax/sbtpg"
             spark={sparkCollect.slice(-7)}
-            hint={`${data.finance.totalRevenueTaxpayerCount} taxpayers · ${data.finance.totalRevenueSource}`}
-            trend={data.finance.totalRevenueWindow === "season-to-date" ? "Season-to-date" : "Recorded payouts"}
+            hint="Grants & Co Consultants"
+            trend="Season-to-date"
             tone="ok"
           />
           <MetricTile
             label="Unfunded"
             value={formatUsd(data.finance.unfundedCents)}
             href="/tax/sbtpg"
-            hint={`${data.finance.unfundedTaxpayerCount} taxpayers · not in Total Revenue`}
+            hint="Pending · not in Total Revenue"
             tone="warn"
           />
           <MetricTile
@@ -93,11 +85,7 @@ export default async function HomePage() {
                 : formatUsd(data.finance.collectedTodayCents)
             }
             href="/tax/sbtpg"
-            hint={
-              data.finance.hasOfficialDailySplit
-                ? `SBTPG ${formatUsd(data.finance.sbtpgCollectedTodayCents)} · Pay ${formatUsd(data.finance.grantsPayTodayCents)}`
-                : "No official daily split"
-            }
+            hint="No official daily split"
             tone="ice"
           />
           <MetricTile
@@ -114,8 +102,8 @@ export default async function HomePage() {
           <Panel title="Operational overview" eyebrow="Clients" className="gc-span-5" action={<Link href="/work" className="text-[0.65rem] uppercase tracking-wider text-[var(--gc-ice)]">Open</Link>}>
             {data.ops.activeClients === 0 ? (
               <DeskEmptyState
-                detail="No Grants clients in this data plane yet. Totals stay honest zeros until a client exists or an official SBTPG payout is recorded."
-                nextAction="Add a client, pull GHL contacts onto existing masters, or record an official SBTPG payout below."
+                detail="No Grants clients in this data plane yet. Totals stay honest zeros until a client exists."
+                nextAction="Add a client or pull GHL contacts onto existing masters."
               />
             ) : null}
             <div className="flex flex-col sm:flex-row gap-5 items-center">
@@ -145,17 +133,16 @@ export default async function HomePage() {
 
           <Panel
             title="Revenue trend"
-            eyebrow="Total Revenue · SBTPG Fee Summary PAID · season-to-date"
+            eyebrow="Grants & Co Consultants · season-to-date"
             className="gc-span-7"
             action={<span className="display text-xl text-[var(--gc-ice)]">{monthLabel}</span>}
           >
             <p className="text-xs text-[var(--gc-muted)] mb-3">
-              Total Revenue is official SBTPG Fee Summary PAID. Today/week stay empty without a dated
-              payout or Grants Pay charge — season-to-date is not split. UNFUNDED is pending only. No
-              portal scrape.
+              Total company revenue is season-to-date. Today and this week stay empty without a dated
+              Grants Pay charge. Unfunded is pending only and is not added.
             </p>
             <LineChart
-              series={[{ name: "Collected", color: "#b2d4ff", values: data.revenueTrend.values }]}
+              series={[{ name: "Total Revenue", color: "#b2d4ff", values: data.revenueTrend.values }]}
               labels={data.revenueTrend.labels}
             />
             <div className="gc-dash-grid gc-dash-grid-4 mt-4">
@@ -168,10 +155,7 @@ export default async function HomePage() {
                 }
                 hint="No official weekly split"
               />
-              <MetricTile
-                label="FCA"
-                value={`${formatUsd(data.finance.fcaCents)} · ${data.finance.fcaTaxpayerCount}`}
-              />
+              <MetricTile label="FCA" value={formatUsd(data.finance.fcaCents)} />
               <MetricTile label="Auto Collect" value={formatUsd(data.finance.autoCollectCents)} />
               <MetricTile label="Pending settlement" value={formatUsd(data.finance.pendingSettlementCents)} />
             </div>
@@ -286,16 +270,6 @@ export default async function HomePage() {
 
         {hasPermission(user.role, "MANAGE_OPERATIONS") && (
           <div className="space-y-4">
-            <Panel title="Record SBTPG collected" eyebrow="Official payouts">
-              <p className="text-sm text-[var(--gc-muted)] mb-4">
-                Total Revenue reads official Fee Summary PAID from Postgres. Today/week stay empty unless a
-                dated payout exists. Official portal is last-step only.
-              </p>
-              <div className="space-y-4">
-                <SbtpgFeeSummaryIngestForm />
-                <SbtpgPayoutForm clients={payoutClients} />
-              </div>
-            </Panel>
             <GhlSyncPanel canSync />
             <GhlConversationPullPanel canSync />
           </div>

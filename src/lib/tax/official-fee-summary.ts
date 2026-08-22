@@ -23,14 +23,18 @@ export {
   SBTPG_BUCKET_PAYOUT,
   SBTPG_WINDOW_DATED,
   SBTPG_WINDOW_SEASON_TO_DATE,
+  commandCenterRevenueSeries,
   mapCommandCenterRevenue,
   officialFeeSummaryFromCaptureKey,
   officialPaidPayoutExternalId,
+  officialSummaryFromFeeSummaryPayouts,
   officialUnfundedPayoutExternalId,
+  sbtpgDeskTotals,
   type CommandCenterRevenue,
   type DatedCollectedWindows,
   type GrantsPayWindows,
   type OfficialSbtpgFeeSummary,
+  type SbtpgDeskTotals,
 } from "@/lib/tax/fee-summary-mapping";
 
 function snapshotToOfficialSummary(row: {

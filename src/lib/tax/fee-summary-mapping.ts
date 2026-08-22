@@ -122,9 +122,111 @@ export function mapCommandCenterRevenue(
   };
 }
 
+export type FeeSummaryPayoutRow = {
+  status: string;
+  amountCents: number;
+  bucket?: string | null;
+  taxpayerCount?: number | null;
+  taxYear?: string | null;
+  paidAt?: Date | string | null;
+};
+
+/** Rebuild official totals from FEE_SUMMARY_* payouts when the snapshot row is missing. */
+export function officialSummaryFromFeeSummaryPayouts(
+  payouts: ReadonlyArray<FeeSummaryPayoutRow>,
+): OfficialSbtpgFeeSummary | null {
+  const paid = payouts.find((row) => row.bucket === SBTPG_BUCKET_FEE_SUMMARY_PAID);
+  if (!paid) return null;
+  const unfunded = payouts.find((row) => row.bucket === SBTPG_BUCKET_FEE_SUMMARY_UNFUNDED);
+  const capturedAt = paid.paidAt ? new Date(paid.paidAt) : null;
+  return {
+    taxYear: paid.taxYear || "",
+    capturedOn: capturedAt && !Number.isNaN(capturedAt.getTime()) ? capturedAt.toISOString().slice(0, 10) : "",
+    capturedAt: capturedAt && !Number.isNaN(capturedAt.getTime()) ? capturedAt.toISOString() : "",
+    sourceLabel: "SBTPG Fee Summary",
+    sourceUrl: null,
+    paidCents: paid.amountCents,
+    paidTaxpayerCount: paid.taxpayerCount ?? 0,
+    unfundedCents: unfunded?.amountCents ?? 0,
+    unfundedTaxpayerCount: unfunded?.taxpayerCount ?? 0,
+    fcaCents: 0,
+    fcaTaxpayerCount: 0,
+    autoCollectCents: 0,
+    notes: null,
+  };
+}
+
+/** Season-to-date chart uses the official total on every point — no invented daily split. */
+export function commandCenterRevenueSeries(
+  officialTotalCents: number | null,
+  labels: string[],
+  datedValues: number[],
+): { labels: string[]; values: number[] } {
+  if (officialTotalCents != null && officialTotalCents > 0) {
+    return { labels, values: labels.map(() => officialTotalCents) };
+  }
+  return { labels, values: datedValues };
+}
+
 export function officialFeeSummaryFromCaptureKey(key: string): OfficialSbtpgFeeSummary {
   if (key === OFFICIAL_SBTPG_FEE_SUMMARY_TY2026_2026_08_22.capturedOn || key === "TY2026-2026-08-22") {
     return { ...OFFICIAL_SBTPG_FEE_SUMMARY_TY2026_2026_08_22 };
   }
   throw new Error("Unknown official SBTPG Fee Summary capture");
+}
+
+export type SbtpgDeskTotals = {
+  isLive: boolean;
+  totalRevenueCents: number;
+  paidTaxpayerCount: number;
+  unfundedCents: number;
+  unfundedTaxpayerCount: number;
+  source: "SBTPG Fee Summary PAID" | "SbtpgPayout PAID/FUNDED";
+  window: "season-to-date" | "recorded-payouts";
+  taxYear: string | null;
+  capturedOn: string | null;
+};
+
+/**
+ * Native SBTPG desk tiles. Official snapshot wins — same PAID/UNFUNDED as Command Center.
+ */
+export function sbtpgDeskTotals(
+  official: OfficialSbtpgFeeSummary | null,
+  payouts: ReadonlyArray<FeeSummaryPayoutRow>,
+  board: ReadonlyArray<{ status: string | null }>,
+): SbtpgDeskTotals {
+  const liveOfficial = official ?? officialSummaryFromFeeSummaryPayouts(payouts);
+  const trackedCents = payouts
+    .filter((row) => row.status === "PAID" || row.status === "FUNDED")
+    .reduce((sum, row) => sum + row.amountCents, 0);
+  const paidFromBoard = board.filter((row) => row.status === "PAID" || row.status === "FUNDED").length;
+  const openFromBoard = board.filter(
+    (row) => row.status && row.status !== "CLOSED" && row.status !== "PAID",
+  ).length;
+
+  if (liveOfficial) {
+    return {
+      isLive: true,
+      totalRevenueCents: liveOfficial.paidCents,
+      paidTaxpayerCount: liveOfficial.paidTaxpayerCount,
+      unfundedCents: liveOfficial.unfundedCents,
+      unfundedTaxpayerCount: liveOfficial.unfundedTaxpayerCount,
+      source: "SBTPG Fee Summary PAID",
+      window: "season-to-date",
+      taxYear: liveOfficial.taxYear || null,
+      capturedOn: liveOfficial.capturedOn || null,
+    };
+  }
+
+  return {
+    isLive: trackedCents > 0 || payouts.length > 0,
+    totalRevenueCents: trackedCents,
+    paidTaxpayerCount: paidFromBoard,
+    unfundedCents: 0,
+    unfundedTaxpayerCount: openFromBoard,
+    source: "SbtpgPayout PAID/FUNDED",
+    window: "recorded-payouts",
+    taxYear: null,
+    capturedOn: null,
+  };
 }

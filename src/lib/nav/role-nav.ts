@@ -101,6 +101,15 @@ export function getTaxNav(): NavItem[] {
   ]);
 }
 
+/** First-class sidebar app — always above the Credit stack so the click is live. */
+export function getPinnedSbtpgNav(): NavItem {
+  return { href: TAX_NAV.sbtpg.href, label: TAX_NAV.sbtpg.label, group: "primary" };
+}
+
+export function getDesktopTaxNav(): NavItem[] {
+  return getTaxNav().filter((item) => item.href !== TAX_NAV.sbtpg.href);
+}
+
 export function navSectionLabel(group: NavGroup | undefined): string | null {
   switch (group) {
     case undefined:
@@ -186,10 +195,11 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/inbox?tab=gmail", label: "Gmail", group: "primary" },
       { href: "/dialer", label: "Dialer", group: "primary" },
       { href: "/team-chat", label: "Telegram", group: "primary" },
+      getPinnedSbtpgNav(),
       { href: "/work", label: "Tasks", group: "ops" },
       ...getCreditDisputesNav(),
       ...getEscalationsNav(),
-      ...getTaxNav(),
+      ...getDesktopTaxNav(),
       { href: "/pay", label: "Grants Pay", group: "finance" },
       { href: "/intelligence", label: "Reports", group: "finance" },
       { href: "/acquisition", label: "Acquisition", group: "finance" },
@@ -208,10 +218,11 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/inbox?tab=gmail", label: "Gmail", group: "primary" },
       { href: "/dialer", label: "Dialer", group: "primary" },
       { href: "/team-chat", label: "Telegram", group: "primary" },
+      getPinnedSbtpgNav(),
       { href: "/work", label: "Tasks", group: "ops" },
       ...getCreditDisputesNav(),
       ...getEscalationsNav(),
-      ...getTaxNav(),
+      ...getDesktopTaxNav(),
       { href: "/search", label: "Search", group: "system" },
       { href: "/more", label: "Settings", group: "system" },
     ]);
@@ -225,10 +236,11 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/inbox?tab=gmail", label: "Gmail", group: "primary" },
       { href: "/dialer", label: "Dialer", group: "primary" },
       { href: "/team-chat", label: "Telegram", group: "primary" },
+      getPinnedSbtpgNav(),
       { href: "/work", label: "File Queues", group: "ops" },
       ...getCreditDisputesNav(),
       ...getEscalationsNav(),
-      ...getTaxNav(),
+      ...getDesktopTaxNav(),
       { href: "/search", label: "Search", group: "system" },
       { href: "/more", label: "Settings", group: "system" },
     ]);

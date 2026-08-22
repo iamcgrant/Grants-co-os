@@ -55,10 +55,12 @@ describe("SBTPG collected payouts", () => {
     const page = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/sbtpg/page.tsx"), "utf8");
     const home = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/home/page.tsx"), "utf8");
     expect(page).toMatch(/SbtpgPayoutForm/);
+    expect(page).toMatch(/loadSbtpgDesk/);
     expect(page).not.toMatch(/cheerio|puppeteer|playwright/i);
     expect(page).not.toMatch(/https:\/\/pro\.sbtpg\.com/);
-    expect(home).toMatch(/SbtpgPayoutForm/);
-    expect(home).toMatch(/SbtpgFeeSummaryIngestForm/);
+    expect(home).not.toMatch(/SbtpgPayoutForm/);
+    expect(home).not.toMatch(/SbtpgFeeSummaryIngestForm/);
+    expect(home).not.toMatch(/SBTPG/);
     expect(home).toMatch(/totalRevenueCents/);
     expect(home).toMatch(/Total Revenue/);
   });

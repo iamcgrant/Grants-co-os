@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
-import { getDesktopNav, getStaffNav, navSectionLabel, roleDisplayName } from "@/lib/nav/role-nav";
+import { getDesktopNav, getStaffNav, navSectionLabel, roleDisplayName, TAX_NAV } from "@/lib/nav/role-nav";
 import type { AuthUserView } from "@/lib/auth/types";
 import type { NavItem, StaffRole } from "@/lib/nav/role-nav";
 
@@ -21,13 +21,21 @@ function SidebarDest({
 }) {
   if (isExternalHref(item.href)) {
     return (
-      <a href={item.href} className={className} data-active={dataActive} target="_blank" rel="noopener noreferrer">
+      <a
+        href={item.href}
+        className={className}
+        data-active={dataActive}
+        data-nav={item.label}
+        data-nav-href={item.href}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
         {children}
       </a>
     );
   }
   return (
-    <Link href={item.href} className={className} data-active={dataActive}>
+    <Link href={item.href} className={className} data-active={dataActive} data-nav={item.label} data-nav-href={item.href}>
       {children}
     </Link>
   );
@@ -93,7 +101,15 @@ export function StaffShell({
         <nav className="gc-sidebar-nav">
           {desktopNav.map(({ item, showSection, section }) => (
             <div key={`${item.href}-${item.label}`}>
-              {showSection && section ? <p className="gc-sidebar-section">{section}</p> : null}
+              {showSection && section ? (
+                item.group === "tax" ? (
+                  <Link href={TAX_NAV.hub.href} className="gc-sidebar-section" data-nav="Tax">
+                    {section}
+                  </Link>
+                ) : (
+                  <p className="gc-sidebar-section">{section}</p>
+                )
+              ) : null}
               <SidebarDest
                 item={item}
                 className={`gc-sidebar-link ${isActive(item.href) ? "is-active" : ""}`}
