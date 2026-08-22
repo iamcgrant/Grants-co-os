@@ -1,10 +1,15 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { probeGhlVoicePath, startGhlOutboundCall } from "../src/lib/integrations/ghl/voice";
 import { GHL_PHONE_SYSTEM_READONLY_SCOPE, GHL_VOICE_SESSION_SCOPE } from "../src/lib/integrations/ghl/location";
 
 const originalFetch = globalThis.fetch;
 
 describe("GHL voice / in-OS dialer", () => {
+  beforeEach(() => {
+    delete process.env.GHL_API_KEY;
+    delete process.env.GHL_LOCATION_ID;
+  });
+
   afterEach(() => {
     globalThis.fetch = originalFetch;
     vi.restoreAllMocks();

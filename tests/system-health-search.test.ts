@@ -96,7 +96,7 @@ describe("system health + universal search", () => {
     process.env.DISPUTEFOX_API_KEY = "df_test_not_a_real_key";
     process.env.SMARTCREDIT_SPONSOR_URL = "https://www.smartcredit.com/join/?pid=TEST";
 
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
       new Response(JSON.stringify({ message: "The token is not authorized for this scope." }), {
         status: 401,
       }),
