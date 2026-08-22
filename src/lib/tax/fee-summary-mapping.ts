@@ -128,3 +128,58 @@ export function officialFeeSummaryFromCaptureKey(key: string): OfficialSbtpgFeeS
   }
   throw new Error("Unknown official SBTPG Fee Summary capture");
 }
+
+export type SbtpgDeskTotals = {
+  isLive: boolean;
+  totalRevenueCents: number;
+  paidTaxpayerCount: number;
+  unfundedCents: number;
+  unfundedTaxpayerCount: number;
+  source: "SBTPG Fee Summary PAID" | "SbtpgPayout PAID/FUNDED";
+  window: "season-to-date" | "recorded-payouts";
+  taxYear: string | null;
+  capturedOn: string | null;
+};
+
+/**
+ * Native SBTPG desk tiles. Official snapshot wins — same PAID/UNFUNDED as Command Center.
+ */
+export function sbtpgDeskTotals(
+  official: OfficialSbtpgFeeSummary | null,
+  payouts: ReadonlyArray<{ status: string; amountCents: number }>,
+  board: ReadonlyArray<{ status: string | null }>,
+): SbtpgDeskTotals {
+  const trackedCents = payouts
+    .filter((row) => row.status === "PAID" || row.status === "FUNDED")
+    .reduce((sum, row) => sum + row.amountCents, 0);
+  const paidFromBoard = board.filter((row) => row.status === "PAID" || row.status === "FUNDED").length;
+  const openFromBoard = board.filter(
+    (row) => row.status && row.status !== "CLOSED" && row.status !== "PAID",
+  ).length;
+
+  if (official) {
+    return {
+      isLive: true,
+      totalRevenueCents: official.paidCents,
+      paidTaxpayerCount: official.paidTaxpayerCount,
+      unfundedCents: official.unfundedCents,
+      unfundedTaxpayerCount: official.unfundedTaxpayerCount,
+      source: "SBTPG Fee Summary PAID",
+      window: "season-to-date",
+      taxYear: official.taxYear,
+      capturedOn: official.capturedOn,
+    };
+  }
+
+  return {
+    isLive: trackedCents > 0 || payouts.length > 0,
+    totalRevenueCents: trackedCents,
+    paidTaxpayerCount: paidFromBoard,
+    unfundedCents: 0,
+    unfundedTaxpayerCount: openFromBoard,
+    source: "SbtpgPayout PAID/FUNDED",
+    window: "recorded-payouts",
+    taxYear: null,
+    capturedOn: null,
+  };
+}

@@ -5,6 +5,7 @@ import { resetSqliteFromSchema } from "./helpers/sqlite-schema";
 import {
   mapCommandCenterRevenue,
   OFFICIAL_SBTPG_FEE_SUMMARY_TY2026_2026_08_22,
+  sbtpgDeskTotals,
 } from "../src/lib/tax/fee-summary-mapping";
 
 const testDb = path.join(process.cwd(), "prisma", "test-command-center-revenue.db");
@@ -91,8 +92,23 @@ describe("Command Center Total Revenue mapping", () => {
     expect(home).toMatch(/label="Total Revenue"/);
     expect(home).toMatch(/data\.finance\.totalRevenueCents/);
     expect(home).toMatch(/data\.finance\.unfundedCents/);
+    expect(home).toMatch(/href="\/tax\/sbtpg"/);
     expect(home).not.toMatch(/117700|117,700/);
     expect(home).not.toMatch(/cheerio|puppeteer|playwright/i);
+  });
+
+  it("maps the native SBTPG desk tiles from the official snapshot, not zeros", () => {
+    const desk = sbtpgDeskTotals(official, [], []);
+    expect(desk.isLive).toBe(true);
+    expect(desk.totalRevenueCents).toBe(11_770_000);
+    expect(desk.paidTaxpayerCount).toBe(73);
+    expect(desk.unfundedCents).toBe(2_100_000);
+    expect(desk.unfundedTaxpayerCount).toBe(12);
+    expect(desk.source).toBe("SBTPG Fee Summary PAID");
+    expect(desk.window).toBe("season-to-date");
+    expect(desk.taxYear).toBe("2026");
+    expect(desk.capturedOn).toBe("2026-08-22");
+    expect(desk.totalRevenueCents).not.toBe(official.paidCents + official.unfundedCents);
   });
 });
 
@@ -103,6 +119,7 @@ describe("persisted official Fee Summary → Command Center query", () => {
   let getSbtpgCollectedTotals: typeof import("../src/lib/tax/payouts").getSbtpgCollectedTotals;
   let getFinanceDashboard: typeof import("../src/lib/payments/dashboard").getFinanceDashboard;
   let recordSbtpgPayout: typeof import("../src/lib/tax/payouts").recordSbtpgPayout;
+  let loadSbtpgDesk: typeof import("../src/lib/tax/sbtpg-desk").loadSbtpgDesk;
 
   beforeAll(async () => {
     process.env.DATABASE_URL = `file:${testDb}`;
@@ -121,6 +138,8 @@ describe("persisted official Fee Summary → Command Center query", () => {
     recordSbtpgPayout = payouts.recordSbtpgPayout;
     const finance = await import("../src/lib/payments/dashboard");
     getFinanceDashboard = finance.getFinanceDashboard;
+    const desk = await import("../src/lib/tax/sbtpg-desk");
+    loadSbtpgDesk = desk.loadSbtpgDesk;
   });
 
   beforeEach(async () => {
@@ -193,5 +212,23 @@ describe("persisted official Fee Summary → Command Center query", () => {
     expect(finance.sbtpgCollectedTodayCents).toBe(55000);
     expect(finance.collectedTodayCents).toBe(55000);
     expect(finance.unfundedCents).toBe(2_100_000);
+  });
+
+  it("SBTPG desk reads the official snapshot for PAID and UNFUNDED", async () => {
+    await persistOfficialSbtpgFeeSummary({ ...OFFICIAL_SBTPG_FEE_SUMMARY_TY2026_2026_08_22 });
+    const desk = await loadSbtpgDesk();
+    expect(desk.official?.paidCents).toBe(11_770_000);
+    expect(desk.official?.unfundedCents).toBe(2_100_000);
+    expect(desk.totals.isLive).toBe(true);
+    expect(desk.totals.totalRevenueCents).toBe(11_770_000);
+    expect(desk.totals.paidTaxpayerCount).toBe(73);
+    expect(desk.totals.unfundedCents).toBe(2_100_000);
+    expect(desk.totals.unfundedTaxpayerCount).toBe(12);
+    expect(desk.totals.source).toBe("SBTPG Fee Summary PAID");
+    const page = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/sbtpg/page.tsx"), "utf8");
+    expect(page).toMatch(/loadSbtpgDesk/);
+    expect(page).toMatch(/totals\.totalRevenueCents/);
+    expect(page).toMatch(/totals\.unfundedCents/);
+    expect(page).not.toMatch(/coming soon/i);
   });
 });

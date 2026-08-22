@@ -27,10 +27,12 @@ export {
   officialFeeSummaryFromCaptureKey,
   officialPaidPayoutExternalId,
   officialUnfundedPayoutExternalId,
+  sbtpgDeskTotals,
   type CommandCenterRevenue,
   type DatedCollectedWindows,
   type GrantsPayWindows,
   type OfficialSbtpgFeeSummary,
+  type SbtpgDeskTotals,
 } from "@/lib/tax/fee-summary-mapping";
 
 function snapshotToOfficialSummary(row: {

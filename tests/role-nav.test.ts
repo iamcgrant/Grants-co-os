@@ -7,7 +7,9 @@ import {
   TAX_NAV,
   getCreditDisputesNav,
   getDesktopNav,
+  getDesktopTaxNav,
   getEscalationsNav,
+  getPinnedSbtpgNav,
   getStaffNav,
   getTaxNav,
   hasCreditDisputesNav,
@@ -55,6 +57,8 @@ describe("Credit & Disputes navigation", () => {
     expect(TAX_NAV.cloudTaxOffice.href).toBe("/tax/cloud-tax-office");
     expect(TAX_NAV.cognito.href).toBe("/tax/cognito");
     expect(TAX_NAV.sbtpg.href).toBe("/tax/sbtpg");
+    expect(getPinnedSbtpgNav()).toEqual({ href: "/tax/sbtpg", label: "SBTPG", group: "primary" });
+    expect(labels(getDesktopTaxNav())).toEqual(["Cloud Tax Office", "Cognito"]);
     for (const role of CREDIT_ROLES) expect(hasTaxNav(role)).toBe(true);
     for (const role of NON_CREDIT_ROLES) expect(hasTaxNav(role)).toBe(false);
   });
@@ -83,8 +87,25 @@ describe("Credit & Disputes navigation", () => {
     expect(nav.find((item) => item.label === "Cloud Tax Office")?.href).toBe("/tax/cloud-tax-office");
     expect(nav.find((item) => item.label === "Cognito")?.href).toBe("/tax/cognito");
     expect(nav.find((item) => item.label === "SBTPG")?.href).toBe("/tax/sbtpg");
+    expect(nav.find((item) => item.label === "SBTPG")?.group).toBe("primary");
+    expect(nav.filter((item) => item.label === "SBTPG")).toHaveLength(1);
+    expect(nav.findIndex((item) => item.label === "SBTPG")).toBeLessThan(8);
     expect(nav.find((item) => item.label === "Telegram")?.href).toBe("/team-chat");
     expect(nav.find((item) => item.label === "Gmail")?.href).toBe("/inbox?tab=gmail");
+    const shell = fs.readFileSync(path.join(process.cwd(), "src/components/layout/StaffShell.tsx"), "utf8");
+    expect(shell).toMatch(/data-nav=\{item\.label\}/);
+    expect(shell).toMatch(/data-nav-href=\{item\.href\}/);
+    expect(shell).toMatch(/TAX_NAV\.hub\.href/);
+    expect(shell).not.toMatch(/pro\.sbtpg\.com/);
+  });
+
+  it("pins SBTPG on client-care and file-prep sidebars", () => {
+    for (const role of ["CUSTOMER_SERVICE", "FILE_PREPARER"] as const) {
+      const nav = getDesktopNav(role);
+      expect(nav.find((item) => item.label === "SBTPG")?.href).toBe("/tax/sbtpg");
+      expect(nav.find((item) => item.label === "SBTPG")?.group).toBe("primary");
+      expect(nav.filter((item) => item.label === "SBTPG")).toHaveLength(1);
+    }
   });
 
   it("keeps mobile bottom nav lean", () => {
@@ -139,6 +160,9 @@ describe("Credit & Disputes navigation", () => {
     const cognito = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/cognito/page.tsx"), "utf8");
     expect(cognito).toMatch(/CognitoPullForm/);
     const sbtpg = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/sbtpg/page.tsx"), "utf8");
-    expect(sbtpg).toMatch(/listTaxDeskBoard/);
+    expect(sbtpg).toMatch(/loadSbtpgDesk/);
+    expect(sbtpg).toMatch(/data-sbtpg-desk/);
+    expect(sbtpg).toMatch(/data-sbtpg-paid/);
+    expect(sbtpg).not.toMatch(/coming soon/i);
   });
 });

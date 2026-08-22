@@ -2,64 +2,70 @@ import Link from "next/link";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { prisma } from "@/lib/db/prisma";
 import { requireTaxStaff } from "@/lib/tax/access";
-import { listTaxDeskBoard } from "@/lib/tax/desk";
 import { probeSbtpgHealth } from "@/lib/tax/health";
 import { SBTPG_STATUSES, taxDeskCatalog, taxStatusLabel } from "@/lib/tax/catalog";
 import { TaxDeskAttachForm } from "@/components/tax/TaxDeskAttachForm";
 import { TaxDeskSessionForm } from "@/components/tax/TaxDeskSessionForm";
 import { SbtpgPayoutForm } from "@/components/tax/SbtpgPayoutForm";
 import { SbtpgFeeSummaryIngestForm } from "@/components/tax/SbtpgFeeSummaryIngestForm";
-import { getLatestOfficialFeeSummary } from "@/lib/tax/official-fee-summary";
 import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
 import { formatUsd } from "@/lib/payments/dashboard";
-import { listSbtpgPayouts } from "@/lib/tax/payouts";
+import { loadSbtpgDesk } from "@/lib/tax/sbtpg-desk";
 
 export default async function SbtpgWorkspacePage() {
   const { user, denied } = await requireTaxStaff();
   if (denied || !user) return <p>Access denied.</p>;
 
   const catalog = taxDeskCatalog("SBTPG");
-  const [board, probe, clients, payouts, official] = await Promise.all([
-    listTaxDeskBoard("SBTPG"),
+  const [desk, probe, clients] = await Promise.all([
+    loadSbtpgDesk(),
     probeSbtpgHealth(),
     prisma.client.findMany({
       orderBy: { lastName: "asc" },
       take: 200,
       select: { id: true, grantsClientId: true, firstName: true, lastName: true },
     }),
-    listSbtpgPayouts(),
-    getLatestOfficialFeeSummary(),
   ]);
+  const { board, payouts, totals } = desk;
   const canManage = hasPermission(user.role, "MANAGE_OPERATIONS");
-  const openCount = board.filter((row) => row.status && row.status !== "CLOSED" && row.status !== "PAID").length;
-  const paidCount = board.filter((row) => row.status === "PAID" || row.status === "FUNDED").length;
-  const trackedCents = payouts
-    .filter((row) => row.status === "PAID" || row.status === "FUNDED")
-    .reduce((sum, row) => sum + row.amountCents, 0);
 
   return (
-    <div className="gc-fade-up">
+    <div className="gc-fade-up" data-sbtpg-desk={totals.isLive ? "live" : "empty"}>
       <p className="gc-eyebrow mb-2">{catalog.eyebrow}</p>
       <h1 className="text-4xl md:text-5xl mb-2">SBTPG payouts</h1>
-      <p className="gc-section-sub mb-6 max-w-3xl">{catalog.honesty}</p>
+      <p className="gc-section-sub mb-6 max-w-3xl">
+        {totals.isLive
+          ? `${totals.source} · ${totals.window}${totals.taxYear ? ` · TY ${totals.taxYear}` : ""}${totals.capturedOn ? ` · captured ${totals.capturedOn}` : ""}. Official portal is last-step only. No scrape.`
+          : catalog.honesty}
+      </p>
 
       <div className="gc-grid-dense gc-grid-dense-4 mb-8">
-        {[
-          ["Total Revenue", official ? formatUsd(official.paidCents) : formatUsd(trackedCents)],
-          ["Paid taxpayers", official ? String(official.paidTaxpayerCount) : String(paidCount)],
-          [
-            "Unfunded",
-            official
-              ? `${formatUsd(official.unfundedCents)} · ${official.unfundedTaxpayerCount}`
-              : String(openCount),
-          ],
-          ["Clients", String(board.length)],
-        ].map(([label, value]) => (
-          <div key={label} className="gc-card">
-            <p className="text-[0.62rem] tracking-[0.14em] uppercase text-[var(--gc-muted)] mb-2">{label}</p>
-            <p className="display text-2xl">{value}</p>
-          </div>
-        ))}
+        <div className="gc-card">
+          <p className="text-[0.62rem] tracking-[0.14em] uppercase text-[var(--gc-muted)] mb-2">Total Revenue</p>
+          <p className="display text-2xl" data-sbtpg-paid>
+            {formatUsd(totals.totalRevenueCents)}
+          </p>
+          <p className="text-sm text-[var(--gc-muted)] mt-2">{totals.paidTaxpayerCount} taxpayers · {totals.source}</p>
+        </div>
+        <div className="gc-card">
+          <p className="text-[0.62rem] tracking-[0.14em] uppercase text-[var(--gc-muted)] mb-2">Paid taxpayers</p>
+          <p className="display text-2xl" data-sbtpg-paid-count>
+            {totals.paidTaxpayerCount}
+          </p>
+        </div>
+        <div className="gc-card">
+          <p className="text-[0.62rem] tracking-[0.14em] uppercase text-[var(--gc-muted)] mb-2">Unfunded</p>
+          <p className="display text-2xl" data-sbtpg-unfunded>
+            {formatUsd(totals.unfundedCents)}
+          </p>
+          <p className="text-sm text-[var(--gc-muted)] mt-2">
+            {totals.unfundedTaxpayerCount} taxpayers · not in Total Revenue
+          </p>
+        </div>
+        <div className="gc-card">
+          <p className="text-[0.62rem] tracking-[0.14em] uppercase text-[var(--gc-muted)] mb-2">Clients</p>
+          <p className="display text-2xl">{board.length}</p>
+        </div>
       </div>
 
       <div className="gc-card mb-10 max-w-3xl">
@@ -73,10 +79,10 @@ export default async function SbtpgWorkspacePage() {
         ) : null}
       </div>
 
-      {board.length === 0 && payouts.length === 0 ? (
+      {!totals.isLive ? (
         <DeskEmptyState
-          detail="No OS-recorded SBTPG payouts yet. Official pro.sbtpg.com is last-step only — this desk does not scrape."
-          nextAction="Attach a Grants client, record a payout session, or import official payout totals so Command Center collected is not $0."
+          detail="No official Fee Summary snapshot or OS-recorded SBTPG payouts yet. Official pro.sbtpg.com is last-step only — this desk does not scrape."
+          nextAction="Ingest the official Fee Summary or record a payout so this desk and Command Center Total Revenue are live."
         />
       ) : null}
 
