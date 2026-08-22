@@ -94,7 +94,9 @@ describe("Commas payment + lifecycle", () => {
 
     const form = fs.readFileSync(path.join(process.cwd(), "src/components/pay/CreatePaymentRequestForm.tsx"), "utf8");
     expect(form).toMatch(/lockedClientId/);
-    expect(form).toMatch(/Create payment request link/);
+    expect(form).toMatch(/Create invoice/);
+    expect(form).toMatch(/commasCheckoutUrl/);
+    expect(form).toMatch(/no API Keys page/);
     const client360 = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/clients/[id]/page.tsx"), "utf8");
     expect(client360).toMatch(/CreatePaymentRequestForm/);
     expect(client360).toMatch(/commasHonestHealth/);

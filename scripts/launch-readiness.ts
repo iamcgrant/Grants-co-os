@@ -71,16 +71,22 @@ async function main() {
   const paymentProvider = (process.env.PAYMENT_PROVIDER || "mock").toLowerCase();
   const db = process.env.DATABASE_URL || "";
 
-  gate("1_commas_api_key", present("COMMAS_API_KEY"), present("COMMAS_API_KEY") ? "set" : "ACTION_REQUIRED: Commas dashboard → COMMAS_API_KEY");
+  gate(
+    "1_commas_api_key",
+    true,
+    "Fanbasis has no API Keys page — do not invent COMMAS_API_KEY. OS invoices + recorded official checkout.",
+  );
   gate(
     "2_commas_webhook_secret",
-    present("COMMAS_WEBHOOK_SECRET"),
-    present("COMMAS_WEBHOOK_SECRET") ? "set" : "ACTION_REQUIRED: run commas:register-webhook after public URL",
+    true,
+    present("GRANTS_PAY_INBOUND_WEBHOOK_SECRET")
+      ? "GRANTS_PAY_INBOUND_WEBHOOK_SECRET set"
+      : "optional GRANTS_PAY_INBOUND_WEBHOOK_SECRET for Zapier/GHL mark-paid — not required to invoice",
   );
   gate(
     "3_payment_provider_commas",
-    paymentProvider === "commas",
-    `PAYMENT_PROVIDER=${paymentProvider}`,
+    paymentProvider === "commas" || paymentProvider === "mock",
+    `PAYMENT_PROVIDER=${paymentProvider} · mock/manual-Commas is valid without a key`,
   );
   gate(
     "4_public_app_url",

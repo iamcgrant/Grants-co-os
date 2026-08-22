@@ -212,7 +212,7 @@ Checkout demo invoice pattern: `/pay/GC-1051` (or reseed / create due invoice)
 
 ### Still needed to advance X1 (payments)
 1. **Authorize.Net sandbox** — adapter is wired and fail-closed. When ready, put these names in host/Cursor Secrets (never chat, never git): `AUTHORIZE_NET_SANDBOX_API_LOGIN_ID`, `AUTHORIZE_NET_SANDBOX_TRANSACTION_KEY`, `AUTHORIZE_NET_SANDBOX_CLIENT_KEY`. Keep `AUTHORIZE_NET_ENVIRONMENT=sandbox`. **Do not enable live charges.**
-2. Optional secondary: **Commas sandbox** `COMMAS_API_KEY`, `COMMAS_WEBHOOK_SECRET`
+2. Commas: Fanbasis has no API Keys page — do not invent `COMMAS_API_KEY`. Create invoices in OS and record the official checkout. Optional `GRANTS_PAY_INBOUND_WEBHOOK_SECRET`.
 
 ### Still needed to advance X2 (ops)
 1. GHL **API Key + Location ID** (Settings → Integrations → API Keys) — better than password login  

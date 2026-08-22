@@ -94,10 +94,10 @@ export default async function DashboardPage() {
                     <p className="display text-xl">{formatUsd(inv.amountCents)}</p>
                     {inv.status === "DUE" || inv.status === "FAILED" ? (
                       <Link
-                        href={`/pay/${inv.invoiceNumber}`}
+                        href={`/pay/invoices/${inv.invoiceNumber}`}
                         className="text-[0.65rem] tracking-[0.14em] uppercase text-[var(--gc-gold)]"
                       >
-                        Open Grants Pay
+                        Open invoice
                       </Link>
                     ) : null}
                   </div>

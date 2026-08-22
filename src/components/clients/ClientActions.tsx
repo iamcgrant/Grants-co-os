@@ -47,7 +47,7 @@ export function ClientActions({
     const data = await res.json();
     if (res.ok) {
       setMsg(`Invoice ${data.invoice.invoiceNumber} created`);
-      router.push(`/pay/${data.invoice.invoiceNumber}`);
+      router.push(`/pay/invoices/${data.invoice.invoiceNumber}`);
     } else {
       setMsg(data.error);
     }

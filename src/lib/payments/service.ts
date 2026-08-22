@@ -428,6 +428,18 @@ async function applyWebhookMoneyEffects(input: {
   return { effect: "none" };
 }
 
+/** Official payment confirmation (Commas HMAC or Zapier/GHL inbound). */
+export async function confirmOfficialPayment(input: {
+  providerName: string;
+  providerTransactionId: string | null;
+  amountCents: number | null;
+  invoiceId: string | null;
+  paymentRequestPublicId: string | null;
+  providerEventId: string;
+}) {
+  return applySucceededPaymentWebhook(input);
+}
+
 async function applySucceededPaymentWebhook(input: {
   providerName: string;
   providerTransactionId: string | null;

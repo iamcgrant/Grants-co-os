@@ -12,9 +12,10 @@ Do **not** invent alternate names. Values go in Cursor Secrets / Vercel Project 
 | `VERCEL_PROJECT_ID` | Vercel link (optional if linked) | `prj_7k6wvDk7P2NziRrcYsw2yUlSpwCx` (claimed project) |
 | `DATABASE_URL` | Prisma (`prisma.config.ts`, `src/lib/db/prisma.ts`) | Neon/Supabase Postgres via Vercel Marketplace — `postgresql://…` |
 | `NEXT_PUBLIC_APP_URL` | Payment links, webhooks, E2E | `https://os.grantandconsultants.com` |
-| `PAYMENT_PROVIDER` | `src/lib/payments/provider.ts` | `commas` |
-| `COMMAS_API_KEY` | `src/lib/payments/commas-config.ts` | Commas / Fanbasis dashboard (sandbox first) |
-| `COMMAS_WEBHOOK_SECRET` | `src/lib/payments/commas-provider.ts` | Issued once by `npm run commas:register-webhook` |
+| `PAYMENT_PROVIDER` | `src/lib/payments/provider.ts` | `mock` (manual Commas) is valid. Do not invent a key to force `commas`. |
+| `GRANTS_PAY_INBOUND_WEBHOOK_SECRET` | `src/lib/payments/inbound-webhook.ts` | Optional Zapier/GHL mark-paid. Fail-closed when unset. |
+| `COMMAS_API_KEY` | `src/lib/payments/commas-config.ts` | **Do not invent.** Fanbasis has no API Keys page. |
+| `COMMAS_WEBHOOK_SECRET` | `src/lib/payments/commas-provider.ts` | Only if a real Commas webhook subscription exists |
 | `AUTH_SECRET` | `src/lib/auth/session.ts` | Strong random; do not invent weak values |
 | `GC_CRON_SECRET` | `src/app/api/automations/run/route.ts` | Vercel cron header |
 | `GHL_API_KEY` | `src/lib/integrations/ghl/*` | Copy into Vercel Production |

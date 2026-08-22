@@ -73,7 +73,9 @@ export function commasPublicStatus(): {
 
 /**
  * Honest Commas health. Key presence is never CONNECTED.
- * CONNECTED only after a processed Commas webhook or a recorded Commas checkout.
+ * Fanbasis has no API Keys page — do not invent COMMAS_API_KEY.
+ * CONNECTED after a recorded official checkout or a payment-confirming
+ * Zapier/GHL (Grants Pay inbound) / Commas webhook — even without a key.
  */
 export function commasHonestHealth(input?: {
   lastWebhookAt?: string | null;
@@ -90,22 +92,23 @@ export function commasHonestHealth(input?: {
   const publicStatus = commasPublicStatus();
   const lastSuccessAt = input?.lastWebhookAt || input?.lastCheckoutAt || null;
 
-  if (!publicStatus.configured) {
-    return {
-      status: "ACTION_REQUIRED",
-      detail: "COMMAS_API_KEY required — sandbox first. Key presence is never CONNECTED.",
-      lastSuccessAt: null,
-      ...publicStatus,
-    };
-  }
-
   if (lastSuccessAt) {
     return {
       status: "CONNECTED",
       detail: input?.lastWebhookAt
-        ? `Commas webhook processed · env=${publicStatus.environment} · live=${publicStatus.liveChargesEnabled ? "on" : "locked"}`
-        : `Commas checkout recorded · env=${publicStatus.environment} · live=${publicStatus.liveChargesEnabled ? "on" : "locked"}`,
+        ? `Payment webhook processed · env=${publicStatus.environment} · live=${publicStatus.liveChargesEnabled ? "on" : "locked"}`
+        : `Official Commas checkout recorded · env=${publicStatus.environment} · live=${publicStatus.liveChargesEnabled ? "on" : "locked"}`,
       lastSuccessAt,
+      ...publicStatus,
+    };
+  }
+
+  if (!publicStatus.configured) {
+    return {
+      status: "ACTION_REQUIRED",
+      detail:
+        "Fanbasis has no API Keys page. Record an official Commas checkout URL or receive a Grants Pay inbound payment webhook. Key absence is never CONNECTED.",
+      lastSuccessAt: null,
       ...publicStatus,
     };
   }

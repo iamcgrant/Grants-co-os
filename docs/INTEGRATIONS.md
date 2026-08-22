@@ -10,7 +10,7 @@ All integrations are adapters beneath Grants & Co OS.
 | SmartCredit | Native OS workspace (`/credit/smartcredit`) | **In-OS desk** — attach, session, packet/results. No public score API. Sponsor URL is attribution only. |
 | Credit Karma | `MockCreditKarmaConnector` | Mock — **read only** |
 | Experian | `MockExperianConnector` | Mock — weekly score |
-| Payments | `PAYMENT_PROVIDER=mock` default; Commas primary adapter when `COMMAS_API_KEY` set; Authorize.Net optional secondary | Mock until secrets · live charges locked (`COMMAS_LIVE_CHARGES`). Client 360 creates/sends payment request links. |
+| Payments | `PAYMENT_PROVIDER=mock` default; Commas in spirit via OS invoices + recorded official checkout. Do **not** invent `COMMAS_API_KEY` (Fanbasis has no API Keys page). Authorize.Net optional secondary | Client 360 / Grants Pay create invoices without a key. Last-step official Fanbasis checkout. Optional Zapier/GHL inbound mark-paid. |
 | Cloud Tax Office | Native OS workspace (`/tax/cloud-tax-office`) | **In-OS desk** — client/return list, status, next actions. No supported ProAvalon list API. Official portal last-step only. No scrape. |
 | Cognito Forms | Official API (`COGNITO_API_KEY`) | **In-OS submissions list.** Fail-closed without key. Never commit the key. No scrape. |
 | SBTPG | Native OS workspace (`/tax/sbtpg`) | **In-OS refund/payout tracker.** No supported list API. Official portal last-step only. No scrape. |
@@ -128,6 +128,10 @@ Staff track tax-client refunds in Grants OS at `/tax/sbtpg`. Official `pro.sbtpg
 
 **Health:** `CONNECTED` only after a recorded OS attach/session.
 
-## Commas payment request from Client 360
+## Commas invoices from Client 360 / Grants Pay
 
-Staff with `MANAGE_PAYMENTS` create/send a Commas (or mock) payment request link on Client 360 → Pay. `COMMAS_API_KEY` stays server-side. Health is honest: key presence is never `CONNECTED`; `CONNECTED` only after a processed Commas webhook or recorded Commas checkout. GHL remains the only phone/SMS/email backend.
+Staff with `MANAGE_PAYMENTS` create a native OS invoice + payment request on Client 360 → Pay or Grants Pay. Fanbasis has **no API Keys page** — do not invent `COMMAS_API_KEY`. Staff paste or pick an official Commas / Fanbasis checkout or product URL as the last step (same pattern as Cloud Tax Office / SBTPG / Experian). No scrape.
+
+Optional official inbound webhook: `POST /api/webhooks/grants-pay` with `GRANTS_PAY_INBOUND_WEBHOOK_SECRET` marks a PaymentRequest paid. Payload is documented in `docs/PAYMENTS.md`. Charles does not need to build the Zap here.
+
+Health is honest: key absence is never `CONNECTED`. A recorded official checkout or a processed Grants Pay inbound / Commas payment webhook can become `CONNECTED` later. GHL remains the only phone/SMS/email backend.

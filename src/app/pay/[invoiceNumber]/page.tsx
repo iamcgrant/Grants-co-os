@@ -25,6 +25,7 @@ type InvoicePayload = {
   amountPaidCents: number;
   description: string | null;
   serviceName: string;
+  items?: Array<{ id: string; description: string; quantity: number; totalCents: number }>;
   client: {
     grantsClientId: string;
     firstName: string;
@@ -315,6 +316,19 @@ export default function GrantsPayPage() {
               <p className="text-[0.65rem] tracking-[0.2em] uppercase text-[var(--gc-muted)] pt-2">
                 Invoice {invoice.invoiceNumber}
               </p>
+              {invoice.items && invoice.items.length > 0 ? (
+                <div className="pt-4 text-left space-y-2">
+                  {invoice.items.map((item) => (
+                    <div key={item.id} className="flex justify-between gap-4 text-sm">
+                      <span className="text-[var(--gc-text-secondary)]">
+                        {item.description}
+                        {item.quantity > 1 ? ` × ${item.quantity}` : ""}
+                      </span>
+                      <span>{formatUsd(item.totalCents)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
             <div className="text-center py-8 border-y border-[var(--gc-border)]">
@@ -330,13 +344,13 @@ export default function GrantsPayPage() {
               <div className="space-y-3 text-center">
                 <p className="text-xs text-[var(--gc-muted)] leading-relaxed">
                   Payment processing is completed securely by Commas.
-                  {commas?.enabled
+                  {commas?.paymentLinkUrl
                     ? " You will complete checkout on their protected page."
-                    : " Payment link will be available once COMMAS_API_KEY is configured."}
+                    : " This invoice is tracked in Grants OS. Staff will attach the official Commas checkout."}
                 </p>
-                {!commas?.paymentLinkUrl && !commas?.enabled ? (
+                {!commas?.paymentLinkUrl ? (
                   <p className="text-sm text-[var(--gc-warning)]">
-                    Commas credentials required — staff can still use mock provider for local QA.
+                    Official Commas checkout is not attached yet. Do not invent an API key — Fanbasis has no API Keys page.
                   </p>
                 ) : null}
               </div>

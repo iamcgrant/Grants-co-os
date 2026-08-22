@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { getAuthorizeNetPublicCheckoutConfig } from "@/lib/payments/authorize-net-config";
 import { commasPublicStatus } from "@/lib/payments/commas-config";
+import { commasLastStepUrl } from "@/lib/payments/commas-checkout-url";
 import { getPaymentProvider } from "@/lib/payments/provider";
 
 export async function GET(
@@ -59,12 +60,13 @@ export async function GET(
       provider: provider.name,
       acceptJs,
       commas: {
-        enabled: commas.configured && provider.name === "commas",
+        enabled: Boolean(commasLastStepUrl(activeLink?.url)) || (commas.configured && provider.name === "commas"),
         environment: commas.environment,
         paymentLinkUrl:
-          provider.name === "commas" && activeLink?.url && !activeLink.url.startsWith("/")
+          commasLastStepUrl(activeLink?.url) ||
+          (provider.name === "commas" && activeLink?.url && !activeLink.url.startsWith("/")
             ? activeLink.url
-            : null,
+            : null),
       },
     },
   });
