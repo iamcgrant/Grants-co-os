@@ -31,6 +31,17 @@ describe("DisputeFox health probe", () => {
     expect(result.lastSuccessAt).toBeNull();
   });
 
+  it("does not hang the desk when the live GET never returns", async () => {
+    process.env.DISPUTEFOX_API_KEY = "df_test_value_do_not_log";
+    process.env.DISPUTEFOX_API_PROBE_URL = "https://example.test/df-probe";
+    const started = Date.now();
+    const result = await probeDisputeFoxApi(() => new Promise(() => {}));
+    expect(Date.now() - started).toBeLessThan(4000);
+    expect(result.status).toBe("OFFLINE");
+    expect(result.probed).toBe(true);
+    expect(result.detail).toMatch(/did not complete|timed out/i);
+  });
+
   it("marks CONNECTED only after a successful live GET", async () => {
     process.env.DISPUTEFOX_API_KEY = "df_test_value_do_not_log";
     process.env.DISPUTEFOX_API_PROBE_URL = "https://example.test/df-probe";

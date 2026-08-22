@@ -1,5 +1,8 @@
 import { getDisputeFoxApiConfig } from "@/lib/integrations/credentials";
+import { withTimeout } from "@/lib/disputes/with-timeout";
 import { DISPUTEFOX_API_KEY_ENV, DISPUTEFOX_ZAP_ENABLED, DISPUTEFOX_ZAP_ID } from "./secrets";
+
+const PROBE_MS = 1500;
 
 export type DisputeFoxProbeResult = {
   status: "CONNECTED" | "DEGRADED" | "ACTION_REQUIRED" | "OFFLINE";
@@ -72,13 +75,20 @@ export async function probeDisputeFoxApi(
   if (!config) return DEFAULT_PROBE;
 
   try {
-    const response = await fetchImpl(parsed.toString(), {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${config.apiKey}`,
-        Accept: "application/json",
+    const response = await withTimeout(
+      fetchImpl(parsed.toString(), {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(PROBE_MS),
+      }),
+      PROBE_MS,
+      () => {
+        throw new Error("DisputeFox probe timed out");
       },
-    });
+    );
     if (response.ok) {
       const now = new Date().toISOString();
       return {
