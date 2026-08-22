@@ -31,6 +31,19 @@ function chromeWebPreferences(preloadPath) {
   };
 }
 
+function messagesWebPreferences(preloadPath) {
+  return {
+    nodeIntegration: false,
+    contextIsolation: true,
+    sandbox: true,
+    partition: "gc-messages-local",
+    preload: preloadPath,
+    webSecurity: true,
+    allowRunningInsecureContent: false,
+    navigateOnDragDrop: false,
+  };
+}
+
 function assertUnprivilegedPrefs(prefs) {
   if (prefs.nodeIntegration !== false) {
     throw new Error("nodeIntegration must be false");
@@ -46,8 +59,17 @@ function assertUnprivilegedPrefs(prefs) {
   }
 }
 
+function assertMessagesPrefs(prefs) {
+  assertUnprivilegedPrefs({ ...prefs, preload: undefined });
+  if (!prefs.preload) {
+    throw new Error("messages view requires its own preload");
+  }
+}
+
 module.exports = {
   unprivilegedWebPreferences,
   chromeWebPreferences,
+  messagesWebPreferences,
   assertUnprivilegedPrefs,
+  assertMessagesPrefs,
 };

@@ -83,3 +83,7 @@ desktop-electron/node_modules
 desktop-electron/dist
 desktop-electron/out
 desktop-electron/.tmp
+desktop-electron/vendor/platform-imessage/
+desktop-electron/native/messages-helper/bin/*
+!desktop-electron/native/messages-helper/bin/.gitkeep
+desktop-electron/native/messages-helper/.build/

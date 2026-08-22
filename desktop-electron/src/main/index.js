@@ -1,6 +1,8 @@
 "use strict";
 
 const path = require("node:path");
+const fs = require("node:fs");
+const os = require("node:os");
 const {
   app,
   BaseWindow,
@@ -9,20 +11,36 @@ const {
   dialog,
   shell,
   session,
+  net,
+  powerMonitor,
 } = require("electron");
-const { DESKS, deskById } = require("./desks");
+const { OS_ORIGIN } = require("../product");
+const { DESKS, deskById, visibleDesks } = require("./desks");
 const { classifyNavigation, isSafeExternalHttps } = require("./allowlist");
 const {
   chromeWebPreferences,
   unprivilegedWebPreferences,
+  messagesWebPreferences,
   assertUnprivilegedPrefs,
+  assertMessagesPrefs,
 } = require("./security");
 const { chromeBounds, vendorBounds } = require("./layout");
 const { attachDownloadHandler } = require("./downloads");
+const { createEntitlementStore, fetchOwnerEntitlement } = require("./messages/entitlement");
+const { isMessagesDeskKilled } = require("./messages/kill-switch");
+const { createHelper } = require("./messages/helper");
+const { readPermissionStatus, settingsTarget } = require("./messages/permissions");
+const { senderIsTrusted, validatePayload } = require("./messages/ipc");
+const { isUserSendOp } = require("./messages/ops");
+const { createSupervisor } = require("./messages/supervisor");
+const { readOwnerSession, writeOwnerSession } = require("./messages/session");
+const { safeLog } = require("./messages/log");
 
 const SMOKE = process.argv.includes("--smoke");
 const CHROME_PRELOAD = path.join(__dirname, "..", "chrome", "preload.js");
 const CHROME_PAGE = path.join(__dirname, "..", "chrome", "index.html");
+const MESSAGES_PRELOAD = path.join(__dirname, "..", "messages", "preload.js");
+const MESSAGES_PAGE = path.join(__dirname, "..", "messages", "index.html");
 let smokePassed = false;
 
 /** Linux smoke VMs often lack user-namespace sandboxing. Windows `npm start` does not set this. */
@@ -37,6 +55,8 @@ if (SMOKE && process.platform === "linux") {
 let mainWindow = null;
 /** @type {import('electron').WebContentsView | null} */
 let chromeView = null;
+/** @type {import('electron').WebContentsView | null} */
+let messagesView = null;
 /** @type {Map<string, import('electron').WebContentsView>} */
 const deskViews = new Map();
 /** @type {Set<string>} */
@@ -48,6 +68,29 @@ let notice = null;
 /** Official start URL was actually requested for this desk. */
 const officialAttempted = new Set();
 
+const entitlementStore = createEntitlementStore();
+let helper = null;
+let supervisor = null;
+let lastNetworkSignature = "";
+
+function extraResourcesPath() {
+  if (app.isPackaged) return process.resourcesPath;
+  return path.join(__dirname, "..", "..");
+}
+
+function messagesVisible() {
+  if (isMessagesDeskKilled({ userData: app.getPath("userData") })) return false;
+  return entitlementStore.isEntitled();
+}
+
+function catalog() {
+  return visibleDesks(messagesVisible());
+}
+
+function userDataPath() {
+  return app.getPath("userData");
+}
+
 function contentSize() {
   if (!mainWindow) return [1280, 800];
   return mainWindow.getContentSize();
@@ -58,12 +101,13 @@ function layoutViews() {
   const [width, height] = contentSize();
   chromeView.setBounds(chromeBounds(width, height));
   const bounds = vendorBounds(width, height, Boolean(notice));
+  const hidden = { x: 0, y: 0, width: 0, height: 0 };
   for (const [id, view] of deskViews) {
-    if (id === activeDeskId) {
-      view.setBounds(bounds);
-    } else {
-      view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
-    }
+    view.setBounds(id === activeDeskId ? bounds : hidden);
+  }
+  if (messagesView) {
+    const show = activeDeskId === "messages" && messagesVisible();
+    messagesView.setBounds(show ? bounds : hidden);
   }
 }
 
@@ -74,9 +118,9 @@ function setNotice(next) {
 }
 
 function snapshot() {
-  const openIds = DESKS.filter((desk) => deskViews.has(desk.id)).map((desk) => desk.id);
-  const active = deskById(activeDeskId);
-  const view = deskViews.get(activeDeskId) ?? null;
+  const desks = catalog();
+  const active = deskById(activeDeskId, desks);
+  const view = deskViews.get(activeDeskId) ?? (activeDeskId === "messages" ? messagesView : null);
   const contents = view?.webContents ?? null;
   let url = active?.startUrl ?? "";
   let title = active?.title ?? "";
@@ -84,7 +128,7 @@ function snapshot() {
   let canGoBack = false;
   let canGoForward = false;
 
-  if (contents && !contents.isDestroyed()) {
+  if (contents && !contents.isDestroyed() && active?.kind !== "local-trusted") {
     url = contents.getURL() || url;
     title = contents.getTitle() || title;
     loading = contents.isLoading();
@@ -96,15 +140,19 @@ function snapshot() {
       : contents.canGoForward();
   }
 
+  const openIds = desks.filter((desk) => {
+    return desk.id === "messages" ? Boolean(messagesView) : deskViews.has(desk.id);
+  }).map((desk) => desk.id);
+
   return {
     activeDeskId,
-    desks: DESKS.map((desk) => ({
+    desks: desks.map((desk) => ({
       id: desk.id,
       title: desk.title,
-      startUrl: desk.startUrl,
-      allowedHosts: [...desk.allowedHosts],
+      startUrl: desk.startUrl || "",
+      allowedHosts: desk.allowedHosts ? [...desk.allowedHosts] : [],
       kind: desk.kind,
-      open: deskViews.has(desk.id),
+      open: desk.id === "messages" ? Boolean(messagesView) : deskViews.has(desk.id),
     })),
     openIds,
     url,
@@ -119,6 +167,11 @@ function snapshot() {
 function pushState() {
   if (!chromeView || chromeView.webContents.isDestroyed()) return;
   chromeView.webContents.send("chrome:state", snapshot());
+}
+
+function pushMessagesEvent(data) {
+  if (!messagesView || messagesView.webContents.isDestroyed()) return;
+  messagesView.webContents.send("messages:event", data);
 }
 
 async function openHttpsInSystemBrowser(urlString) {
@@ -148,6 +201,7 @@ function handleUnknownNavigation(desk, decision) {
   // Hostname changed off the exact provider/IdP list. Stay on the official
   // page. Do not open the system browser — that is only after a real load failure.
   void desk;
+  void authReturnMessage;
 }
 
 function attachNavigationGuards(contents, desk) {
@@ -190,8 +244,18 @@ function attachNavigationGuards(contents, desk) {
     officialAttempted.add(desk.id);
     pushState();
   });
-  contents.on("did-stop-loading", () => pushState());
-  contents.on("did-navigate", () => pushState());
+  contents.on("did-stop-loading", () => {
+    pushState();
+    if (desk.id === "os" && !SMOKE) {
+      refreshEntitlement().catch(() => {});
+    }
+  });
+  contents.on("did-navigate", () => {
+    pushState();
+    if (desk.id === "os" && !SMOKE) {
+      refreshEntitlement().catch(() => {});
+    }
+  });
   contents.on("did-navigate-in-page", () => pushState());
   contents.on("page-title-updated", () => pushState());
   contents.on("did-fail-load", (_event, code, desc, _url, isMainFrame) => {
@@ -236,8 +300,117 @@ function createDeskView(desk) {
   return view;
 }
 
+function rememberOwnerDesk(lastDeskId, lastConversationId) {
+  if (!messagesVisible()) return;
+  const current = readOwnerSession(userDataPath());
+  writeOwnerSession(userDataPath(), {
+    lastDeskId,
+    lastConversationId: lastConversationId ?? current.lastConversationId,
+  });
+}
+
+function emitToMessages(event) {
+  pushMessagesEvent(event);
+}
+
+function ensureSupervisor() {
+  if (helper && supervisor) return;
+  helper = createHelper({
+    userData: userDataPath(),
+    extraResourcesPath: extraResourcesPath(),
+  });
+  supervisor = createSupervisor({
+    helper,
+    readPermissionStatus,
+    isEntitled: () => messagesVisible(),
+    isKilled: () => isMessagesDeskKilled({ userData: userDataPath() }),
+    onEvent: emitToMessages,
+  });
+}
+
+function destroyMessagesView() {
+  if (messagesView && mainWindow) {
+    mainWindow.contentView.removeChildView(messagesView);
+    if (!messagesView.webContents.isDestroyed()) messagesView.webContents.close();
+  }
+  messagesView = null;
+  deskViews.delete("messages");
+}
+
+function ensureMessagesView() {
+  if (messagesView || !mainWindow || !messagesVisible()) return;
+  const prefs = messagesWebPreferences(MESSAGES_PRELOAD);
+  assertMessagesPrefs(prefs);
+  messagesView = new WebContentsView({ webPreferences: prefs });
+  messagesView.webContents.loadFile(MESSAGES_PAGE);
+  mainWindow.contentView.addChildView(messagesView);
+  deskViews.set("messages", messagesView);
+}
+
+async function startOwnerAutonomy() {
+  if (SMOKE || !messagesVisible()) {
+    if (supervisor) supervisor.stop();
+    return;
+  }
+  ensureSupervisor();
+  await supervisor.start();
+}
+
+async function refreshEntitlement() {
+  if (SMOKE) return entitlementStore.peek();
+  if (isMessagesDeskKilled({ userData: userDataPath() })) {
+    entitlementStore.set({ entitled: false, reason: "killed" });
+    if (supervisor) supervisor.stop();
+    destroyMessagesView();
+    if (activeDeskId === "messages") showDesk("os");
+    else pushState();
+    return entitlementStore.peek();
+  }
+  try {
+    const ses = session.fromPartition("persist:gc-os");
+    const result = await fetchOwnerEntitlement({
+      netFetch: net.fetch.bind(net),
+      session: ses,
+      origin: OS_ORIGIN,
+    });
+    entitlementStore.set(result);
+  } catch {
+    entitlementStore.set({ entitled: false, reason: "entitlement-unreachable" });
+  }
+
+  if (!entitlementStore.isEntitled()) {
+    if (supervisor) supervisor.stop();
+    destroyMessagesView();
+    if (activeDeskId === "messages") showDesk("os");
+    else pushState();
+    return entitlementStore.peek();
+  }
+
+  await startOwnerAutonomy();
+  const saved = readOwnerSession(userDataPath());
+  if (saved.lastDeskId === "messages" && !messagesView && mainWindow) {
+    showDesk("messages");
+  } else {
+    pushState();
+  }
+  return entitlementStore.peek();
+}
+
 function showDesk(id) {
-  const desk = deskById(id);
+  if (id === "messages") {
+    if (!messagesVisible() || !mainWindow) return snapshot();
+    ensureMessagesView();
+    ensureSupervisor();
+    supervisor?.start()?.catch(() => {});
+    activeDeskId = "messages";
+    if (messagesView) mainWindow.contentView.addChildView(messagesView);
+    rememberOwnerDesk("messages");
+    layoutViews();
+    pushState();
+    return snapshot();
+  }
+
+  const desk = deskById(id, DESKS);
   if (!desk || !mainWindow) return snapshot();
 
   if (!deskViews.has(desk.id)) {
@@ -251,12 +424,24 @@ function showDesk(id) {
   if (activeView) {
     mainWindow.contentView.addChildView(activeView);
   }
+  if (messagesVisible()) rememberOwnerDesk(null);
   layoutViews();
   pushState();
   return snapshot();
 }
 
 function closeDesk(id) {
+  if (id === "messages") {
+    destroyMessagesView();
+    if (messagesVisible()) rememberOwnerDesk(null);
+    if (activeDeskId === "messages") {
+      activeDeskId = "os";
+      showDesk("os");
+      return snapshot();
+    }
+    pushState();
+    return snapshot();
+  }
   const view = deskViews.get(id);
   if (view && mainWindow) {
     mainWindow.contentView.removeChildView(view);
@@ -281,6 +466,7 @@ function closeDesk(id) {
 }
 
 function navigate(action) {
+  if (activeDeskId === "messages") return snapshot();
   const view = deskViews.get(activeDeskId);
   if (!view || view.webContents.isDestroyed()) return snapshot();
   const contents = view.webContents;
@@ -307,8 +493,8 @@ function navigate(action) {
 }
 
 async function clearSiteData(id) {
-  const desk = deskById(id);
-  if (!desk) return snapshot();
+  const desk = deskById(id, DESKS);
+  if (!desk || !desk.partition) return snapshot();
   const { response } = await dialog.showMessageBox(mainWindow ?? undefined, {
     type: "warning",
     buttons: ["Clear site data and sign out", "Cancel"],
@@ -335,8 +521,8 @@ async function clearSiteData(id) {
 }
 
 async function openOfficialInBrowser(id) {
-  const desk = deskById(id);
-  if (!desk) return snapshot();
+  const desk = deskById(id, DESKS);
+  if (!desk || !desk.startUrl) return snapshot();
   const opened = await openHttpsInSystemBrowser(desk.startUrl);
   setNotice({
     kind: opened ? "info" : "error",
@@ -346,6 +532,110 @@ async function openOfficialInBrowser(id) {
     allowBrowser: false,
   });
   return snapshot();
+}
+
+function messagesTrusted(event) {
+  if (!messagesView || messagesView.webContents.isDestroyed()) return false;
+  return senderIsTrusted({
+    event,
+    trustedWebContentsId: messagesView.webContents.id,
+    trustedFileUrl: messagesView.webContents.getURL(),
+  });
+}
+
+function hydratePayload() {
+  const saved = messagesVisible() ? readOwnerSession(userDataPath()) : { lastConversationId: null };
+  return {
+    ok: true,
+    permissions: readPermissionStatus(),
+    conversations: supervisor?.snapshot().conversations ?? null,
+    lastConversationId: saved.lastConversationId,
+    connection: supervisor?.snapshot() || { running: false },
+  };
+}
+
+async function handleMessagesOp(event, request) {
+  if (!messagesVisible()) return { ok: false, reason: "not-entitled" };
+  if (!messagesTrusted(event)) return { ok: false, reason: "untrusted-sender" };
+  const op = String(request?.op || "");
+  const checked = validatePayload(op, request?.payload || {}, {
+    existsSync: fs.existsSync,
+    isAbsolute: path.isAbsolute,
+  });
+  if (!checked.ok) return checked;
+
+  ensureSupervisor();
+
+  switch (op) {
+    case "permission-status":
+    case "recheck-permissions":
+      supervisor.start().catch(() => {});
+      return readPermissionStatus();
+    case "hydrate":
+    case "connection-status":
+      return hydratePayload();
+    case "open-settings-pane": {
+      const url = settingsTarget(checked.payload.pane);
+      if (url) await shell.openExternal(url);
+      return { ok: Boolean(url) };
+    }
+    case "disconnect":
+      supervisor.stop();
+      helper.disconnect();
+      destroyMessagesView();
+      rememberOwnerDesk(null);
+      safeLog("info", "messages-disconnected", { appleMessagesPreserved: true });
+      return { ok: true };
+    case "unsubscribe":
+      supervisor.focusConversation(null);
+      return { ok: true };
+    case "subscribe-new":
+      supervisor.focusConversation(checked.payload.conversationId || null);
+      return { ok: true };
+    case "load-messages":
+      supervisor.focusConversation(checked.payload.conversationId);
+      rememberOwnerDesk("messages", checked.payload.conversationId);
+      return helper.run(op, checked.payload);
+    case "open-in-apple-messages":
+      if (checked.payload.conversationId && helper.available()) {
+        const result = await helper.run(op, checked.payload);
+        if (result.ok) return result;
+      }
+      return { ok: helper.openAppleMessages() };
+    default:
+      if (isUserSendOp(op)) {
+        return helper.run(op, checked.payload);
+      }
+      return helper.run(op, checked.payload);
+  }
+}
+
+function networkSignature() {
+  return Object.entries(os.networkInterfaces())
+    .map(([name, addrs]) => `${name}:${(addrs || []).map((row) => row.address).join(",")}`)
+    .sort()
+    .join("|");
+}
+
+function watchResumeAndNetwork() {
+  const reconnect = (reason) => {
+    if (!messagesVisible() || !supervisor) return;
+    supervisor.reconnect(reason).catch(() => {});
+  };
+  powerMonitor.on("resume", () => reconnect("wake"));
+  powerMonitor.on("unlock-screen", () => reconnect("unlock"));
+  powerMonitor.on("suspend", () => {
+    helper?.stop?.();
+  });
+  lastNetworkSignature = networkSignature();
+  setInterval(() => {
+    if (!messagesVisible() || !supervisor) return;
+    const next = networkSignature();
+    if (next !== lastNetworkSignature) {
+      lastNetworkSignature = next;
+      reconnect("network-change");
+    }
+  }, 8000);
 }
 
 function registerIpc() {
@@ -360,6 +650,16 @@ function registerIpc() {
     layoutViews();
     pushState();
     return snapshot();
+  });
+  ipcMain.handle("messages:op", (event, request) => handleMessagesOp(event, request));
+  ipcMain.handle("messages:pick-attachment", async (event) => {
+    if (!messagesTrusted(event)) return { path: null };
+    const picked = await dialog.showOpenDialog(mainWindow ?? undefined, {
+      title: "Send attachment",
+      properties: ["openFile"],
+    });
+    if (picked.canceled || !picked.filePaths[0]) return { path: null };
+    return { path: picked.filePaths[0] };
   });
 }
 
@@ -382,6 +682,8 @@ function createWindow() {
 
   mainWindow.on("resize", () => layoutViews());
   mainWindow.on("closed", () => {
+    if (supervisor) supervisor.stop();
+    destroyMessagesView();
     for (const view of deskViews.values()) {
       if (!view.webContents.isDestroyed()) view.webContents.close();
     }
@@ -403,6 +705,7 @@ function createWindow() {
       return;
     }
     showDesk("os");
+    refreshEntitlement().catch(() => {});
     if (mainWindow) mainWindow.show();
     pushState();
   });
@@ -423,6 +726,12 @@ app.on("web-contents-created", (_event, contents) => {
 app.whenReady().then(() => {
   registerIpc();
   createWindow();
+  if (!SMOKE) {
+    watchResumeAndNetwork();
+    setInterval(() => {
+      refreshEntitlement().catch(() => {});
+    }, 10 * 60 * 1000);
+  }
   if (SMOKE) {
     setTimeout(() => {
       if (!smokePassed) {

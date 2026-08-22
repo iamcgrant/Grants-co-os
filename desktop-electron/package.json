@@ -10,7 +10,9 @@
     "smoke": "electron . --smoke",
     "test": "node --test tests/*.test.js",
     "build": "electron-builder --win",
-    "build:linux": "electron-builder --linux dir"
+    "build:linux": "electron-builder --linux dir",
+    "helper:fetch": "bash scripts/helper-fetch.sh",
+    "helper:build": "bash scripts/helper-build.sh"
   },
   "devDependencies": {
     "electron": "^37.2.6",
@@ -25,7 +27,18 @@
     },
     "files": [
       "src/**/*",
+      "vendor/NOTICE.md",
+      "vendor/platform-imessage.pin.json",
       "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "native/messages-helper/bin",
+        "to": "messages-helper",
+        "filter": [
+          "imessage-cli"
+        ]
+      }
     ],
     "win": {
       "target": [
