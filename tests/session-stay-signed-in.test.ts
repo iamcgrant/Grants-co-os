@@ -22,8 +22,8 @@ describe("stay signed in", () => {
     expect(desk).toMatch(/data-browser-profile="shared"/);
     expect(desk).not.toMatch(/sandbox=/);
     expect(desk).not.toMatch(/credentialless/);
-    expect(desk).toMatch(/target="_self"/);
-    expect(desk).toMatch(/location\.assign/);
+    expect(desk).not.toMatch(/target="_blank"|target="_self"/);
+    expect(desk).not.toMatch(/window\.location|location\.assign/);
     expect(desk).not.toMatch(/refuses an in-desk embed/);
   });
 });

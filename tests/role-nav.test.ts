@@ -332,7 +332,8 @@ describe("Credit & Disputes navigation", () => {
     expect(launch).not.toMatch(/target="_blank"/);
     expect(desk).toMatch(/gc-portal-desk/);
     expect(desk).toMatch(/<iframe/);
-    expect(desk).toMatch(/target="_self"/);
+    expect(desk).not.toMatch(/window\.location|location\.assign/);
+    expect(desk).not.toMatch(/target="_blank"|target="_self"/);
     expect(empty).not.toMatch(/iframe/i);
     expect(login).not.toMatch(/iframe/i);
   });

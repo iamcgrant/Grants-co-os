@@ -153,34 +153,24 @@ describe("in-OS portal navigation", () => {
     );
   });
 
-  it("renders a full-desk iframe when the host allows embed", () => {
-    const html = renderToStaticMarkup(createElement(PortalDesk, { deskId: "disputefox" }));
-    expect(html).toContain('data-portal-desk="disputefox"');
-    expect(html).toContain(`src="${OFFICIAL_DISPUTEFOX_LOGIN_URL}"`);
-    expect(html).toMatch(/<iframe/i);
-    expect(html).not.toMatch(/target="_blank"/);
-    expect(html).not.toMatch(/GHL_API_KEY|DISPUTEFOX_API_KEY|API health|DEGRADED/);
-  });
+  it("loads every official login only in the desk iframe and never leaves the OS", () => {
+    const src = fs.readFileSync(path.join(process.cwd(), "src/components/desk/PortalDesk.tsx"), "utf8");
+    expect(src).not.toMatch(/window\.location|location\.assign|location\.replace|location\.href\s*=/);
+    expect(src).not.toMatch(/target="_blank"|target="_self"/);
+    expect(src).not.toMatch(/PortalContinue|data-portal-continue/);
 
-  it("uses a luxury same-window continue when the host refuses embed", () => {
-    const html = renderToStaticMarkup(createElement(PortalDesk, { deskId: "ghl" }));
-    expect(html).toContain('data-portal-desk="ghl"');
-    expect(html).toContain('data-portal-stage="continue"');
-    expect(html).toContain(`href="${OFFICIAL_GHL_LOGIN_URL}"`);
-    expect(html).toContain("Return to OS");
-    expect(html).toContain('data-return-to-os="home"');
-    expect(html).toContain("Opening GHL");
-    expect(html).toContain('target="_self"');
-    expect(html).not.toMatch(/target="_blank"/);
-    expect(html).not.toMatch(/refuses an in-desk embed|OFFICIAL LOGIN|X-Frame-Options/i);
-    expect(html).not.toMatch(/GHL_API_KEY|Awaiting Integration|API health|DEGRADED/);
-    expect(portalDeskById("experian").officialUrl).toBe(EXPERIAN_BACKDOOR_SUBMIT_PORTAL_URL);
-    const experian = renderToStaticMarkup(createElement(PortalDesk, { deskId: "experian" }));
-    expect(experian).toContain(`href="${EXPERIAN_BACKDOOR_SUBMIT_PORTAL_URL}"`);
-    expect(experian).toContain("Return to OS");
-    const telegram = renderToStaticMarkup(createElement(PortalDesk, { deskId: "telegram" }));
-    expect(telegram).toContain(`href="${OFFICIAL_TELEGRAM_LOGIN_URL}"`);
-    expect(telegram).not.toMatch(/TELEGRAM_BOT_TOKEN/);
+    for (const desk of PORTAL_DESKS) {
+      const html = renderToStaticMarkup(createElement(PortalDesk, { deskId: desk.id }));
+      expect(html, desk.id).toContain(`data-portal-desk="${desk.id}"`);
+      expect(html, desk.id).toContain(`src="${desk.officialUrl}"`);
+      expect(html, desk.id).toMatch(/<iframe/i);
+      expect(html, desk.id).toContain("Return to OS");
+      expect(html, desk.id).toContain('href="/home"');
+      expect(html, desk.id).not.toMatch(/target="_blank"|target="_self"/);
+      expect(html, desk.id).not.toContain(`href="${desk.officialUrl}"`);
+      expect(html, desk.id).not.toMatch(/Continue|refuses an in-desk embed|OFFICIAL LOGIN/i);
+      expect(html, desk.id).not.toMatch(/GHL_API_KEY|TELEGRAM_BOT_TOKEN|API health|DEGRADED/);
+    }
   });
 
   it("Telegram and DisputeFox pages are official login desks with no key theater", () => {
