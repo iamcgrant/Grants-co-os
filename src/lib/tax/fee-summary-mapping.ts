@@ -175,6 +175,61 @@ export function officialFeeSummaryFromCaptureKey(key: string): OfficialSbtpgFeeS
   throw new Error("Unknown official SBTPG Fee Summary capture");
 }
 
+export type OfficialFeeSummaryPersistPayout = {
+  amountCents: number;
+  status: "PAID" | "UNFUNDED";
+  bucket: typeof SBTPG_BUCKET_FEE_SUMMARY_PAID | typeof SBTPG_BUCKET_FEE_SUMMARY_UNFUNDED;
+  windowKind: typeof SBTPG_WINDOW_SEASON_TO_DATE;
+  taxpayerCount: number;
+  externalId: string;
+  taxYear: string;
+  paidAt: string;
+  source: "official_import";
+};
+
+export type OfficialFeeSummaryPersistRows = {
+  snapshot: OfficialSbtpgFeeSummary;
+  paidPayout: OfficialFeeSummaryPersistPayout;
+  unfundedPayout: OfficialFeeSummaryPersistPayout | null;
+};
+
+/**
+ * Map an official Fee Summary capture onto SbtpgFeeSummarySnapshot + matching
+ * SbtpgPayout rows. Amounts come from the capture only — never invented.
+ */
+export function officialFeeSummaryPersistRows(
+  summary: OfficialSbtpgFeeSummary,
+): OfficialFeeSummaryPersistRows {
+  return {
+    snapshot: { ...summary },
+    paidPayout: {
+      amountCents: summary.paidCents,
+      status: "PAID",
+      bucket: SBTPG_BUCKET_FEE_SUMMARY_PAID,
+      windowKind: SBTPG_WINDOW_SEASON_TO_DATE,
+      taxpayerCount: summary.paidTaxpayerCount,
+      externalId: officialPaidPayoutExternalId(summary),
+      taxYear: summary.taxYear,
+      paidAt: summary.capturedAt,
+      source: "official_import",
+    },
+    unfundedPayout:
+      summary.unfundedCents > 0
+        ? {
+            amountCents: summary.unfundedCents,
+            status: "UNFUNDED",
+            bucket: SBTPG_BUCKET_FEE_SUMMARY_UNFUNDED,
+            windowKind: SBTPG_WINDOW_SEASON_TO_DATE,
+            taxpayerCount: summary.unfundedTaxpayerCount,
+            externalId: officialUnfundedPayoutExternalId(summary),
+            taxYear: summary.taxYear,
+            paidAt: summary.capturedAt,
+            source: "official_import",
+          }
+        : null,
+  };
+}
+
 export type SbtpgDeskTotals = {
   isLive: boolean;
   totalRevenueCents: number;

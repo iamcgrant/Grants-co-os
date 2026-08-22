@@ -73,7 +73,12 @@ export function MetricTile({
   );
 
   return href ? (
-    <Link href={href} className="block h-full hover:opacity-95 transition-opacity">
+    <Link
+      href={href}
+      className="block h-full hover:opacity-95 transition-opacity"
+      data-metric-label={label}
+      data-metric-href={href}
+    >
       {body}
     </Link>
   ) : (

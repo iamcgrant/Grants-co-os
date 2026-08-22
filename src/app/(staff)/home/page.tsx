@@ -16,7 +16,14 @@ import { DonutChart, LineChart } from "@/components/ui/charts";
 import { GhlSyncPanel } from "@/components/integrations/GhlSyncPanel";
 import { GhlConversationPullPanel } from "@/components/integrations/GhlConversationPullPanel";
 import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
+import { OfficialLoginLink } from "@/components/desk/OfficialLoginLink";
+import { OfficialFeeSummaryPersistForm } from "@/components/tax/OfficialFeeSummaryPersistForm";
 import { hasPermission } from "@/lib/rbac/permissions";
+import {
+  COMMAND_CENTER_TOTAL_REVENUE_HREF,
+  COMMAND_CENTER_UPDATE_REVENUE_LABEL,
+  COMMAND_CENTER_UPDATE_REVENUE_LOGIN_URL,
+} from "@/lib/tax/command-center-revenue-actions";
 
 const STAGE_COLORS = ["#b2d4ff", "#f5b82a", "#67a671", "#6887d6", "#fdd79a", "#ff6b6b", "#94a1b2", "#ffffff"];
 
@@ -47,6 +54,11 @@ export default async function HomePage() {
             </p>
           </div>
           <div className="hidden xl:flex flex-wrap gap-2">
+            <OfficialLoginLink
+              href={COMMAND_CENTER_UPDATE_REVENUE_LOGIN_URL}
+              label={COMMAND_CENTER_UPDATE_REVENUE_LABEL}
+              action="update-revenue"
+            />
             <Link href="/pay" className="gc-btn gc-btn-primary text-xs">
               Grants Pay
             </Link>
@@ -64,7 +76,7 @@ export default async function HomePage() {
           <MetricTile
             label="Total Revenue"
             value={formatUsd(data.finance.totalRevenueCents)}
-            href="/tax/sbtpg"
+            href={COMMAND_CENTER_TOTAL_REVENUE_HREF}
             spark={sparkCollect.slice(-7)}
             hint="Grants & Co Consultants"
             trend="Season-to-date"
@@ -73,7 +85,7 @@ export default async function HomePage() {
           <MetricTile
             label="Unfunded"
             value={formatUsd(data.finance.unfundedCents)}
-            href="/tax/sbtpg"
+            href={COMMAND_CENTER_TOTAL_REVENUE_HREF}
             hint="Pending · not in Total Revenue"
             tone="warn"
           />
@@ -84,7 +96,7 @@ export default async function HomePage() {
                 ? "—"
                 : formatUsd(data.finance.collectedTodayCents)
             }
-            href="/tax/sbtpg"
+            href={COMMAND_CENTER_TOTAL_REVENUE_HREF}
             hint="No official daily split"
             tone="ice"
           />
@@ -135,12 +147,19 @@ export default async function HomePage() {
             title="Revenue trend"
             eyebrow="Grants & Co Consultants · season-to-date"
             className="gc-span-7"
-            action={<span className="display text-xl text-[var(--gc-ice)]">{monthLabel}</span>}
+            action={
+              <OfficialLoginLink
+                href={COMMAND_CENTER_UPDATE_REVENUE_LOGIN_URL}
+                label={COMMAND_CENTER_UPDATE_REVENUE_LABEL}
+                action="update-revenue"
+              />
+            }
           >
             <p className="text-xs text-[var(--gc-muted)] mb-3">
               Total company revenue is season-to-date. Today and this week stay empty without a dated
               Grants Pay charge. Unfunded is pending only and is not added.
             </p>
+            <p className="display text-xl text-[var(--gc-ice)] mb-3">{monthLabel}</p>
             <LineChart
               series={[{ name: "Total Revenue", color: "#b2d4ff", values: data.revenueTrend.values }]}
               labels={data.revenueTrend.labels}
@@ -270,6 +289,7 @@ export default async function HomePage() {
 
         {hasPermission(user.role, "MANAGE_OPERATIONS") && (
           <div className="space-y-4">
+            <OfficialFeeSummaryPersistForm />
             <GhlSyncPanel canSync />
             <GhlConversationPullPanel canSync />
           </div>

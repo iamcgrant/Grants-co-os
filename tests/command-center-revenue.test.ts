@@ -94,13 +94,18 @@ describe("Command Center Total Revenue mapping", () => {
     expect(home).toMatch(/label="Total Revenue"/);
     expect(home).toMatch(/data\.finance\.totalRevenueCents/);
     expect(home).toMatch(/data\.finance\.unfundedCents/);
-    expect(home).toMatch(/href="\/tax\/sbtpg"/);
+    expect(home).toMatch(/COMMAND_CENTER_TOTAL_REVENUE_HREF/);
+    expect(home).toMatch(/COMMAND_CENTER_UPDATE_REVENUE_LOGIN_URL/);
+    expect(home).toMatch(/COMMAND_CENTER_UPDATE_REVENUE_LABEL/);
+    expect(home).toMatch(/OfficialLoginLink/);
+    expect(home).toMatch(/OfficialFeeSummaryPersistForm/);
     expect(home).toMatch(/Season-to-date/);
     expect(home).toMatch(/Revenue trend/);
     expect(home).not.toMatch(/117700|117,700/);
     expect(home).not.toMatch(/SBTPG/);
     expect(home).not.toMatch(/taxpayer/i);
     expect(home).not.toMatch(/SbtpgPayoutForm|SbtpgFeeSummaryIngestForm/);
+    expect(home).not.toMatch(/<iframe/i);
     expect(home).not.toMatch(/cheerio|puppeteer|playwright/i);
   });
 

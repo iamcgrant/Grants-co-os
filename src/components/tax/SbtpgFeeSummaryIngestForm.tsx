@@ -3,7 +3,15 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
-export function SbtpgFeeSummaryIngestForm() {
+export function SbtpgFeeSummaryIngestForm({
+  heading = "Official Fee Summary",
+  description = "Persist the staff-captured 2026-08-22 TY 2026 Fee Summary from pro.sbtpg.com (PAID $117,700.00 / 73, UNFUNDED $21,000.00 / 12, FCA $0, Auto Collect $0). No scrape. No invented daily split.",
+  successMessage = "Official TY 2026 Fee Summary PAID $117,700.00 / 73 taxpayers is now in Postgres. Command Center Total Revenue reads that snapshot.",
+}: {
+  heading?: string;
+  description?: string;
+  successMessage?: string;
+}) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -20,9 +28,7 @@ export function SbtpgFeeSummaryIngestForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not persist official Fee Summary");
-      setMessage(
-        "Official TY 2026 Fee Summary PAID $117,700.00 / 73 taxpayers is now in Postgres. Command Center Total Revenue reads that snapshot.",
-      );
+      setMessage(successMessage);
       router.refresh();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Could not persist official Fee Summary");
@@ -32,13 +38,12 @@ export function SbtpgFeeSummaryIngestForm() {
   }
 
   return (
-    <form onSubmit={ingestOfficial} className="gc-card space-y-3">
+    <form onSubmit={ingestOfficial} className="gc-card space-y-3" data-official-fee-summary-persist>
       <p className="text-[0.62rem] tracking-[0.14em] uppercase text-[var(--gc-muted)]">
-        Official Fee Summary
+        {heading}
       </p>
       <p className="text-sm text-[var(--gc-muted)]">
-        Persist the staff-captured 2026-08-22 TY 2026 Fee Summary from pro.sbtpg.com (PAID $117,700.00 /
-        73, UNFUNDED $21,000.00 / 12, FCA $0, Auto Collect $0). No scrape. No invented daily split.
+        {description}
       </p>
       <button type="submit" className="gc-btn gc-btn-gold text-xs" disabled={busy}>
         {busy ? "Saving…" : "Persist official TY 2026 Fee Summary"}

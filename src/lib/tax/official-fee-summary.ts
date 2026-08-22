@@ -6,11 +6,7 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { prisma as defaultPrisma } from "@/lib/db/prisma";
 import { recordSbtpgPayout } from "@/lib/tax/payouts";
 import {
-  SBTPG_BUCKET_FEE_SUMMARY_PAID,
-  SBTPG_BUCKET_FEE_SUMMARY_UNFUNDED,
-  SBTPG_WINDOW_SEASON_TO_DATE,
-  officialPaidPayoutExternalId,
-  officialUnfundedPayoutExternalId,
+  officialFeeSummaryPersistRows,
   type OfficialSbtpgFeeSummary,
 } from "@/lib/tax/fee-summary-mapping";
 
@@ -26,6 +22,7 @@ export {
   commandCenterRevenueSeries,
   mapCommandCenterRevenue,
   officialFeeSummaryFromCaptureKey,
+  officialFeeSummaryPersistRows,
   officialPaidPayoutExternalId,
   officialSummaryFromFeeSummaryPayouts,
   officialUnfundedPayoutExternalId,
@@ -33,6 +30,7 @@ export {
   type CommandCenterRevenue,
   type DatedCollectedWindows,
   type GrantsPayWindows,
+  type OfficialFeeSummaryPersistRows,
   type OfficialSbtpgFeeSummary,
   type SbtpgDeskTotals,
 } from "@/lib/tax/fee-summary-mapping";
@@ -91,24 +89,25 @@ export async function persistOfficialSbtpgFeeSummary(
     throw new Error("Official Fee Summary amounts cannot be negative");
   }
 
+  const rows = officialFeeSummaryPersistRows(input);
   const existing = await db.sbtpgFeeSummarySnapshot.findFirst({
-    where: { taxYear: input.taxYear, capturedOn: input.capturedOn },
+    where: { taxYear: rows.snapshot.taxYear, capturedOn: rows.snapshot.capturedOn },
   });
 
   const snapshotData = {
-    taxYear: input.taxYear,
-    capturedOn: input.capturedOn,
+    taxYear: rows.snapshot.taxYear,
+    capturedOn: rows.snapshot.capturedOn,
     capturedAt,
-    sourceLabel: input.sourceLabel,
-    sourceUrl: input.sourceUrl,
-    paidCents: input.paidCents,
-    paidTaxpayerCount: input.paidTaxpayerCount,
-    unfundedCents: input.unfundedCents,
-    unfundedTaxpayerCount: input.unfundedTaxpayerCount,
-    fcaCents: input.fcaCents,
-    fcaTaxpayerCount: input.fcaTaxpayerCount,
-    autoCollectCents: input.autoCollectCents,
-    notes: input.notes,
+    sourceLabel: rows.snapshot.sourceLabel,
+    sourceUrl: rows.snapshot.sourceUrl,
+    paidCents: rows.snapshot.paidCents,
+    paidTaxpayerCount: rows.snapshot.paidTaxpayerCount,
+    unfundedCents: rows.snapshot.unfundedCents,
+    unfundedTaxpayerCount: rows.snapshot.unfundedTaxpayerCount,
+    fcaCents: rows.snapshot.fcaCents,
+    fcaTaxpayerCount: rows.snapshot.fcaTaxpayerCount,
+    autoCollectCents: rows.snapshot.autoCollectCents,
+    notes: rows.snapshot.notes,
     recordedById: options?.recordedById ?? null,
   };
 
@@ -117,35 +116,34 @@ export async function persistOfficialSbtpgFeeSummary(
     : await db.sbtpgFeeSummarySnapshot.create({ data: snapshotData });
 
   const paidPayout = await recordSbtpgPayout({
-    amountCents: input.paidCents,
-    status: "PAID",
-    externalId: officialPaidPayoutExternalId(input),
-    taxYear: input.taxYear,
+    amountCents: rows.paidPayout.amountCents,
+    status: rows.paidPayout.status,
+    externalId: rows.paidPayout.externalId,
+    taxYear: rows.paidPayout.taxYear,
     paidAt: capturedAt,
-    source: "official_import",
-    windowKind: SBTPG_WINDOW_SEASON_TO_DATE,
-    bucket: SBTPG_BUCKET_FEE_SUMMARY_PAID,
-    taxpayerCount: input.paidTaxpayerCount,
-    notes: input.notes,
+    source: rows.paidPayout.source,
+    windowKind: rows.paidPayout.windowKind,
+    bucket: rows.paidPayout.bucket,
+    taxpayerCount: rows.paidPayout.taxpayerCount,
+    notes: rows.snapshot.notes,
     recordedById: options?.recordedById,
   });
 
-  const unfundedPayout =
-    input.unfundedCents > 0
-      ? await recordSbtpgPayout({
-          amountCents: input.unfundedCents,
-          status: "UNFUNDED",
-          externalId: officialUnfundedPayoutExternalId(input),
-          taxYear: input.taxYear,
-          paidAt: capturedAt,
-          source: "official_import",
-          windowKind: SBTPG_WINDOW_SEASON_TO_DATE,
-          bucket: SBTPG_BUCKET_FEE_SUMMARY_UNFUNDED,
-          taxpayerCount: input.unfundedTaxpayerCount,
-          notes: input.notes,
-          recordedById: options?.recordedById,
-        })
-      : null;
+  const unfundedPayout = rows.unfundedPayout
+    ? await recordSbtpgPayout({
+        amountCents: rows.unfundedPayout.amountCents,
+        status: rows.unfundedPayout.status,
+        externalId: rows.unfundedPayout.externalId,
+        taxYear: rows.unfundedPayout.taxYear,
+        paidAt: capturedAt,
+        source: rows.unfundedPayout.source,
+        windowKind: rows.unfundedPayout.windowKind,
+        bucket: rows.unfundedPayout.bucket,
+        taxpayerCount: rows.unfundedPayout.taxpayerCount,
+        notes: rows.snapshot.notes,
+        recordedById: options?.recordedById,
+      })
+    : null;
 
   return { snapshot, paidPayout, unfundedPayout };
 }
