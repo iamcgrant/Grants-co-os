@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { caseDetailHref, DISPUTE_CHANNELS, nextDisputeStatus, type DisputeChannel } from "@/lib/disputes/channels";
+import {
+  caseDetailHref,
+  channelFromPathname,
+  DISPUTE_CHANNELS,
+  nextDisputeStatus,
+  type DisputeChannel,
+} from "@/lib/disputes/channels";
 
 describe("official bureau / CFPB / DisputeFox catalog", () => {
   const channels = Object.keys(DISPUTE_CHANNELS) as DisputeChannel[];
@@ -30,6 +36,14 @@ describe("official bureau / CFPB / DisputeFox catalog", () => {
     expect(DISPUTE_CHANNELS.SMARTCREDIT.hasOfficialSubmitApi).toBe(false);
     expect(DISPUTE_CHANNELS.SMARTCREDIT.officialSubmitUrl).toMatch(/smartcredit\.com/);
     expect(DISPUTE_CHANNELS.SMARTCREDIT.href).toBe("/credit/smartcredit");
+  });
+
+  it("maps desk pathnames back to channels for the error fallback", () => {
+    expect(channelFromPathname("/credit/disputefox")).toBe("DISPUTEFOX");
+    expect(channelFromPathname("/credit/equifax")).toBe("EQUIFAX");
+    expect(channelFromPathname("/credit/transunion")).toBe("TRANSUNION");
+    expect(channelFromPathname("/credit/equifax/case_1")).toBe("EQUIFAX");
+    expect(channelFromPathname("/home")).toBeNull();
   });
 
   it("keeps case detail hrefs serializable and channel-specific", () => {

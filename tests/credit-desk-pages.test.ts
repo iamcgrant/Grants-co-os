@@ -44,6 +44,7 @@ vi.mock("next/navigation", () => ({
     throw new Error(`REDIRECT:${href}`);
   },
   useRouter: () => ({ push: () => undefined, refresh: () => undefined }),
+  usePathname: () => "/credit/equifax",
 }));
 
 vi.mock("@/lib/disputes/access", () => ({
@@ -74,6 +75,18 @@ vi.mock("@/lib/integrations/disputefox/probe", () => ({
 vi.mock("@/lib/credit/smartcredit-health", () => ({
   probeSmartCreditHealth: (...args: unknown[]) => probeSmartCreditHealth(...args),
 }));
+
+let forceChannelLoadThrow = false;
+vi.mock("@/lib/disputes/desk-load", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/lib/disputes/desk-load")>();
+  return {
+    ...actual,
+    loadChannelDeskSafe: async (channel: DisputeChannel) => {
+      if (forceChannelLoadThrow) throw new Error("forced channel load throw");
+      return actual.loadChannelDeskSafe(channel);
+    },
+  };
+});
 
 const CHANNEL_PAGES: Array<{ href: string; channel?: DisputeChannel; importPage: () => Promise<{ default: () => Promise<ReactNode> }> }> =
   [
@@ -114,6 +127,7 @@ const CHANNEL_PAGES: Array<{ href: string; channel?: DisputeChannel; importPage:
 
 describe("credit / escalation desk pages", () => {
   beforeEach(() => {
+    forceChannelLoadThrow = false;
     listCasesForChannel.mockReset().mockResolvedValue([]);
     listDisputeFoxBoard.mockReset().mockResolvedValue([]);
     listSmartCreditBoard.mockReset().mockResolvedValue([]);
@@ -158,9 +172,15 @@ describe("credit / escalation desk pages", () => {
     const { NewCaseForm } = await import("../src/components/disputes/NewCaseForm");
     const { SmartCreditAttachForm } = await import("../src/components/credit/SmartCreditAttachForm");
     const { SmartCreditSessionForm } = await import("../src/components/credit/SmartCreditSessionForm");
+    const { CreditDeskUnavailable } = await import("../src/components/disputes/CreditDeskUnavailable");
     const Page = (await importPage()).default;
     const tree = await resolveAsyncServerTree(await Page());
-    assertNoFunctionPropsToClientComponents(tree, [NewCaseForm, SmartCreditAttachForm, SmartCreditSessionForm]);
+    assertNoFunctionPropsToClientComponents(tree, [
+      NewCaseForm,
+      SmartCreditAttachForm,
+      SmartCreditSessionForm,
+      CreditDeskUnavailable,
+    ]);
     const html = renderToStaticMarkup(createElement("div", null, tree));
     expect(html, href).not.toMatch(/This page couldn't load|A server error occurred/i);
     expect(html, href).toMatch(/Open login/);
@@ -206,5 +226,85 @@ describe("credit / escalation desk pages", () => {
     expect(scHtml).toMatch(/SmartCredit/);
     expect(scHtml).toMatch(/Open login/);
     expect(scHtml).toMatch(/could not load/);
+  });
+
+  it("renders Equifax and TransUnion when case rows are missing relations", async () => {
+    listCasesForChannel.mockResolvedValue([
+      { id: "broken", status: "INTAKE", title: "Packet", outcome: null } as never,
+    ]);
+    const { renderChannelDeskSafe } = await import("../src/components/disputes/ChannelCasesView");
+    const { NewCaseForm } = await import("../src/components/disputes/NewCaseForm");
+    const { CreditDeskUnavailable } = await import("../src/components/disputes/CreditDeskUnavailable");
+    for (const channel of ["EQUIFAX", "TRANSUNION"] as const) {
+      const tree = await resolveAsyncServerTree(await renderChannelDeskSafe(channel, owner));
+      assertNoFunctionPropsToClientComponents(tree, [NewCaseForm, CreditDeskUnavailable]);
+      const html = renderToStaticMarkup(createElement("div", null, tree));
+      expect(html, channel).toContain(DISPUTE_CHANNELS[channel].label);
+      expect(html, channel).not.toMatch(/This page couldn't load|A server error occurred/i);
+    }
+  });
+
+  it("renders DisputeFox when an attached client has a null stage", async () => {
+    listDisputeFoxBoard.mockResolvedValue([
+      {
+        id: "c1",
+        firstName: "Ann",
+        lastName: "Fox",
+        grantsClientId: "GC-1",
+        stage: null,
+        nextAction: null,
+        disputeFoxId: "df_1",
+        latestRound: null,
+        case: null,
+      } as never,
+    ]);
+    const DisputeFox = (await import("../src/app/(staff)/credit/disputefox/page")).default;
+    const { NewCaseForm } = await import("../src/components/disputes/NewCaseForm");
+    const tree = await resolveAsyncServerTree(await DisputeFox());
+    assertNoFunctionPropsToClientComponents(tree, [NewCaseForm]);
+    const html = renderToStaticMarkup(createElement("div", null, tree));
+    expect(html).toMatch(/DisputeFox/);
+    expect(html).toMatch(/Ann Fox/);
+    expect(html).not.toMatch(/This page couldn't load|A server error occurred/i);
+  });
+
+  it("keeps Equifax and TransUnion on an empty desk when the view throws", async () => {
+    forceChannelLoadThrow = true;
+    const { CreditDeskUnavailable } = await import("../src/components/disputes/CreditDeskUnavailable");
+    const Equifax = (await import("../src/app/(staff)/credit/equifax/page")).default;
+    const TransUnion = (await import("../src/app/(staff)/credit/transunion/page")).default;
+    for (const [label, Page] of [
+      ["Equifax", Equifax],
+      ["TransUnion", TransUnion],
+    ] as const) {
+      const tree = await resolveAsyncServerTree(await Page());
+      assertNoFunctionPropsToClientComponents(tree, [CreditDeskUnavailable]);
+      const html = renderToStaticMarkup(createElement("div", null, tree));
+      expect(html, label).toContain(label);
+      expect(html, label).toMatch(/Honest empty desk/);
+      expect(html, label).toMatch(/Open login/);
+      expect(html, label).toMatch(/Back to Command Center/);
+      expect(html, label).not.toMatch(/This page couldn't load|A server error occurred/i);
+    }
+  });
+
+  it("ships a credit error boundary that is an empty desk, not the Next crash page", () => {
+    const src = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/error.tsx"), "utf8");
+    expect(src).toMatch(/CreditDeskUnavailable/);
+    expect(src).toMatch(/usePathname/);
+    expect(src).not.toMatch(/This page couldn't load/);
+    const fallback = fs.readFileSync(path.join(process.cwd(), "src/components/disputes/CreditDeskUnavailable.tsx"), "utf8");
+    expect(fallback).toMatch(/Open login|OfficialLoginLink|DeskEmptyState/);
+    expect(fallback).toMatch(/\/home/);
+    expect(fallback).toMatch(/Back to Command Center/);
+    expect(fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/equifax/page.tsx"), "utf8")).toMatch(
+      /renderChannelDeskSafe\("EQUIFAX"/,
+    );
+    expect(fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/transunion/page.tsx"), "utf8")).toMatch(
+      /renderChannelDeskSafe\("TRANSUNION"/,
+    );
+    expect(fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/credit/disputefox/page.tsx"), "utf8")).toMatch(
+      /CreditDeskUnavailable/,
+    );
   });
 });

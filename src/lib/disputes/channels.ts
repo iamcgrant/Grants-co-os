@@ -186,6 +186,16 @@ export function channelCatalog(channel: DisputeChannel): ChannelCatalog {
   return DISPUTE_CHANNELS[channel];
 }
 
+export function channelFromPathname(pathname: string): DisputeChannel | null {
+  const base = pathname.split("?")[0] || "";
+  const channels = Object.keys(DISPUTE_CHANNELS) as DisputeChannel[];
+  const match = channels.find((channel) => {
+    const href = DISPUTE_CHANNELS[channel].href;
+    return base === href || base.startsWith(`${href}/`);
+  });
+  return match ?? null;
+}
+
 /** In-OS case detail path. DisputeFox / SmartCredit keep a /case/ segment so client ids stay on the sibling route. */
 export function caseDetailHref(channel: DisputeChannel, caseId: string): string {
   switch (channel) {

@@ -3,19 +3,26 @@ import { hasPermission } from "@/lib/rbac/permissions";
 import { requireCreditStaff } from "@/lib/disputes/access";
 import { loadDisputeFoxDeskSafe } from "@/lib/disputes/desk-load";
 import { DISPUTE_CASE_STATUSES, channelCatalog, statusLabel } from "@/lib/disputes/channels";
+import { CreditDeskUnavailable } from "@/components/disputes/CreditDeskUnavailable";
 import { NewCaseForm } from "@/components/disputes/NewCaseForm";
 import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
+import type { AuthUser } from "@/lib/auth/session";
 
-export default async function DisputeFoxWorkspacePage() {
-  const { user, denied } = await requireCreditStaff();
-  if (denied || !user) return <p>Access denied.</p>;
+function stageLabel(stage: unknown): string {
+  if (typeof stage !== "string" || !stage.trim()) return "—";
+  return stage.replaceAll("_", " ");
+}
 
+async function DisputeFoxDesk({ user }: { user: AuthUser }) {
   const catalog = channelCatalog("DISPUTEFOX");
   const { board, probe, clients, loadError } = await loadDisputeFoxDeskSafe();
   const canManage = hasPermission(user.role, "MANAGE_CREDIT");
   const openCases = board.filter((row) => row.case && row.case.status !== "CLOSED");
-  const itemCount = board.reduce((sum, row) => sum + (row.case?.items.length ?? 0), 0);
+  const itemCount = board.reduce((sum, row) => sum + (row.case?.items?.length ?? 0), 0);
   const readyCount = board.filter((row) => row.case?.status === "READY").length;
+  const probeStatus = typeof probe?.status === "string" ? probe.status.replaceAll("_", " ") : "OFFLINE";
+  const probeDetail =
+    probe?.detail || "DisputeFox desk data could not load. Official portal is last-step only. No scrape.";
 
   return (
     <div className="gc-fade-up">
@@ -39,8 +46,8 @@ export default async function DisputeFoxWorkspacePage() {
 
       <div className="gc-card mb-10 max-w-3xl">
         <p className="text-[0.62rem] tracking-[0.14em] uppercase text-[var(--gc-muted)] mb-2">API health</p>
-        <p className="text-lg display">{probe.status.replaceAll("_", " ")}</p>
-        <p className="text-sm text-[var(--gc-muted)] mt-2">{probe.detail}</p>
+        <p className="text-lg display">{probeStatus}</p>
+        <p className="text-sm text-[var(--gc-muted)] mt-2">{probeDetail}</p>
       </div>
 
       {board.length === 0 ? (
@@ -79,7 +86,7 @@ export default async function DisputeFoxWorkspacePage() {
                         {row.firstName} {row.lastName} · {row.grantsClientId}
                       </p>
                       <p className="text-sm text-[var(--gc-muted)]">
-                        DF id {row.disputeFoxId || "not attached"} · items {row.case?.items.length ?? 0} ·{" "}
+                        DF id {row.disputeFoxId || "not attached"} · items {row.case?.items?.length ?? 0} ·{" "}
                         {row.latestRound
                           ? `round ${row.latestRound.roundNumber} ${row.latestRound.status}`
                           : "no letter round"}
@@ -128,7 +135,7 @@ export default async function DisputeFoxWorkspacePage() {
                       {row.nextAction ? ` · ${row.nextAction}` : ""}
                     </p>
                   </div>
-                  <span className="gc-status">{row.stage.replaceAll("_", " ")}</span>
+                  <span className="gc-status">{stageLabel(row.stage)}</span>
                 </Link>
               ))
           )}
@@ -136,4 +143,15 @@ export default async function DisputeFoxWorkspacePage() {
       </section>
     </div>
   );
+}
+
+export default async function DisputeFoxWorkspacePage() {
+  const { user, denied } = await requireCreditStaff();
+  if (denied || !user) return <p>Access denied.</p>;
+  try {
+    return await DisputeFoxDesk({ user });
+  } catch (error) {
+    console.error("[DISPUTEFOX] desk render failed", error);
+    return <CreditDeskUnavailable channel="DISPUTEFOX" />;
+  }
 }
