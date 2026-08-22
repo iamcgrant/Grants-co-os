@@ -23,10 +23,14 @@ export function CreatePaymentRequestForm({
 }) {
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [clientId, setClientId] = useState(lockedClientId || "");
-  const [amount, setAmount] = useState("750.00");
-  const [serviceName, setServiceName] = useState("Credit Optimization");
+  const [amount, setAmount] = useState("550.00");
+  const [serviceName, setServiceName] = useState("Returning Client Restart");
+  const [commasProductId, setCommasProductId] = useState("mXrEA");
   const [commasCheckoutUrl, setCommasCheckoutUrl] = useState("");
   const [recordedUrls, setRecordedUrls] = useState<string[]>([]);
+  const [products, setProducts] = useState<
+    Array<{ id: string; name: string; amountCents: number; officialCheckoutUrl: string | null }>
+  >([]);
   const [sendEmail, setSendEmail] = useState(true);
   const [sendSms, setSendSms] = useState(false);
   const [result, setResult] = useState<string>("");
@@ -64,6 +68,23 @@ export function CreatePaymentRequestForm({
       .then((r) => r.json())
       .then((d) => {
         if (Array.isArray(d.urls)) setRecordedUrls(d.urls as string[]);
+        if (Array.isArray(d.products)) {
+          setProducts(d.products);
+          const first = d.products[0] as {
+            id: string;
+            name: string;
+            amountCents: number;
+            officialCheckoutUrl: string | null;
+          };
+          if (first) {
+            setCommasProductId(first.id);
+            setServiceName(first.name);
+            setAmount((first.amountCents / 100).toFixed(2));
+            if (first.officialCheckoutUrl) {
+              setCommasCheckoutUrl((current) => current || first.officialCheckoutUrl || "");
+            }
+          }
+        }
       })
       .catch(() => undefined);
   }, [lockedClientId]);
@@ -87,6 +108,7 @@ export function CreatePaymentRequestForm({
           sendEmail,
           sendSms,
           commasCheckoutUrl: commasCheckoutUrl.trim() || undefined,
+          commasProductId,
         }),
       });
       const data = await res.json();
@@ -120,8 +142,8 @@ export function CreatePaymentRequestForm({
         Create invoice
       </p>
       <p className="text-sm text-[var(--gc-muted)]">
-        Issue the invoice in Grants OS. Official Commas / Fanbasis checkout is the last step only.
-        Fanbasis has no API Keys page — do not invent a key.
+        Issue the invoice in Grants OS. Default last step is the official Returning Client Restart
+        ($550 · mXrEA) product copy-link. Fanbasis has no API Keys page. Zapier cannot mint pay links.
       </p>
       {commas ? (
         <p className="text-sm text-[var(--gc-muted)]">
@@ -145,6 +167,27 @@ export function CreatePaymentRequestForm({
           ))}
         </select>
       )}
+      {products.length > 0 ? (
+        <select
+          className="gc-input"
+          value={commasProductId}
+          onChange={(e) => {
+            const product = products.find((p) => p.id === e.target.value);
+            setCommasProductId(e.target.value);
+            if (product) {
+              setServiceName(product.name);
+              setAmount((product.amountCents / 100).toFixed(2));
+              if (product.officialCheckoutUrl) setCommasCheckoutUrl(product.officialCheckoutUrl);
+            }
+          }}
+        >
+          {products.map((product) => (
+            <option key={product.id} value={product.id}>
+              {product.name} · ${(product.amountCents / 100).toFixed(0)} · {product.id}
+            </option>
+          ))}
+        </select>
+      ) : null}
       <input
         className="gc-input"
         value={serviceName}

@@ -51,6 +51,8 @@ describe("manual Commas invoices without COMMAS_API_KEY", () => {
     await prisma.idSequence.deleteMany();
     process.env.PAYMENT_PROVIDER = "mock";
     delete process.env.COMMAS_API_KEY;
+    delete process.env.COMMAS_CREATOR_HANDLE;
+    delete process.env.COMMAS_RETURNING_CLIENT_RESTART_URL;
   });
 
   afterAll(async () => {
@@ -111,7 +113,8 @@ describe("manual Commas invoices without COMMAS_API_KEY", () => {
     const { collectSystemHealth } = await import("@/lib/system/health");
     const health = await collectSystemHealth();
     const commas = health.components.find((c) => c.component === "commas");
-    expect(commas?.status).toBe("CONNECTED");
+    expect(commas?.status).toBe("DEGRADED");
+    expect(commas?.status).not.toBe("CONNECTED");
     expect(commas?.detail).toMatch(/checkout recorded/i);
   });
 
@@ -183,7 +186,35 @@ describe("manual Commas invoices without COMMAS_API_KEY", () => {
     expect(second.duplicate).toBe(true);
   });
 
-  it("never marks Commas CONNECTED from key absence; recorded checkout or inbound webhook can CONNECT", () => {
+  it("defaults Returning Client Restart $550 last-step from the official product catalog", async () => {
+    vi.resetModules();
+    const g = globalThis as unknown as { prisma?: unknown };
+    delete g.prisma;
+    process.env.COMMAS_CREATOR_HANDLE = "grantandco";
+    const { createPaymentRequest } = await import("@/lib/payments/payment-requests");
+    const { nextGrantsClientId } = await import("@/lib/clients/identity");
+    const db = await import("@/lib/db/prisma");
+    prisma = db.prisma;
+
+    const client = await prisma.client.create({
+      data: {
+        grantsClientId: await nextGrantsClientId(),
+        email: "restart@example.com",
+        emailNormalized: "restart@example.com",
+        firstName: "Return",
+        lastName: "Client",
+      },
+    });
+
+    const created = await createPaymentRequest({
+      clientId: client.id,
+      amountCents: 55000,
+    });
+    expect(created.request.serviceName).toBe("Returning Client Restart");
+    expect(created.link.url).toBe("https://www.fanbasis.com/agency-checkout/grantandco/mXrEA");
+  });
+
+  it("never marks Commas CONNECTED from key absence; recorded checkout or inbound webhook stay fail-closed", () => {
     delete process.env.COMMAS_API_KEY;
     const missing = commasHonestHealth();
     expect(missing.status).not.toBe("CONNECTED");
@@ -192,14 +223,17 @@ describe("manual Commas invoices without COMMAS_API_KEY", () => {
     const recorded = commasHonestHealth({
       lastCheckoutAt: "2026-08-22T12:00:00.000Z",
     });
-    expect(recorded.status).toBe("CONNECTED");
+    expect(recorded.status).toBe("DEGRADED");
+    expect(recorded.status).not.toBe("CONNECTED");
     expect(recorded.detail).toMatch(/checkout recorded/i);
+    expect(recorded.detail).toMatch(/never CONNECTED/i);
 
     const inbound = commasHonestHealth({
       lastWebhookAt: "2026-08-22T13:00:00.000Z",
     });
-    expect(inbound.status).toBe("CONNECTED");
-    expect(inbound.detail).toMatch(/webhook processed/i);
+    expect(inbound.status).toBe("DEGRADED");
+    expect(inbound.status).not.toBe("CONNECTED");
+    expect(inbound.detail).toMatch(/webhook recorded|never CONNECTED/i);
   });
 
   it("documents the inbound webhook path and keeps Hobby daily cron", () => {
@@ -233,5 +267,15 @@ describe("manual Commas invoices without COMMAS_API_KEY", () => {
     );
     expect(staffInvoice).toMatch(/InvoiceDocument/);
     expect(staffInvoice).toMatch(/RecordCommasCheckoutForm/);
+
+    const catalog = fs.readFileSync(
+      path.join(process.cwd(), "src/lib/payments/commas-catalog.ts"),
+      "utf8",
+    );
+    expect(catalog).toMatch(/mXrEA/);
+    expect(catalog).toMatch(/Returning Client Restart/);
+    expect(catalog).toMatch(/55000/);
+    expect(form).toMatch(/Returning Client Restart/);
+    expect(form).toMatch(/Zapier cannot mint pay links/);
   });
 });

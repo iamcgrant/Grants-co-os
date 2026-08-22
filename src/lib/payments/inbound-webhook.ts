@@ -41,6 +41,8 @@ export function grantsPayInboundContract() {
     },
     notes: [
       "Fanbasis has no API Keys page — do not invent COMMAS_API_KEY.",
+      "Zapier Commas app is triggers-only (New Sale). It cannot create checkout sessions or payment links.",
+      "Do not use Zapier or GHL as a pay-link fallback. Attach the official product copy-link in OS.",
       "Identify the OS invoice with paymentRequestPublicId and/or invoiceNumber.",
       "source may be zapier or ghl. GHL remains the only phone/SMS/email backend.",
       "Without GRANTS_PAY_INBOUND_WEBHOOK_SECRET the route fails closed.",

@@ -23,6 +23,7 @@ export async function POST(req: Request) {
       sendEmail?: boolean;
       sendSms?: boolean;
       commasCheckoutUrl?: string;
+      commasProductId?: string;
     };
 
     if (!body.clientId || !body.amountCents) {
@@ -43,6 +44,7 @@ export async function POST(req: Request) {
       sendEmail: body.sendEmail,
       sendSms: body.sendSms,
       commasCheckoutUrl: body.commasCheckoutUrl,
+      commasProductId: body.commasProductId,
     });
 
     return NextResponse.json(result, { status: 201 });

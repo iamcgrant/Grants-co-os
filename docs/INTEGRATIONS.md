@@ -132,6 +132,6 @@ Staff track tax-client refunds in Grants OS at `/tax/sbtpg`. Official `pro.sbtpg
 
 Staff with `MANAGE_PAYMENTS` create a native OS invoice + payment request on Client 360 → Pay or Grants Pay. Fanbasis has **no API Keys page** — do not invent `COMMAS_API_KEY`. Staff paste or pick an official Commas / Fanbasis checkout or product URL as the last step (same pattern as Cloud Tax Office / SBTPG / Experian). No scrape.
 
-Optional official inbound webhook: `POST /api/webhooks/grants-pay` with `GRANTS_PAY_INBOUND_WEBHOOK_SECRET` marks a PaymentRequest paid. Payload is documented in `docs/PAYMENTS.md`. Charles does not need to build the Zap here.
+Default last-step product: Returning Client Restart · $550 · `mXrEA`. Zapier cannot create Commas pay links (triggers-only). Optional `POST /api/webhooks/grants-pay` only marks an existing PaymentRequest paid. Payload is in `docs/PAYMENTS.md`.
 
-Health is honest: key absence is never `CONNECTED`. A recorded official checkout or a processed Grants Pay inbound / Commas payment webhook can become `CONNECTED` later. GHL remains the only phone/SMS/email backend.
+Health is honest and fail-closed: key absence is never `CONNECTED`. A recorded official checkout or inbound payment webhook is recorded as lastSuccessAt but stays `DEGRADED` until a real key exists. GHL remains the only phone/SMS/email backend.
