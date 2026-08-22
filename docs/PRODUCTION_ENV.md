@@ -51,6 +51,17 @@ Outbound SMS/email also needs PIT **scopes** `conversations/message.write` (requ
 | `GC_DESKTOP_LINUX_URL` | Publish Linux installer link |
 | `GC_DESKTOP_RELEASES_URL` | Optional releases index |
 
+## SmartCredit (public join link — env, not hardcoded)
+
+| Name | Required? | Production value |
+|------|-----------|------------------|
+| `SMARTCREDIT_SPONSOR_URL` | Yes for enroll attribution | `https://www.smartcredit.com/join/?pid=69411` |
+| `SMARTCREDIT_SPONSOR_CODE` | Optional | Only if separate from the URL |
+| `SMARTCREDIT_API_KEY` | Optional / unused today | No public score API. Key presence is never CONNECTED. |
+| `SMARTCREDIT_API_PROBE_URL` | Optional / unused today | https GET only if a partner API appears |
+
+Set `SMARTCREDIT_SPONSOR_URL` in Vercel Production (and preview if enroll is tested there). Runtime reads env only.
+
 ## Not required to start production web (optional adapters)
 
-`DISPUTEFOX_*`, `SMARTCREDIT_*`, `CRC_*`, `AUTHORIZE_NET_*`, `AGENT_HUB_*`, `CURSOR_API_KEY` (already present for Agent Hub / Cursor — not a Vercel runtime requirement for core OS).
+`DISPUTEFOX_*`, `CRC_*`, `AUTHORIZE_NET_*`, `AGENT_HUB_*`, `CURSOR_API_KEY` (already present for Agent Hub / Cursor — not a Vercel runtime requirement for core OS). `SMARTCREDIT_SPONSOR_URL` is documented above.
