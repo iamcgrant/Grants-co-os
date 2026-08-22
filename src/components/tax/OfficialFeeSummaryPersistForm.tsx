@@ -1,6 +1,6 @@
 import { SbtpgFeeSummaryIngestForm } from "@/components/tax/SbtpgFeeSummaryIngestForm";
 
-/** Command Center persist-after-return. Copy stays generic — no portal name, no taxpayer counts. */
+/** Command Center persist-after-return. Copy stays generic — no portal name, no counts. */
 export function OfficialFeeSummaryPersistForm() {
   return (
     <SbtpgFeeSummaryIngestForm
