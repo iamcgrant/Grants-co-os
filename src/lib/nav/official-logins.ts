@@ -1,0 +1,52 @@
+/**
+ * Official last-step product logins. Native OS routes stay the sidebar destination
+ * when a desk already exists. These URLs open in a new tab so staff can sign in.
+ * Never iframe portals that set X-Frame-Options. No scrape.
+ */
+
+import { DISPUTE_CHANNELS } from "@/lib/disputes/channels";
+import { TAX_DESK_CATALOG } from "@/lib/tax/catalog";
+import { COGNITO_OFFICIAL_LOGIN_URL } from "@/lib/integrations/cognito/config";
+import {
+  OFFICIAL_GHL_LOGIN_URL,
+  OFFICIAL_GMAIL_LOGIN_URL,
+  OFFICIAL_TELEGRAM_LOGIN_URL,
+} from "@/lib/nav/official-login-urls";
+
+export {
+  GMAIL_WORK_MAILBOX,
+  OFFICIAL_GHL_LOGIN_URL,
+  OFFICIAL_GMAIL_LOGIN_URL,
+  OFFICIAL_TELEGRAM_LOGIN_URL,
+} from "@/lib/nav/official-login-urls";
+
+export function isLiveNavHref(href: string): boolean {
+  const trimmed = href.trim();
+  if (!trimmed || trimmed === "#") return false;
+  return trimmed.startsWith("/") || trimmed.startsWith("https://");
+}
+
+function catalogLogins(): Record<string, string> {
+  const rows: Array<[string, string | null]> = [
+    ["/inbox", OFFICIAL_GHL_LOGIN_URL],
+    ["/inbox?tab=gmail", OFFICIAL_GMAIL_LOGIN_URL],
+    ["/inbox?tab=ghl", OFFICIAL_GHL_LOGIN_URL],
+    ["/dialer", OFFICIAL_GHL_LOGIN_URL],
+    ["/team-chat", OFFICIAL_TELEGRAM_LOGIN_URL],
+    [DISPUTE_CHANNELS.DISPUTEFOX.href, DISPUTE_CHANNELS.DISPUTEFOX.officialSubmitUrl],
+    [DISPUTE_CHANNELS.EXPERIAN.href, DISPUTE_CHANNELS.EXPERIAN.officialSubmitUrl],
+    [DISPUTE_CHANNELS.EQUIFAX.href, DISPUTE_CHANNELS.EQUIFAX.officialSubmitUrl],
+    [DISPUTE_CHANNELS.TRANSUNION.href, DISPUTE_CHANNELS.TRANSUNION.officialSubmitUrl],
+    [DISPUTE_CHANNELS.INNOVIS.href, DISPUTE_CHANNELS.INNOVIS.officialSubmitUrl],
+    [DISPUTE_CHANNELS.SMARTCREDIT.href, DISPUTE_CHANNELS.SMARTCREDIT.officialSubmitUrl],
+    [DISPUTE_CHANNELS.CFPB.href, DISPUTE_CHANNELS.CFPB.officialSubmitUrl],
+    [TAX_DESK_CATALOG.CLOUD_TAX_OFFICE.href, TAX_DESK_CATALOG.CLOUD_TAX_OFFICE.officialLastStepUrl],
+    [TAX_DESK_CATALOG.SBTPG.href, TAX_DESK_CATALOG.SBTPG.officialLastStepUrl],
+    ["/tax/cognito", COGNITO_OFFICIAL_LOGIN_URL],
+  ];
+  return Object.fromEntries(rows.filter((entry): entry is [string, string] => Boolean(entry[1])));
+}
+
+export function officialLoginForHref(href: string): string | undefined {
+  return catalogLogins()[href];
+}

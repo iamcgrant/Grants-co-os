@@ -77,6 +77,7 @@ export default async function SbtpgWorkspacePage() {
         <DeskEmptyState
           detail="No OS-recorded SBTPG payouts yet. Official pro.sbtpg.com is last-step only — this desk does not scrape."
           nextAction="Attach a Grants client, record a payout session, or import official payout totals so Command Center collected is not $0."
+          loginUrl={catalog.officialLastStepUrl}
         />
       ) : null}
 

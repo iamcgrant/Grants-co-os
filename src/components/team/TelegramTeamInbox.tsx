@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { OfficialLoginLink } from "@/components/desk/OfficialLoginLink";
+import { OFFICIAL_TELEGRAM_LOGIN_URL } from "@/lib/nav/official-login-urls";
 
 type Chat = {
   id: string;
@@ -100,9 +102,12 @@ export function TelegramTeamInbox() {
             </button>
           ))}
           {!chats.length && (
-            <p className="p-4 text-sm text-[var(--gc-muted)]">
-              {notice || "No team chats visible yet."}
-            </p>
+            <div className="p-4 space-y-3">
+              <p className="text-sm text-[var(--gc-muted)]">
+                {notice || "No team chats visible yet."}
+              </p>
+              <OfficialLoginLink href={OFFICIAL_TELEGRAM_LOGIN_URL} />
+            </div>
           )}
         </div>
       </aside>

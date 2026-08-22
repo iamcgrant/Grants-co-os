@@ -26,6 +26,7 @@ describe("official bureau / CFPB / DisputeFox catalog", () => {
     expect(DISPUTE_CHANNELS.TRANSUNION.officialSubmitUrl).toMatch(/transunion\.com/);
     expect(DISPUTE_CHANNELS.INNOVIS.officialSubmitUrl).toMatch(/innovis\.com/);
     expect(DISPUTE_CHANNELS.DISPUTEFOX.hasOfficialSubmitApi).toBe(false);
+    expect(DISPUTE_CHANNELS.DISPUTEFOX.officialSubmitUrl).toBe("https://pulse.disputeprocess.com");
     expect(DISPUTE_CHANNELS.SMARTCREDIT.hasOfficialSubmitApi).toBe(false);
     expect(DISPUTE_CHANNELS.SMARTCREDIT.officialSubmitUrl).toMatch(/smartcredit\.com/);
     expect(DISPUTE_CHANNELS.SMARTCREDIT.href).toBe("/credit/smartcredit");

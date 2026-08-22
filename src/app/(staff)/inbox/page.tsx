@@ -12,6 +12,8 @@ import { hasPermission } from "@/lib/rbac/permissions";
 import { GhlConversationPullPanel } from "@/components/integrations/GhlConversationPullPanel";
 import { GhlLocationInbox } from "@/components/inbox/GhlLocationInbox";
 import { GmailWorkInbox } from "@/components/inbox/GmailWorkInbox";
+import { OfficialLoginLink } from "@/components/desk/OfficialLoginLink";
+import { OFFICIAL_GHL_LOGIN_URL } from "@/lib/nav/official-login-urls";
 
 export default async function InboxPage({
   searchParams,
@@ -131,7 +133,10 @@ export default async function InboxPage({
               );
             })}
             {conversations.length === 0 && (
-              <p className="p-4 text-sm text-[var(--gc-muted)]">No conversations yet.</p>
+              <div className="p-4 space-y-3">
+                <p className="text-sm text-[var(--gc-muted)]">No conversations yet.</p>
+                <OfficialLoginLink href={OFFICIAL_GHL_LOGIN_URL} />
+              </div>
             )}
           </div>
         </Panel>

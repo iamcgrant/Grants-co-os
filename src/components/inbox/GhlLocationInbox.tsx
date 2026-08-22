@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { OfficialLoginLink } from "@/components/desk/OfficialLoginLink";
+import { OFFICIAL_GHL_LOGIN_URL } from "@/lib/nav/official-login-urls";
 
 type Thread = {
   conversationId: string;
@@ -84,9 +86,12 @@ export function GhlLocationInbox() {
           </div>
         ))}
         {!loading && !data?.threads?.length && (
-          <p className="p-4 text-sm text-[var(--gc-muted)]">
-            {data?.message || "No GHL conversations yet. Pull conversations or confirm GHL_API_KEY."}
-          </p>
+          <div className="p-4 space-y-3">
+            <p className="text-sm text-[var(--gc-muted)]">
+              {data?.message || "No GHL conversations yet. Pull conversations or confirm GHL_API_KEY."}
+            </p>
+            <OfficialLoginLink href={OFFICIAL_GHL_LOGIN_URL} />
+          </div>
         )}
         {loading && <p className="p-4 text-sm text-[var(--gc-muted)]">Loading GHL conversations…</p>}
       </div>

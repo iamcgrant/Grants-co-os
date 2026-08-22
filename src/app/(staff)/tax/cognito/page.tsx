@@ -3,7 +3,7 @@ import { hasPermission } from "@/lib/rbac/permissions";
 import { requireTaxStaff } from "@/lib/tax/access";
 import { listCachedCognitoBoard } from "@/lib/integrations/cognito/workspace";
 import { probeCognitoHealth } from "@/lib/integrations/cognito/health";
-import { cognitoPublicStatus } from "@/lib/integrations/cognito/config";
+import { COGNITO_OFFICIAL_LOGIN_URL, cognitoPublicStatus } from "@/lib/integrations/cognito/config";
 import { CognitoPullForm } from "@/components/tax/CognitoPullForm";
 import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
 
@@ -58,6 +58,7 @@ export default async function CognitoWorkspacePage() {
               : "ACTION_REQUIRED: set COGNITO_API_KEY, then pull official submissions. No scrape."
           }
           nextAction="Use Pull submissions. Entries match existing Grants masters by email."
+          loginUrl={COGNITO_OFFICIAL_LOGIN_URL}
         />
       ) : null}
 

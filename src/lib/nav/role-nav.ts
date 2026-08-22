@@ -1,3 +1,5 @@
+import { officialLoginForHref } from "@/lib/nav/official-logins";
+
 export type StaffRole =
   | "OWNER"
   | "ADMIN"
@@ -14,6 +16,8 @@ export type NavItem = {
   label: string;
   short?: string;
   group?: NavGroup;
+  /** Official product login when the desk is last-step only. Native href stays the destination. */
+  officialLastStepUrl?: string;
 };
 
 /** Credit & Disputes destinations — native OS workspaces. */
@@ -58,6 +62,11 @@ export function hasCreditDisputesNav(role: StaffRole): boolean {
   }
 }
 
+function withOfficialLogin(item: NavItem): NavItem {
+  const officialLastStepUrl = officialLoginForHref(item.href);
+  return officialLastStepUrl ? { ...item, officialLastStepUrl } : item;
+}
+
 export function getCreditDisputesNav(): NavItem[] {
   return [
     { href: CREDIT_DISPUTES_NAV.disputeFox.href, label: CREDIT_DISPUTES_NAV.disputeFox.label, group: "credit" },
@@ -67,11 +76,13 @@ export function getCreditDisputesNav(): NavItem[] {
     { href: CREDIT_DISPUTES_NAV.innovis.href, label: CREDIT_DISPUTES_NAV.innovis.label, group: "credit" },
     { href: CREDIT_DISPUTES_NAV.smartCredit.href, label: CREDIT_DISPUTES_NAV.smartCredit.label, group: "credit" },
     { href: CREDIT_DISPUTES_NAV.creditKarma.href, label: CREDIT_DISPUTES_NAV.creditKarma.label, group: "credit" },
-  ];
+  ].map(withOfficialLogin);
 }
 
 export function getEscalationsNav(): NavItem[] {
-  return [{ href: ESCALATIONS_NAV.cfpb.href, label: ESCALATIONS_NAV.cfpb.label, group: "escalations" }];
+  return [{ href: ESCALATIONS_NAV.cfpb.href, label: ESCALATIONS_NAV.cfpb.label, group: "escalations" }].map(
+    withOfficialLogin,
+  );
 }
 
 export function hasTaxNav(role: StaffRole): boolean {
@@ -83,7 +94,7 @@ export function getTaxNav(): NavItem[] {
     { href: TAX_NAV.cloudTaxOffice.href, label: TAX_NAV.cloudTaxOffice.label, group: "tax" },
     { href: TAX_NAV.cognito.href, label: TAX_NAV.cognito.label, group: "tax" },
     { href: TAX_NAV.sbtpg.href, label: TAX_NAV.sbtpg.label, group: "tax" },
-  ];
+  ].map(withOfficialLogin);
 }
 
 export function navSectionLabel(group: NavGroup | undefined): string | null {
@@ -182,7 +193,7 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       { href: "/system-health", label: "System Health", group: "system" },
       { href: "/agents", label: "Agent Hub", group: "system" },
       { href: "/more", label: "Settings", group: "system" },
-    ];
+    ].map(withOfficialLogin);
   }
 
   if (role === "CUSTOMER_SERVICE") {
@@ -199,7 +210,7 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       ...getTaxNav(),
       { href: "/search", label: "Search", group: "system" },
       { href: "/more", label: "Settings", group: "system" },
-    ];
+    ].map(withOfficialLogin);
   }
 
   if (role === "FILE_PREPARER") {
@@ -216,10 +227,10 @@ export function getDesktopNav(role: StaffRole): NavItem[] {
       ...getTaxNav(),
       { href: "/search", label: "Search", group: "system" },
       { href: "/more", label: "Settings", group: "system" },
-    ];
+    ].map(withOfficialLogin);
   }
 
-  return getStaffNav(role).map((n) => ({ ...n, group: "primary" as const }));
+  return getStaffNav(role).map((n) => withOfficialLogin({ ...n, group: "primary" as const }));
 }
 
 export function roleHomeLabel(role: StaffRole): string {

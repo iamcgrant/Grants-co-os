@@ -64,7 +64,7 @@ export const TAX_DESK_CATALOG: Record<TaxDesk, TaxDeskCatalog> = {
     integration: "cloud_tax_office",
     hasOfficialSubmitApi: false,
     hasOfficialPortal: true,
-    officialLastStepUrl: "https://grantandco.cloudtaxoffice.com/",
+    officialLastStepUrl: "https://grantandco.cloudtaxoffice.com/proavalon/",
     scrape: false,
     honesty:
       "No supported Cloud Tax Office (ProAvalon) list/read API. This workspace is the OS staff desk: client/return list, status, and next actions. Official Cloud Tax Office is a last login/file step only. No scrape.",
@@ -80,7 +80,7 @@ export const TAX_DESK_CATALOG: Record<TaxDesk, TaxDeskCatalog> = {
     integration: "sbtpg",
     hasOfficialSubmitApi: false,
     hasOfficialPortal: true,
-    officialLastStepUrl: "https://pro.sbtpg.com/",
+    officialLastStepUrl: "https://pro.sbtpg.com/login",
     scrape: false,
     honesty:
       "No supported SBTPG refund/payout list API. This workspace is the OS tracker for tax-client refunds and payouts. Official SBTPG portal is a last login step only. No scrape.",

@@ -4,6 +4,35 @@ import { getDesktopNav, getStaffNav, navSectionLabel, roleDisplayName } from "@/
 import type { AuthUserView } from "@/lib/auth/types";
 import type { NavItem, StaffRole } from "@/lib/nav/role-nav";
 
+function isExternalHref(href: string) {
+  return href.startsWith("https://") || href.startsWith("http://");
+}
+
+function SidebarDest({
+  item,
+  className,
+  children,
+  "data-active": dataActive,
+}: {
+  item: NavItem;
+  className?: string;
+  children: React.ReactNode;
+  "data-active"?: boolean;
+}) {
+  if (isExternalHref(item.href)) {
+    return (
+      <a href={item.href} className={className} data-active={dataActive} target="_blank" rel="noopener noreferrer">
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link href={item.href} className={className} data-active={dataActive}>
+      {children}
+    </Link>
+  );
+}
+
 function withSectionLabels(nav: NavItem[]) {
   let lastGroup = "";
   return nav.map((item) => {
@@ -65,13 +94,13 @@ export function StaffShell({
           {desktopNav.map(({ item, showSection, section }) => (
             <div key={`${item.href}-${item.label}`}>
               {showSection && section ? <p className="gc-sidebar-section">{section}</p> : null}
-              <Link
-                href={item.href}
+              <SidebarDest
+                item={item}
                 className={`gc-sidebar-link ${isActive(item.href) ? "is-active" : ""}`}
               >
                 <span className="gc-sidebar-dot" aria-hidden />
                 {item.label}
-              </Link>
+              </SidebarDest>
             </div>
           ))}
         </nav>
@@ -131,9 +160,9 @@ export function StaffShell({
 
       <nav className="gc-nav-mobile" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
         {mobileNav.map((item) => (
-          <Link key={item.href} href={item.href} data-active={isActive(item.href)}>
+          <SidebarDest key={`${item.href}-${item.label}`} item={item} data-active={isActive(item.href)}>
             {item.short || item.label}
-          </Link>
+          </SidebarDest>
         ))}
       </nav>
     </div>
