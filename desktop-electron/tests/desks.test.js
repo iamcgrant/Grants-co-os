@@ -8,37 +8,47 @@ const { DESKS, deskById } = require("../src/main/desks");
 const { unprivilegedWebPreferences, chromeWebPreferences } = require("../src/main/security");
 
 const EXPECTED = [
-  ["os", "https://os.grantandconsultants.com/", "os.grantandconsultants.com"],
-  ["ghl", "https://app.gohighlevel.com/", "app.gohighlevel.com"],
-  ["telegram", "https://web.telegram.org/a/", "web.telegram.org"],
-  ["experian", "https://www.experian.com/consumer/upload/", "www.experian.com"],
-  ["equifax", "https://www.equifax.com/personal/credit-report-services/credit-dispute", "www.equifax.com"],
-  ["disputefox", "https://pulse.disputeprocess.com/jsp/client/login.jsp", "pulse.disputeprocess.com"],
-  ["cloud-tax", "https://grantandco.cloudtaxoffice.com/proavalon/", "grantandco.cloudtaxoffice.com"],
+  ["os", "Home", "https://os.grantandconsultants.com/login?gc_shell=app", "persist:gc-os", ["os.grantandconsultants.com"]],
+  ["ghl", "GHL", "https://app.gohighlevel.com/", "persist:gc-ghl", ["app.gohighlevel.com", "accounts.google.com"]],
+  ["telegram", "Telegram", "https://web.telegram.org/a/", "persist:gc-telegram", ["web.telegram.org"]],
+  ["experian", "Experian", "https://www.experian.com/consumer/upload/", "persist:gc-experian", ["www.experian.com"]],
+  ["equifax", "Equifax", "https://www.equifax.com/personal/credit-report-services/credit-dispute", "persist:gc-equifax", ["www.equifax.com"]],
+  ["disputefox", "DisputeFox", "https://pulse.disputeprocess.com/jsp/client/login.jsp", "persist:gc-disputefox", ["pulse.disputeprocess.com"]],
+  ["cloud-tax", "Cloud Tax", "https://grantandco.cloudtaxoffice.com/proavalon/", "persist:gc-cloud-tax", ["grantandco.cloudtaxoffice.com"]],
+  ["cfpb", "CFPB", "https://www.consumerfinance.gov/complaint/", "persist:gc-cfpb", ["www.consumerfinance.gov"]],
 ];
 
-describe("first-wave desks", () => {
-  it("ships OS home plus the six approved vendors only", () => {
+describe("locked 8-desk sidebar", () => {
+  it("exports DESKS.length === 8 with the locked titles and start URLs", () => {
+    assert.equal(DESKS.length, 8);
     assert.deepEqual(
       DESKS.map((desk) => desk.id),
       EXPECTED.map((row) => row[0]),
     );
-    assert.equal(DESKS.length, 7);
-  });
-
-  it("locks official start URLs and exact allowlist hosts", () => {
-    for (const [id, startUrl, host] of EXPECTED) {
+    assert.deepEqual(
+      DESKS.map((desk) => desk.title),
+      EXPECTED.map((row) => row[1]),
+    );
+    for (const [id, title, startUrl, partition, hosts] of EXPECTED) {
       const desk = deskById(id);
       assert.ok(desk, id);
+      assert.equal(desk.title, title);
       assert.equal(desk.startUrl, startUrl);
-      assert.deepEqual([...desk.allowedHosts], [host]);
-      assert.match(desk.partition, /^persist:gc-/);
+      assert.equal(desk.partition, partition);
+      assert.deepEqual([...desk.allowedHosts], hosts);
     }
   });
 
-  it("gives each desk its own persistent partition", () => {
-    const partitions = DESKS.map((desk) => desk.partition);
-    assert.equal(new Set(partitions).size, partitions.length);
+  it("does not export OWNER_NAV or website fallback start URLs", () => {
+    const src = fs.readFileSync(path.join(__dirname, "..", "src/main/desks.js"), "utf8");
+    assert.doesNotMatch(src, /OWNER_NAV|officialLastStepUrl|getDesktopNav/);
+    assert.doesNotMatch(src, /Gmail|Dialer|Clients|Inbox|SBTPG|Tasks|TransUnion|Innovis|SmartCredit|Credit Karma|Cognito|Grants Pay|Reports|Settings/);
+    for (const desk of DESKS) {
+      assert.doesNotMatch(desk.startUrl, /\/credit\/experian|\/team-chat|tab=ghl/);
+    }
+    const exported = require("../src/main/desks");
+    assert.equal(Object.prototype.hasOwnProperty.call(exported, "OWNER_NAV"), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(exported, "OFFICIAL"), false);
   });
 });
 
@@ -61,7 +71,7 @@ describe("renderer privileges", () => {
   });
 });
 
-describe("spike source invariants", () => {
+describe("desktop chrome invariants", () => {
   const root = path.join(__dirname, "..");
 
   it("does not embed vendor pages in chrome via iframe or webview", () => {
@@ -70,6 +80,9 @@ describe("spike source invariants", () => {
     assert.doesNotMatch(html, /<webview/i);
     assert.doesNotMatch(html, /os\.grantandconsultants\.com/);
     assert.doesNotMatch(html, /gohighlevel|telegram\.org|experian|equifax|disputeprocess|cloudtaxoffice/i);
+    assert.doesNotMatch(html, /url-bar|address bar/i);
+    assert.doesNotMatch(html, /spike|prototype|Electron/i);
+    assert.match(html, /Grant &amp; Co OS/);
   });
 
   it("does not implement a grantscoos return or cookie export", () => {
@@ -79,5 +92,9 @@ describe("spike source invariants", () => {
     assert.match(main, /There is no grantscoos/);
     assert.match(main, /WebContentsView/);
     assert.match(main, /unprivilegedWebPreferences/);
+    assert.match(main, /Grant & Co OS/);
+    assert.doesNotMatch(main, /Electron spike|prototype/i);
+    assert.match(main, /officialAttempted/);
+    assert.match(main, /did-fail-load/);
   });
 });

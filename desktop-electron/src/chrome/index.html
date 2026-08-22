@@ -7,48 +7,27 @@
       content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Grants &amp; Co OS — Electron spike</title>
+    <title>Grant &amp; Co OS</title>
     <link rel="stylesheet" href="./chrome.css" />
   </head>
   <body>
     <div class="shell">
-      <aside class="sidebar" aria-label="Desks">
-        <p class="eyebrow">Grants &amp; Co</p>
-        <h1>OS spike</h1>
-        <p class="sidebar-note">Local chrome only. Vendor pages never load here.</p>
+      <aside class="sidebar" aria-label="Grant &amp; Co OS">
+        <p class="eyebrow">Grant &amp; Co</p>
+        <h1>OS</h1>
         <nav id="desk-nav" class="desk-nav"></nav>
       </aside>
       <div class="main">
-        <div class="banner" role="status">
-          DISPOSABLE FEASIBILITY SPIKE — not production, not a Tauri replacement.
-          Login/SSO/MFA results are unproven until Windows + authorized accounts.
-        </div>
-        <div class="tabs" id="tab-strip" role="tablist" aria-label="Open desks"></div>
-        <div class="toolbar">
-          <div class="nav-group">
-            <button type="button" id="btn-back" aria-label="Back" disabled>Back</button>
-            <button type="button" id="btn-forward" aria-label="Forward" disabled>Forward</button>
-            <button type="button" id="btn-reload" aria-label="Reload" disabled>Reload</button>
-          </div>
-          <div class="url-group">
-            <span id="loading-dot" class="loading-dot" hidden></span>
-            <span id="url-bar" class="url-bar">Select a desk</span>
-          </div>
-          <div class="action-group">
-            <button type="button" id="btn-open-browser">Open securely in browser</button>
-            <button type="button" id="btn-clear">Clear site data and sign out</button>
-            <button type="button" id="btn-close" aria-label="Close desk">Close</button>
-          </div>
-        </div>
+        <div class="tabs" id="tab-strip" role="tablist" aria-label="Open tabs"></div>
         <div id="notice" class="notice" hidden>
           <p id="notice-text"></p>
-          <button type="button" id="notice-dismiss">Dismiss</button>
+          <div class="notice-actions">
+            <button type="button" id="notice-open-browser" hidden>Open securely in browser</button>
+            <button type="button" id="notice-dismiss">Dismiss</button>
+          </div>
         </div>
         <div class="viewport-well">
-          <p>
-            Official sites load in an unprivileged WebContentsView over this well.
-            This chrome renderer has no live OS page and no vendor page.
-          </p>
+          <p>Select a workspace from the sidebar.</p>
         </div>
       </div>
     </div>

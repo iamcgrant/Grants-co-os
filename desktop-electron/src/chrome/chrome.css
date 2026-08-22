@@ -7,9 +7,7 @@
   --muted: #929292;
   --line: rgba(178, 212, 255, 0.16);
   --sidebar: 236px;
-  --banner: 34px;
   --tabs: 40px;
-  --toolbar: 52px;
 }
 
 * {
@@ -56,6 +54,7 @@ button:not(:disabled):hover {
   background: var(--near-black);
   border-right: 1px solid var(--line);
   padding: 18px 16px;
+  overflow: auto;
 }
 
 .eyebrow {
@@ -67,22 +66,25 @@ button:not(:disabled):hover {
 }
 
 h1 {
-  margin: 0 0 8px;
+  margin: 0 0 14px;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 22px;
   font-weight: 500;
-}
-
-.sidebar-note {
-  margin: 0 0 18px;
-  color: var(--muted);
-  line-height: 1.4;
 }
 
 .desk-nav {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.nav-section {
+  margin: 12px 0 2px;
+  padding: 0 4px;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 10px;
 }
 
 .desk-nav button {
@@ -103,20 +105,6 @@ h1 {
   min-width: 0;
 }
 
-.banner {
-  height: var(--banner);
-  display: flex;
-  align-items: center;
-  padding: 0 14px;
-  background: #2a220c;
-  color: var(--gold);
-  font-size: 11px;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .tabs {
   height: var(--tabs);
   display: flex;
@@ -125,6 +113,10 @@ h1 {
   padding: 0 10px;
   border-bottom: 1px solid var(--line);
   overflow-x: auto;
+}
+
+.tab-empty {
+  color: var(--muted);
 }
 
 .tab {
@@ -147,56 +139,6 @@ h1 {
   border-radius: 6px;
 }
 
-.toolbar {
-  height: var(--toolbar);
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 10px;
-  align-items: center;
-  padding: 0 10px;
-  border-bottom: 1px solid var(--line);
-}
-
-.nav-group,
-.action-group {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.url-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  padding: 0 10px;
-  height: 32px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(4, 4, 4, 0.45);
-}
-
-.url-bar {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--muted);
-}
-
-.loading-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--ice);
-  animation: pulse 0.9s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  50% {
-    opacity: 0.25;
-  }
-}
-
 .notice {
   display: flex;
   justify-content: space-between;
@@ -211,6 +153,12 @@ h1 {
 .notice p {
   margin: 0;
   line-height: 1.4;
+}
+
+.notice-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .notice.warn {

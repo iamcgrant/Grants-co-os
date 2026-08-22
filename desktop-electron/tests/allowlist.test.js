@@ -43,11 +43,18 @@ describe("classifyNavigation", () => {
     assert.equal(decision.host, "pulse.disputeprocess.com");
   });
 
-  it("sends unknown https hosts to the system-browser path", () => {
-    const decision = classifyNavigation("https://accounts.google.com/o/oauth", hosts);
-    assert.equal(decision.action, "system-browser");
+  it("stays on the official page when the hostname is not allowlisted", () => {
+    const decision = classifyNavigation("https://marketing.example.com/", hosts);
+    assert.equal(decision.action, "stay");
     assert.equal(decision.reason, "host-not-allowlisted");
-    assert.equal(decision.host, "accounts.google.com");
+    assert.equal(decision.host, "marketing.example.com");
+  });
+
+  it("allows an exact IdP host when it is on that desk’s allowlist", () => {
+    const ghl = ["app.gohighlevel.com", "accounts.google.com"];
+    const idp = classifyNavigation("https://accounts.google.com/o/oauth", ghl);
+    assert.equal(idp.action, "allow");
+    assert.equal(idp.host, "accounts.google.com");
   });
 
   it("blocks non-https and invalid URLs", () => {

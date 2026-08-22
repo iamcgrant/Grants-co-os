@@ -424,6 +424,13 @@ a {
   padding: 0.85rem 0.85rem 5.5rem;
 }
 
+.gc-desktop-shell {
+  box-sizing: border-box;
+  min-height: 100dvh;
+  width: 100%;
+  padding: 1rem 1.25rem;
+}
+
 .gc-metric-tile {
   background: rgba(255, 255, 255, 0.035);
   border: 1px solid var(--gc-border);
@@ -655,6 +662,10 @@ a {
     max-width: none;
   }
 
+  .gc-desktop-shell {
+    padding: 1.1rem 1.25rem 1.75rem;
+  }
+
   .gc-dash-grid {
     gap: 0.75rem;
   }
@@ -678,6 +689,10 @@ a {
   }
 
   .gc-content {
+    padding: 1.25rem 1.5rem 2rem;
+  }
+
+  .gc-desktop-shell {
     padding: 1.25rem 1.5rem 2rem;
   }
 

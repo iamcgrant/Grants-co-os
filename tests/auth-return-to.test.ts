@@ -22,6 +22,8 @@ describe("login returnTo", () => {
     expect(pathAfterLogin("OWNER", "/tax/sbtpg")).toBe("/tax/sbtpg");
     expect(pathAfterLogin("ADMIN", null)).toBe("/home");
     expect(pathAfterLogin("CLIENT", "/tax/sbtpg")).toBe("/portal");
+    expect(pathAfterLogin("OWNER", null, true)).toBe("/home?gc_shell=app");
+    expect(loginHref("/clients?gc_shell=app")).toBe("/login?gc_shell=app&returnTo=%2Fclients");
   });
 
   it("staff layout and login form preserve returnTo", () => {

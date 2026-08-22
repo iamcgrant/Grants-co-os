@@ -1,22 +1,15 @@
 "use strict";
 
-const api = window.spikeChrome;
+const api = window.gcChrome;
 
 const deskNav = document.getElementById("desk-nav");
 const tabStrip = document.getElementById("tab-strip");
-const urlBar = document.getElementById("url-bar");
-const loadingDot = document.getElementById("loading-dot");
 const noticeEl = document.getElementById("notice");
 const noticeText = document.getElementById("notice-text");
-const btnBack = document.getElementById("btn-back");
-const btnForward = document.getElementById("btn-forward");
-const btnReload = document.getElementById("btn-reload");
-const btnOpen = document.getElementById("btn-open-browser");
-const btnClear = document.getElementById("btn-clear");
-const btnClose = document.getElementById("btn-close");
 const noticeDismiss = document.getElementById("notice-dismiss");
+const noticeOpenBrowser = document.getElementById("notice-open-browser");
 
-/** @type {{ activeDeskId: string, desks: Array<{id:string,title:string,startUrl:string,open:boolean}>, url: string, loading: boolean, canGoBack: boolean, canGoForward: boolean, notice: {kind:string,message:string}|null } | null} */
+/** @type {{ activeDeskId: string, desks: Array<{id:string,title:string,startUrl:string,open:boolean,group?:string}>, notice: {kind:string,message:string,allowBrowser?:boolean}|null } | null} */
 let state = null;
 
 function currentDeskId() {
@@ -31,7 +24,7 @@ function renderNav() {
     button.type = "button";
     button.dataset.desk = desk.id;
     button.textContent = desk.title;
-    button.classList.toggle("active", desk.id === state.activeDeskId && desk.open);
+    button.classList.toggle("active", desk.id === state.activeDeskId);
     button.addEventListener("click", () => {
       api.selectDesk(desk.id);
     });
@@ -45,8 +38,8 @@ function renderTabs() {
   const open = state.desks.filter((desk) => desk.open);
   if (open.length === 0) {
     const empty = document.createElement("span");
-    empty.className = "url-bar";
-    empty.textContent = "No open desk";
+    empty.className = "tab-empty";
+    empty.textContent = "No open tabs";
     tabStrip.append(empty);
     return;
   }
@@ -76,23 +69,15 @@ function renderTabs() {
 
 function renderChrome() {
   if (!state) return;
-  const hasView = state.desks.some((desk) => desk.id === state.activeDeskId && desk.open);
-  urlBar.textContent = hasView ? state.url || "Loading…" : "Select a desk";
-  loadingDot.hidden = !state.loading;
-  btnBack.disabled = !hasView || !state.canGoBack;
-  btnForward.disabled = !hasView || !state.canGoForward;
-  btnReload.disabled = !hasView;
-  btnClose.disabled = !hasView;
-  btnOpen.disabled = !state.activeDeskId;
-  btnClear.disabled = !state.activeDeskId;
-
   if (state.notice?.message) {
     noticeEl.hidden = false;
     noticeEl.className = `notice ${state.notice.kind || "info"}`;
     noticeText.textContent = state.notice.message;
+    noticeOpenBrowser.hidden = !state.notice.allowBrowser;
   } else {
     noticeEl.hidden = true;
     noticeText.textContent = "";
+    noticeOpenBrowser.hidden = true;
   }
 }
 
@@ -103,16 +88,12 @@ function render(next) {
   renderChrome();
 }
 
-btnBack.addEventListener("click", () => api.nav("back"));
-btnForward.addEventListener("click", () => api.nav("forward"));
-btnReload.addEventListener("click", () => api.nav("reload"));
-btnClose.addEventListener("click", () => api.closeDesk(currentDeskId()));
-btnOpen.addEventListener("click", () => api.openInBrowser(currentDeskId()));
-btnClear.addEventListener("click", () => api.clearSiteData(currentDeskId()));
 noticeDismiss.addEventListener("click", () => api.dismissNotice());
+noticeOpenBrowser.addEventListener("click", () => api.openInBrowser(currentDeskId()));
 
 if (!api) {
-  urlBar.textContent = "Chrome preload missing — refuse to continue.";
+  noticeEl.hidden = false;
+  noticeText.textContent = "Desktop chrome is unavailable.";
 } else {
   api.onState(render);
   api.getState().then(render);

@@ -3,9 +3,7 @@
 /** Local chrome metrics. Content WebContentsViews sit in the remaining rect. */
 const CHROME = Object.freeze({
   sidebarWidth: 236,
-  bannerHeight: 34,
   tabHeight: 40,
-  toolbarHeight: 52,
   noticeHeight: 56,
 });
 
@@ -21,7 +19,7 @@ function chromeBounds(contentWidth, contentHeight) {
 function vendorBounds(contentWidth, contentHeight, noticeVisible) {
   const x = CHROME.sidebarWidth;
   const notice = noticeVisible ? CHROME.noticeHeight : 0;
-  const y = CHROME.bannerHeight + CHROME.tabHeight + CHROME.toolbarHeight + notice;
+  const y = CHROME.tabHeight + notice;
   return {
     x,
     y,

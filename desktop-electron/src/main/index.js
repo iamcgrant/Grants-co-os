@@ -43,8 +43,10 @@ const deskViews = new Map();
 const preparedPartitions = new Set();
 
 let activeDeskId = "os";
-/** @type {{ kind: string, message: string } | null} */
+/** @type {{ kind: string, message: string, allowBrowser?: boolean } | null} */
 let notice = null;
+/** Official start URL was actually requested for this desk. */
+const officialAttempted = new Set();
 
 function contentSize() {
   if (!mainWindow) return [1280, 800];
@@ -95,13 +97,13 @@ function snapshot() {
   }
 
   return {
-    spike: true,
     activeDeskId,
     desks: DESKS.map((desk) => ({
       id: desk.id,
       title: desk.title,
       startUrl: desk.startUrl,
       allowedHosts: [...desk.allowedHosts],
+      kind: desk.kind,
       open: deskViews.has(desk.id),
     })),
     openIds,
@@ -129,26 +131,23 @@ function authReturnMessage(desk, host) {
   return (
     `${desk.title} left the exact allowlist (${host || "unknown host"}). ` +
     `The official login stays available here. If sign-in needs another host, ` +
-    `use Open securely in browser, finish there, then return to this spike. ` +
+    `use Open securely in browser, finish there, then return. ` +
     `There is no grantscoos:// return — no provider documents that redirect.`
   );
 }
 
-function handleUnknownNavigation(desk, decision, { openExternal }) {
+function handleUnknownNavigation(desk, decision) {
   if (decision.action === "block") {
     setNotice({
       kind: "error",
       message: `Blocked navigation for ${desk.title} (${decision.reason}).`,
+      allowBrowser: false,
     });
     return;
   }
-  if (openExternal && decision.url) {
-    openHttpsInSystemBrowser(decision.url).catch(() => {});
-  }
-  setNotice({
-    kind: "warn",
-    message: authReturnMessage(desk, decision.host),
-  });
+  // Hostname changed off the exact provider/IdP list. Stay on the official
+  // page. Do not open the system browser — that is only after a real load failure.
+  void desk;
 }
 
 function attachNavigationGuards(contents, desk) {
@@ -165,7 +164,7 @@ function attachNavigationGuards(contents, desk) {
         },
       };
     }
-    handleUnknownNavigation(desk, decision, { openExternal: decision.action === "system-browser" });
+    handleUnknownNavigation(desk, decision);
     return { action: "deny" };
   });
 
@@ -173,21 +172,24 @@ function attachNavigationGuards(contents, desk) {
     const decision = classifyNavigation(url, desk.allowedHosts);
     if (decision.action === "allow") return;
     event.preventDefault();
-    handleUnknownNavigation(desk, decision, { openExternal: decision.action === "system-browser" });
+    handleUnknownNavigation(desk, decision);
   });
 
   contents.on("will-redirect", (event, url) => {
     const decision = classifyNavigation(url, desk.allowedHosts);
     if (decision.action === "allow") return;
     event.preventDefault();
-    handleUnknownNavigation(desk, decision, { openExternal: decision.action === "system-browser" });
+    handleUnknownNavigation(desk, decision);
   });
 
   contents.on("will-attach-webview", (event) => {
     event.preventDefault();
   });
 
-  contents.on("did-start-loading", () => pushState());
+  contents.on("did-start-loading", () => {
+    officialAttempted.add(desk.id);
+    pushState();
+  });
   contents.on("did-stop-loading", () => pushState());
   contents.on("did-navigate", () => pushState());
   contents.on("did-navigate-in-page", () => pushState());
@@ -198,6 +200,7 @@ function attachNavigationGuards(contents, desk) {
     setNotice({
       kind: "error",
       message: `${desk.title} failed to load: ${desc || "unknown error"}`,
+      allowBrowser: desk.kind === "vendor" && officialAttempted.has(desk.id),
     });
   });
 }
@@ -209,7 +212,8 @@ function preparePartition(desk) {
     callback(false);
     setNotice({
       kind: "warn",
-      message: `Denied “${permission}” on ${desk.title}. This spike does not grant vendor-page permissions.`,
+      message: `Denied “${permission}” on ${desk.title}.`,
+      allowBrowser: false,
     });
   });
   ses.setPermissionCheckHandler(() => false);
@@ -337,8 +341,9 @@ async function openOfficialInBrowser(id) {
   setNotice({
     kind: opened ? "info" : "error",
     message: opened
-      ? `Opened the official ${desk.title} login in your system browser. This spike stays open. Return here after sign-in. No grantscoos:// return exists.`
+      ? `Opened the official ${desk.title} login in your browser. Return here after sign-in.`
       : `Could not open the official ${desk.title} URL.`,
+    allowBrowser: false,
   });
   return snapshot();
 }
@@ -364,7 +369,7 @@ function createWindow() {
     height: 900,
     minWidth: 1100,
     minHeight: 720,
-    title: "Grants & Co OS — Electron spike",
+    title: "Grant & Co OS",
     backgroundColor: "#16161a",
     show: false,
   });
