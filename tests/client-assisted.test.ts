@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { resetSqliteFromSchema } from "./helpers/sqlite-schema";
-import { CLIENT_ASSISTED_SOURCE } from "@/lib/credit/client-assisted";
+import { CLIENT_ASSISTED_SOURCE } from "@/lib/credit/client-assisted-source";
 
 const testDb = path.join(process.cwd(), "prisma", "test-client-assisted.db");
 
@@ -54,5 +54,16 @@ describe("client-assisted Credit Karma scores", () => {
         scoringModel: "VantageScore 3.0",
       }),
     ).rejects.toThrow(/300/);
+  });
+
+  it("keeps the client form off the Prisma/pg module graph", () => {
+    const form = fs.readFileSync(
+      path.join(process.cwd(), "src/components/credit/ClientAssistedScoreForm.tsx"),
+      "utf8",
+    );
+    expect(form).toContain("use client");
+    expect(form).toContain("@/lib/credit/client-assisted-source");
+    expect(form).not.toContain("@/lib/credit/client-assisted\"");
+    expect(form).not.toContain("@/lib/db/prisma");
   });
 });

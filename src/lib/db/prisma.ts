@@ -1,3 +1,7 @@
+/**
+ * Server-only Prisma entry. Never import this module from a Client Component —
+ * `pg` and the SQLite adapter must stay out of the browser bundle.
+ */
 import path from "node:path";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient } from "@/generated/prisma/client";
