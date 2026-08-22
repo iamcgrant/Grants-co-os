@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { getSbtpgCollectedTotals } from "@/lib/tax/payouts";
 import { mapCommandCenterRevenue } from "@/lib/tax/fee-summary-mapping";
 import { getLatestOfficialFeeSummary } from "@/lib/tax/official-fee-summary";
+import { STAFF_REVENUE_ATTRIBUTION } from "@/lib/tax/staff-revenue-copy";
 
 function moneySum(
   rows: { amountCents: number }[],
@@ -152,12 +153,12 @@ export async function getFinanceDashboard() {
     asOf: now.toISOString(),
     notes: {
       collected:
-        "Total Revenue is official SBTPG Fee Summary PAID when a snapshot exists. Today/week stay empty unless a dated payout or Grants Pay charge exists. No invented daily split. No portal scrape.",
+        `Total Revenue is ${STAFF_REVENUE_ATTRIBUTION} when an official season-to-date snapshot exists. Today/week stay empty unless a dated payout or Grants Pay charge exists. No invented daily split. No portal scrape.`,
       settled: "Settlement confirmed by processor.",
       payout: "Payout to merchant account — separate from settlement.",
       deposited: "Bank deposit confirmation requires processor payout reconciliation.",
       sbtpg:
-        "Total Revenue = SBTPG Fee Summary PAID (season-to-date). UNFUNDED is pending and is not added. FCA and Auto Collect are official snapshot fields only. No scrape of pro.sbtpg.com.",
+        `Internal source is the official Fee Summary PAID snapshot. Staff-facing Total Revenue is ${STAFF_REVENUE_ATTRIBUTION}. UNFUNDED is pending and is not added. FCA and Auto Collect are official snapshot fields only. No scrape.`,
     },
   };
 }

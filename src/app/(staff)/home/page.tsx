@@ -24,6 +24,7 @@ import {
   COMMAND_CENTER_UPDATE_REVENUE_LABEL,
   COMMAND_CENTER_UPDATE_REVENUE_LOGIN_URL,
 } from "@/lib/tax/command-center-revenue-actions";
+import { STAFF_REVENUE_ATTRIBUTION, STAFF_REVENUE_FIRM } from "@/lib/tax/staff-revenue-copy";
 
 const STAGE_COLORS = ["#b2d4ff", "#f5b82a", "#67a671", "#6887d6", "#fdd79a", "#ff6b6b", "#94a1b2", "#ffffff"];
 
@@ -51,6 +52,8 @@ export default async function HomePage() {
                 : "Awaiting Integration"}
               {" · "}
               Grants &amp; Co total revenue {formatUsd(data.finance.totalRevenueCents)} · season-to-date
+              {" · "}
+              {STAFF_REVENUE_ATTRIBUTION}
             </p>
           </div>
           <div className="hidden xl:flex flex-wrap gap-2">
@@ -78,7 +81,7 @@ export default async function HomePage() {
             value={formatUsd(data.finance.totalRevenueCents)}
             href={COMMAND_CENTER_TOTAL_REVENUE_HREF}
             spark={sparkCollect.slice(-7)}
-            hint="Grants & Co Consultants"
+            hint={STAFF_REVENUE_ATTRIBUTION}
             trend="SEASON-TO-DATE"
             tone="ok"
           />
@@ -145,7 +148,7 @@ export default async function HomePage() {
 
           <Panel
             title="Total Company Revenue"
-            eyebrow="Grants & Co Consultants · SEASON-TO-DATE"
+            eyebrow={`${STAFF_REVENUE_FIRM} · SEASON-TO-DATE`}
             className="gc-span-7"
             action={
               <OfficialLoginLink

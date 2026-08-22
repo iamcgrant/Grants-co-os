@@ -102,9 +102,10 @@ describe("Command Center Total Revenue mapping", () => {
     expect(home).toMatch(/SEASON-TO-DATE/);
     expect(home).toMatch(/Revenue trend/);
     expect(home).toMatch(/Total Company Revenue/);
-    expect(home).toMatch(/Grants & Co Consultants/);
+    expect(home).toMatch(/STAFF_REVENUE_ATTRIBUTION/);
     expect(home).not.toMatch(/117700|117,700/);
     expect(home).not.toMatch(/SBTPG/);
+    expect(home).not.toMatch(/from SBTPG|SBTPG collected|via SBTPG/i);
     expect(home).not.toMatch(/taxpayer/i);
     expect(home).not.toMatch(/SbtpgPayoutForm|SbtpgFeeSummaryIngestForm/);
     expect(home).not.toMatch(/<iframe/i);
@@ -125,6 +126,7 @@ describe("Command Center Total Revenue mapping", () => {
     expect(desk.unfundedCents).toBe(2_100_000);
     expect(desk.unfundedTaxpayerCount).toBe(12);
     expect(desk.source).toBe("SBTPG Fee Summary PAID");
+    expect(desk.staffAttribution).toBe("from Grants & Co Consultants");
     expect(desk.window).toBe("season-to-date");
     expect(desk.taxYear).toBe("2026");
     expect(desk.capturedOn).toBe("2026-08-22");
@@ -291,10 +293,14 @@ describe("persisted official Fee Summary → Command Center query", () => {
     expect(desk.totals.unfundedCents).toBe(2_100_000);
     expect(desk.totals.unfundedTaxpayerCount).toBe(12);
     expect(desk.totals.source).toBe("SBTPG Fee Summary PAID");
+    expect(desk.totals.staffAttribution).toBe("from Grants & Co Consultants");
     const page = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/sbtpg/page.tsx"), "utf8");
     expect(page).toMatch(/loadSbtpgDesk/);
     expect(page).toMatch(/totals\.totalRevenueCents/);
     expect(page).toMatch(/totals\.unfundedCents/);
+    expect(page).toMatch(/totals\.staffAttribution/);
+    expect(page).toMatch(/Official portal is SBTPG/);
+    expect(page).not.toMatch(/from SBTPG|SBTPG collected|via SBTPG/);
     expect(page).not.toMatch(/coming soon/i);
   });
 

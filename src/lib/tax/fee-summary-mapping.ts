@@ -3,6 +3,10 @@
  * Source: signed-in pro.sbtpg.com/account/dashboard. No invented daily split.
  */
 
+import { STAFF_REVENUE_ATTRIBUTION } from "@/lib/tax/staff-revenue-copy";
+
+export { STAFF_REVENUE_ATTRIBUTION } from "@/lib/tax/staff-revenue-copy";
+
 export const SBTPG_WINDOW_SEASON_TO_DATE = "season_to_date" as const;
 export const SBTPG_WINDOW_DATED = "dated" as const;
 
@@ -237,6 +241,7 @@ export type SbtpgDeskTotals = {
   unfundedCents: number;
   unfundedTaxpayerCount: number;
   source: "SBTPG Fee Summary PAID" | "SbtpgPayout PAID/FUNDED";
+  staffAttribution: typeof STAFF_REVENUE_ATTRIBUTION;
   window: "season-to-date" | "recorded-payouts";
   taxYear: string | null;
   capturedOn: string | null;
@@ -267,6 +272,7 @@ export function sbtpgDeskTotals(
       unfundedCents: liveOfficial.unfundedCents,
       unfundedTaxpayerCount: liveOfficial.unfundedTaxpayerCount,
       source: "SBTPG Fee Summary PAID",
+      staffAttribution: STAFF_REVENUE_ATTRIBUTION,
       window: "season-to-date",
       taxYear: liveOfficial.taxYear || null,
       capturedOn: liveOfficial.capturedOn || null,
@@ -280,6 +286,7 @@ export function sbtpgDeskTotals(
     unfundedCents: 0,
     unfundedTaxpayerCount: openFromBoard,
     source: "SbtpgPayout PAID/FUNDED",
+    staffAttribution: STAFF_REVENUE_ATTRIBUTION,
     window: "recorded-payouts",
     taxYear: null,
     capturedOn: null,

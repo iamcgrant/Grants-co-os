@@ -82,6 +82,25 @@ describe("login returnTo for Tax → SBTPG", () => {
   });
 });
 
+describe("staff-facing revenue attribution", () => {
+  it("labels Command Center and finance tiles from Grants & Co Consultants, not from SBTPG", () => {
+    const home = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/home/page.tsx"), "utf8");
+    const dashboard = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/dashboard/page.tsx"), "utf8");
+    const finance = fs.readFileSync(path.join(process.cwd(), "src/lib/payments/dashboard.ts"), "utf8");
+    const desk = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/sbtpg/page.tsx"), "utf8");
+    for (const src of [home, dashboard, finance]) {
+      expect(src).not.toMatch(/from SBTPG/);
+      expect(src).not.toMatch(/SBTPG collected/);
+      expect(src).not.toMatch(/via SBTPG/);
+    }
+    expect(home).toMatch(/STAFF_REVENUE_ATTRIBUTION/);
+    expect(home).not.toMatch(/SBTPG/);
+    expect(finance).toMatch(/STAFF_REVENUE_ATTRIBUTION/);
+    expect(desk).toMatch(/staffAttribution/);
+    expect(desk).toMatch(/Official portal is SBTPG/);
+  });
+});
+
 describe("official Fee Summary persist mapping", () => {
   it("maps the known capture onto snapshot + matching PAID/UNFUNDED payout rows", () => {
     const official = officialFeeSummaryFromCaptureKey("2026-08-22");
