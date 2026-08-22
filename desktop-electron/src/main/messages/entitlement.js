@@ -3,10 +3,25 @@
 const { OS_ORIGIN, APP_ID } = require("../../product");
 
 const ENTITLEMENT_PATH = "/api/desktop/owner-entitlement";
+const SESSION_PATH = "/api/auth/me";
 const PURPOSE = "desktop-messages-owner";
+const FALLBACK_MINUTES = 15;
 
 function entitlementUrl(origin = OS_ORIGIN) {
   return `${origin}${ENTITLEMENT_PATH}`;
+}
+
+function sessionUrl(origin = OS_ORIGIN) {
+  return `${origin}${SESSION_PATH}`;
+}
+
+function isOsHomeLoginUrl(urlString) {
+  try {
+    const parsed = new URL(String(urlString || ""));
+    return parsed.pathname === "/login" || parsed.pathname.startsWith("/login/");
+  } catch {
+    return false;
+  }
 }
 
 function parseEntitlementResponse(body, now = Date.now()) {
@@ -34,6 +49,26 @@ function parseEntitlementResponse(body, now = Date.now()) {
     role: "OWNER",
     exp: new Date(expMs).toISOString(),
     entitlement: typeof body.entitlement === "string" ? body.entitlement : "",
+    source: "signed-route",
+  };
+}
+
+function parseSessionEntitlement(body, now = Date.now()) {
+  const user = body && typeof body === "object" ? body.user : null;
+  if (!user || typeof user !== "object") {
+    return { entitled: false, reason: "unauthenticated" };
+  }
+  if (user.isActive !== true) {
+    return { entitled: false, reason: "inactive" };
+  }
+  if (user.role !== "OWNER") {
+    return { entitled: false, reason: "not-owner" };
+  }
+  return {
+    entitled: true,
+    role: "OWNER",
+    exp: new Date(now + FALLBACK_MINUTES * 60 * 1000).toISOString(),
+    source: "session-fallback",
   };
 }
 
@@ -60,33 +95,70 @@ function createEntitlementStore() {
   };
 }
 
+async function readJson(response) {
+  if (typeof response.json !== "function") return null;
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+async function sessionRequest({ netFetch, session, origin }) {
+  return netFetch(sessionUrl(origin), {
+    method: "GET",
+    session,
+    bypassCustomProtocolHandlers: true,
+  });
+}
+
+async function fetchSessionFallback({ netFetch, session, origin = OS_ORIGIN }) {
+  const response = await sessionRequest({ netFetch, session, origin });
+  const status = response.status;
+  if (status === 401 || status === 403) {
+    return { entitled: false, reason: status === 401 ? "unauthenticated" : "forbidden" };
+  }
+  if (!response.ok) {
+    return { entitled: false, reason: `session-http-${status}` };
+  }
+  return parseSessionEntitlement(await readJson(response));
+}
+
 /**
- * Fetch a server-signed owner entitlement using the OS Home partition session.
- * Cookies stay inside Chromium — this never calls cookies.get / export.
+ * Fetch owner entitlement using the OS Home partition session.
+ * The Chromium session is passed to net.fetch only. Cookie values are
+ * never read, listed, or exported. Dedicated signed route is primary.
+ * /api/auth/me is only used when that route is missing (404/501).
  */
 async function fetchOwnerEntitlement({ netFetch, session, origin = OS_ORIGIN }) {
-  const url = entitlementUrl(origin);
-  const response = await netFetch(url, {
+  const response = await netFetch(entitlementUrl(origin), {
     method: "GET",
     session,
     bypassCustomProtocolHandlers: true,
   });
   const status = response.status;
+  if (status === 404 || status === 501) {
+    return fetchSessionFallback({ netFetch, session, origin });
+  }
   if (status === 401 || status === 403) {
     return { entitled: false, reason: status === 401 ? "unauthenticated" : "forbidden" };
   }
   if (!response.ok) {
     return { entitled: false, reason: `http-${status}` };
   }
-  const body = await response.json();
-  return parseEntitlementResponse(body);
+  return parseEntitlementResponse(await readJson(response));
 }
 
 module.exports = {
   ENTITLEMENT_PATH,
+  SESSION_PATH,
   PURPOSE,
+  FALLBACK_MINUTES,
   entitlementUrl,
+  sessionUrl,
+  isOsHomeLoginUrl,
   parseEntitlementResponse,
+  parseSessionEntitlement,
   createEntitlementStore,
   fetchOwnerEntitlement,
 };

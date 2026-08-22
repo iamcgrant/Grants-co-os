@@ -25,7 +25,14 @@ const {
 const { senderIsTrusted, validatePayload } = require("../src/main/messages/ipc");
 const { redact, safeLog } = require("../src/main/messages/log");
 const { isMessagesDeskKilled } = require("../src/main/messages/kill-switch");
-const { parseEntitlementResponse, entitlementUrl } = require("../src/main/messages/entitlement");
+const {
+  parseEntitlementResponse,
+  parseSessionEntitlement,
+  entitlementUrl,
+  sessionUrl,
+  isOsHomeLoginUrl,
+  fetchOwnerEntitlement,
+} = require("../src/main/messages/entitlement");
 const { readPermissionStatus } = require("../src/main/messages/permissions");
 const {
   assertNoListenFlags,
@@ -131,6 +138,7 @@ describe("Messages helper and entitlement", () => {
     assert.ok(baseArgs("/tmp/cache").includes("--no-use-secondary-instance"));
     assert.equal(resolveHelperPath("/missing", { existsSync: () => false }), null);
     assert.match(entitlementUrl(), /\/api\/desktop\/owner-entitlement$/);
+    assert.match(sessionUrl(), /\/api\/auth\/me$/);
     assert.equal(Object.hasOwn(helperEnv({ IMESSAGE_CLI_HISTORY_FILE: "/tmp/plain.json" }), "IMESSAGE_CLI_HISTORY_FILE"), false);
   });
 
@@ -150,6 +158,63 @@ describe("Messages helper and entitlement", () => {
     });
     assert.equal(ok.entitled, true);
     assert.equal(parseEntitlementResponse({ entitled: true, role: "ADMIN", exp }).entitled, false);
+  });
+
+  it("falls back to /api/auth/me when the signed route is 404 or 501", async () => {
+    const calls = [];
+    const netFetch = async (url) => {
+      calls.push(new URL(url).pathname);
+      if (url.includes("/api/desktop/owner-entitlement")) {
+        return { status: 404, ok: false, json: async () => ({}) };
+      }
+      return {
+        status: 200,
+        ok: true,
+        json: async () => ({ user: { role: "OWNER", isActive: true } }),
+      };
+    };
+    const fallback = await fetchOwnerEntitlement({ netFetch, session: {} });
+    assert.deepEqual(calls, ["/api/desktop/owner-entitlement", "/api/auth/me"]);
+    assert.equal(fallback.entitled, true);
+    assert.equal(fallback.source, "session-fallback");
+    assert.equal(fallback.role, "OWNER");
+
+    const notImpl = await fetchOwnerEntitlement({
+      netFetch: async (url) => {
+        if (url.includes("/owner-entitlement")) return { status: 501, ok: false, json: async () => ({}) };
+        return { status: 200, ok: true, json: async () => ({ user: { role: "OWNER", isActive: true } }) };
+      },
+      session: {},
+    });
+    assert.equal(notImpl.entitled, true);
+    assert.equal(notImpl.source, "session-fallback");
+  });
+
+  it("does not entitle unauthenticated or non-owner session fallbacks", async () => {
+    const unauthenticated = await fetchOwnerEntitlement({
+      netFetch: async (url) => {
+        if (url.includes("/owner-entitlement")) return { status: 404, ok: false, json: async () => ({}) };
+        return { status: 401, ok: false, json: async () => ({ user: null }) };
+      },
+      session: {},
+    });
+    assert.equal(unauthenticated.entitled, false);
+    assert.equal(unauthenticated.reason, "unauthenticated");
+
+    const staff = await fetchOwnerEntitlement({
+      netFetch: async (url) => {
+        if (url.includes("/owner-entitlement")) return { status: 404, ok: false, json: async () => ({}) };
+        return { status: 200, ok: true, json: async () => ({ user: { role: "ADMIN", isActive: true } }) };
+      },
+      session: {},
+    });
+    assert.equal(staff.entitled, false);
+    assert.equal(staff.reason, "not-owner");
+
+    const inactive = parseSessionEntitlement({ user: { role: "OWNER", isActive: false } });
+    assert.equal(inactive.entitled, false);
+    assert.equal(isOsHomeLoginUrl("https://os.grantandconsultants.com/login?gc_shell=app"), true);
+    assert.equal(isOsHomeLoginUrl("https://os.grantandconsultants.com/home"), false);
   });
 
   it("hides the desk when the kill switch is on and never logs message text", () => {
@@ -309,13 +374,18 @@ describe("Messages source invariants", () => {
     const helper = fs.readFileSync(path.join(root, "src/main/messages/helper.js"), "utf8");
     const main = fs.readFileSync(path.join(root, "src/main/index.js"), "utf8");
     const supervisor = fs.readFileSync(path.join(root, "src/main/messages/supervisor.js"), "utf8");
+    const entitlement = fs.readFileSync(path.join(root, "src/main/messages/entitlement.js"), "utf8");
     assert.doesNotMatch(helper, /createServer|net\.createServer|new WebSocket|beeper\.com|matrix\.org/i);
     assert.doesNotMatch(supervisor, /send-text|auto-reply|auto-send/);
     assert.doesNotMatch(main, /cookies\.get|cookies\.set|ses\.cookies/);
+    assert.doesNotMatch(entitlement, /cookies\.get|cookies\.set|ses\.cookies/);
+    assert.match(entitlement, /\/api\/auth\/me/);
     assert.match(main, /There is no grantscoos/);
     assert.match(main, /messagesTrusted/);
     assert.match(main, /startOwnerAutonomy/);
     assert.match(main, /powerMonitor/);
+    assert.match(main, /isOsHomeLoginUrl/);
+    assert.match(main, /did-navigate/);
     const messagesHtml = fs.readFileSync(path.join(root, "src/messages/index.html"), "utf8");
     assert.doesNotMatch(messagesHtml, /type="password"|BlueBubbles|AirMessage|pypush/i);
     assert.match(messagesHtml, /does not ask for/);

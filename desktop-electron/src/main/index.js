@@ -26,7 +26,7 @@ const {
 } = require("./security");
 const { chromeBounds, vendorBounds } = require("./layout");
 const { attachDownloadHandler } = require("./downloads");
-const { createEntitlementStore, fetchOwnerEntitlement } = require("./messages/entitlement");
+const { createEntitlementStore, fetchOwnerEntitlement, isOsHomeLoginUrl } = require("./messages/entitlement");
 const { isMessagesDeskKilled } = require("./messages/kill-switch");
 const { createHelper } = require("./messages/helper");
 const { readPermissionStatus, settingsTarget } = require("./messages/permissions");
@@ -246,17 +246,22 @@ function attachNavigationGuards(contents, desk) {
   });
   contents.on("did-stop-loading", () => {
     pushState();
-    if (desk.id === "os" && !SMOKE) {
+    if (desk.id === "os" && !SMOKE && !isOsHomeLoginUrl(contents.getURL())) {
       refreshEntitlement().catch(() => {});
     }
   });
-  contents.on("did-navigate", () => {
+  contents.on("did-navigate", (_event, url) => {
     pushState();
-    if (desk.id === "os" && !SMOKE) {
+    if (desk.id === "os" && !SMOKE && !isOsHomeLoginUrl(url || contents.getURL())) {
       refreshEntitlement().catch(() => {});
     }
   });
-  contents.on("did-navigate-in-page", () => pushState());
+  contents.on("did-navigate-in-page", (_event, url) => {
+    pushState();
+    if (desk.id === "os" && !SMOKE && !isOsHomeLoginUrl(url || contents.getURL())) {
+      refreshEntitlement().catch(() => {});
+    }
+  });
   contents.on("page-title-updated", () => pushState());
   contents.on("did-fail-load", (_event, code, desc, _url, isMainFrame) => {
     if (!isMainFrame) return;
