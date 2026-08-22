@@ -43,7 +43,7 @@ export default async function HomePage() {
                 ? `${data.ops.ghlLinked} linked · ${data.ops.ghlLiveLinked} live API`
                 : "Awaiting Integration"}
               {" · "}
-              Grants &amp; Co total revenue {formatUsd(data.finance.totalRevenueCents)} · season-to-date
+              Total Company Revenue {formatUsd(data.finance.totalRevenueCents)} · Grants &amp; Co Consultants · SEASON-TO-DATE
             </p>
           </div>
           <div className="hidden xl:flex flex-wrap gap-2">
@@ -62,19 +62,19 @@ export default async function HomePage() {
         {/* KPI strip — always 4 across on desktop */}
         <div className="gc-dash-grid gc-dash-grid-4">
           <MetricTile
-            label="Total Revenue"
+            label="Total Company Revenue"
             value={formatUsd(data.finance.totalRevenueCents)}
             href="/tax/sbtpg"
             spark={sparkCollect.slice(-7)}
             hint="Grants & Co Consultants"
-            trend="Season-to-date"
+            trend="SEASON-TO-DATE"
             tone="ok"
           />
           <MetricTile
             label="Unfunded"
             value={formatUsd(data.finance.unfundedCents)}
             href="/tax/sbtpg"
-            hint="Pending · not in Total Revenue"
+            hint="Pending · not in Total Company Revenue"
             tone="warn"
           />
           <MetricTile
@@ -133,16 +133,16 @@ export default async function HomePage() {
 
           <Panel
             title="Revenue trend"
-            eyebrow="Grants & Co Consultants · season-to-date"
+            eyebrow="Grants & Co Consultants · SEASON-TO-DATE"
             className="gc-span-7"
             action={<span className="display text-xl text-[var(--gc-ice)]">{monthLabel}</span>}
           >
             <p className="text-xs text-[var(--gc-muted)] mb-3">
-              Total company revenue is season-to-date. Today and this week stay empty without a dated
+              Total Company Revenue is SEASON-TO-DATE. Today and this week stay empty without a dated
               Grants Pay charge. Unfunded is pending only and is not added.
             </p>
             <LineChart
-              series={[{ name: "Total Revenue", color: "#b2d4ff", values: data.revenueTrend.values }]}
+              series={[{ name: "Total Company Revenue", color: "#b2d4ff", values: data.revenueTrend.values }]}
               labels={data.revenueTrend.labels}
             />
             <div className="gc-dash-grid gc-dash-grid-4 mt-4">

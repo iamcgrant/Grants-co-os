@@ -89,17 +89,24 @@ describe("Command Center Total Revenue mapping", () => {
     expect(revenue.collectedTodayCents).toBe(184000);
   });
 
-  it("keeps the home Command Center on queried Total Revenue, not a canvas zero", () => {
+  it("keeps the home Command Center on queried Total Company Revenue, not a canvas zero", () => {
     const home = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/home/page.tsx"), "utf8");
-    expect(home).toMatch(/label="Total Revenue"/);
+    expect(home).toMatch(/label="Total Company Revenue"/);
+    expect(home).toMatch(/Grants & Co Consultants/);
+    expect(home).toMatch(/SEASON-TO-DATE/);
+    expect(home).toMatch(/Revenue trend/);
+    expect(home).toMatch(/name: "Total Company Revenue"/);
     expect(home).toMatch(/data\.finance\.totalRevenueCents/);
     expect(home).toMatch(/data\.finance\.unfundedCents/);
-    expect(home).toMatch(/href="\/tax\/sbtpg"/);
-    expect(home).toMatch(/Season-to-date/);
-    expect(home).toMatch(/Revenue trend/);
+    expect(home).toMatch(/label="Unfunded"/);
+    expect(official.paidCents).toBe(11_770_000);
     expect(home).not.toMatch(/117700|117,700/);
+    expect(home).not.toMatch(/totalRevenueSource|totalRevenueTaxpayerCount|unfundedTaxpayerCount/);
     expect(home).not.toMatch(/SBTPG/);
     expect(home).not.toMatch(/taxpayer/i);
+    expect(home).not.toMatch(/tax program/i);
+    expect(home).not.toMatch(/Fee Summary/);
+    expect(home).not.toMatch(/\bERO\b/);
     expect(home).not.toMatch(/SbtpgPayoutForm|SbtpgFeeSummaryIngestForm/);
     expect(home).not.toMatch(/cheerio|puppeteer|playwright/i);
   });
