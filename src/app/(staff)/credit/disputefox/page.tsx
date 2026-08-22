@@ -1,28 +1,38 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { requireCreditStaff } from "@/lib/disputes/access";
-import { loadDisputeFoxDeskSafe } from "@/lib/disputes/desk-load";
 import { DISPUTE_CASE_STATUSES, channelCatalog, statusLabel } from "@/lib/disputes/channels";
 import { CreditDeskUnavailable } from "@/components/disputes/CreditDeskUnavailable";
 import { NewCaseForm } from "@/components/disputes/NewCaseForm";
 import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
 import type { AuthUser } from "@/lib/auth/session";
+import {
+  emptyDisputeFoxDesk,
+  loadDisputeFoxDeskSafe,
+  type DisputeFoxDeskData,
+} from "@/lib/disputes/desk-load";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 function stageLabel(stage: unknown): string {
   if (typeof stage !== "string" || !stage.trim()) return "—";
   return stage.replaceAll("_", " ");
 }
 
-async function DisputeFoxDesk({ user }: { user: AuthUser }) {
+function DisputeFoxDesk({ user, desk }: { user: AuthUser; desk: DisputeFoxDeskData }) {
   const catalog = channelCatalog("DISPUTEFOX");
-  const { board, probe, clients, loadError } = await loadDisputeFoxDeskSafe();
+  const board = Array.isArray(desk.board) ? desk.board : [];
+  const clients = Array.isArray(desk.clients) ? desk.clients : [];
+  const { loadError } = desk;
   const canManage = hasPermission(user.role, "MANAGE_CREDIT");
   const openCases = board.filter((row) => row.case && row.case.status !== "CLOSED");
   const itemCount = board.reduce((sum, row) => sum + (row.case?.items?.length ?? 0), 0);
   const readyCount = board.filter((row) => row.case?.status === "READY").length;
-  const probeStatus = typeof probe?.status === "string" ? probe.status.replaceAll("_", " ") : "OFFLINE";
+  const probeStatus = typeof desk.probe?.status === "string" ? desk.probe.status.replaceAll("_", " ") : "OFFLINE";
   const probeDetail =
-    probe?.detail || "DisputeFox desk data could not load. Official portal is last-step only. No scrape.";
+    desk.probe?.detail || "DisputeFox desk data could not load. Official portal is last-step only. No scrape.";
 
   return (
     <div className="gc-fade-up">
@@ -145,13 +155,24 @@ async function DisputeFoxDesk({ user }: { user: AuthUser }) {
   );
 }
 
-export default async function DisputeFoxWorkspacePage() {
-  const { user, denied } = await requireCreditStaff();
-  if (denied || !user) return <p>Access denied.</p>;
+async function DisputeFoxDeskLoaded({ user }: { user: AuthUser }) {
   try {
-    return await DisputeFoxDesk({ user });
+    const desk = await loadDisputeFoxDeskSafe();
+    return <DisputeFoxDesk user={user} desk={desk} />;
   } catch (error) {
     console.error("[DISPUTEFOX] desk render failed", error);
     return <CreditDeskUnavailable channel="DISPUTEFOX" />;
   }
+}
+
+export default async function DisputeFoxWorkspacePage() {
+  const { user, denied } = await requireCreditStaff();
+  if (denied || !user) return <p>Access denied.</p>;
+  // First byte is always an empty desk. A hung Neon/Prisma board must not
+  // block the document — that is the first-click production 500.
+  return (
+    <Suspense fallback={<DisputeFoxDesk user={user} desk={emptyDisputeFoxDesk()} />}>
+      <DisputeFoxDeskLoaded user={user} />
+    </Suspense>
+  );
 }
