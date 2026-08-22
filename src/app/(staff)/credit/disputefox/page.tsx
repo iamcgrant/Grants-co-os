@@ -6,6 +6,7 @@ import { DISPUTE_CASE_STATUSES, channelCatalog, statusLabel } from "@/lib/disput
 import { CreditDeskUnavailable } from "@/components/disputes/CreditDeskUnavailable";
 import { NewCaseForm } from "@/components/disputes/NewCaseForm";
 import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
+import { OpenPortalLaunch } from "@/components/desk/OpenPortalLaunch";
 import type { AuthUser } from "@/lib/auth/session";
 import {
   emptyDisputeFoxDesk,
@@ -37,7 +38,10 @@ function DisputeFoxDesk({ user, desk }: { user: AuthUser; desk: DisputeFoxDeskDa
   return (
     <div className="gc-fade-up">
       <p className="gc-eyebrow mb-2">{catalog.eyebrow}</p>
-      <h1 className="text-4xl md:text-5xl mb-2">DisputeFox</h1>
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-2">
+        <h1 className="text-4xl md:text-5xl">DisputeFox</h1>
+        {catalog.officialSubmitUrl ? <OpenPortalLaunch href={catalog.officialSubmitUrl} /> : null}
+      </div>
       <p className="gc-section-sub mb-6 max-w-3xl">{catalog.honesty}</p>
 
       <div className="gc-grid-dense gc-grid-dense-4 mb-8">

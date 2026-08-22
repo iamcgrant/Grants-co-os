@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { OfficialLoginLink } from "@/components/desk/OfficialLoginLink";
+import { OpenPortalLaunch } from "@/components/desk/OpenPortalLaunch";
 import { OFFICIAL_TELEGRAM_LOGIN_URL } from "@/lib/nav/official-login-urls";
 
 type Chat = {
@@ -85,7 +86,8 @@ export function TelegramTeamInbox() {
       <aside className="gc-panel !p-0 overflow-hidden">
         <div className="px-4 py-3 border-b border-[var(--gc-border)]">
           <p className="gc-eyebrow mb-1">Telegram</p>
-          <p className="font-medium">Team chats</p>
+          <p className="font-medium mb-3">Team chats</p>
+          <OpenPortalLaunch href={OFFICIAL_TELEGRAM_LOGIN_URL} />
         </div>
         <div className="divide-y divide-[var(--gc-border)]">
           {chats.map((chat) => (

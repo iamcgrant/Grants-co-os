@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { getDesktopNav, getStaffNav, navSectionLabel, roleDisplayName, TAX_NAV } from "@/lib/nav/role-nav";
+import { sidebarClickHref } from "@/lib/nav/official-logins";
 import type { AuthUserView } from "@/lib/auth/types";
 import type { NavItem, StaffRole } from "@/lib/nav/role-nav";
 
@@ -19,14 +20,16 @@ function SidebarDest({
   children: React.ReactNode;
   "data-active"?: boolean;
 }) {
-  if (isExternalHref(item.href)) {
+  const clickHref = sidebarClickHref(item);
+  if (isExternalHref(clickHref)) {
     return (
       <a
-        href={item.href}
+        href={clickHref}
         className={className}
         data-active={dataActive}
         data-nav={item.label}
-        data-nav-href={item.href}
+        data-nav-href={clickHref}
+        data-os-workspace={item.href}
         target="_blank"
         rel="noopener noreferrer"
       >
@@ -35,7 +38,7 @@ function SidebarDest({
     );
   }
   return (
-    <Link href={item.href} className={className} data-active={dataActive} data-nav={item.label} data-nav-href={item.href}>
+    <Link href={clickHref} className={className} data-active={dataActive} data-nav={item.label} data-nav-href={clickHref}>
       {children}
     </Link>
   );
@@ -71,7 +74,8 @@ export function StaffShell({
     if (href.includes("view=jona") && pathname.includes("view=jona")) return true;
     if (base === "/team-chat" && (pathBase === "/team-chat" || pathname.includes("tab=team"))) return true;
     if (href.includes("tab=gmail")) return pathname.includes("tab=gmail");
-    if (base === "/inbox" && pathname.includes("tab=gmail")) return false;
+    if (href.includes("tab=ghl")) return pathname.includes("tab=ghl");
+    if (base === "/inbox" && (pathname.includes("tab=gmail") || pathname.includes("tab=ghl"))) return false;
     if (base === "/home") return pathBase === "/home";
     if (base === "/credit") {
       return (

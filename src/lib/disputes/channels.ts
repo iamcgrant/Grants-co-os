@@ -1,3 +1,5 @@
+import { experianOfficialClickUrl } from "@/lib/nav/official-login-urls";
+
 export type DisputeChannel =
   | "DISPUTEFOX"
   | "EXPERIAN"
@@ -70,7 +72,7 @@ export const DISPUTE_CHANNELS: Record<DisputeChannel, ChannelCatalog> = {
     eyebrow: "Credit & Disputes",
     hasOfficialSubmitApi: false,
     hasOfficialPortal: true,
-    officialSubmitUrl: "https://www.experian.com/disputes/main.html",
+    officialSubmitUrl: experianOfficialClickUrl(),
     canSubmitInApp: false,
     scrape: false,
     eOscarAvailable: false,

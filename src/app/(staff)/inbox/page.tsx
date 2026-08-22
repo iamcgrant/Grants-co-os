@@ -13,6 +13,7 @@ import { GhlConversationPullPanel } from "@/components/integrations/GhlConversat
 import { GhlLocationInbox } from "@/components/inbox/GhlLocationInbox";
 import { GmailWorkInbox } from "@/components/inbox/GmailWorkInbox";
 import { OfficialLoginLink } from "@/components/desk/OfficialLoginLink";
+import { OpenPortalLaunch } from "@/components/desk/OpenPortalLaunch";
 import { OFFICIAL_GHL_LOGIN_URL } from "@/lib/nav/official-login-urls";
 
 export default async function InboxPage({
@@ -77,6 +78,7 @@ export default async function InboxPage({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <OpenPortalLaunch href={OFFICIAL_GHL_LOGIN_URL} />
           <Link href="/inbox?tab=all" className={`gc-btn text-xs ${tab === "all" ? "gc-btn-primary" : "gc-btn-outline"}`}>All</Link>
           <Link href="/inbox?tab=client" className={`gc-btn text-xs ${tab === "client" ? "gc-btn-primary" : "gc-btn-outline"}`}>Client</Link>
           <Link href="/inbox?tab=ghl" className={`gc-btn text-xs ${tab === "ghl" ? "gc-btn-primary" : "gc-btn-outline"}`}>GHL</Link>

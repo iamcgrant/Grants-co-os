@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { OfficialLoginLink } from "@/components/desk/OfficialLoginLink";
+import { OpenPortalLaunch } from "@/components/desk/OpenPortalLaunch";
 import { OFFICIAL_GHL_LOGIN_URL } from "@/lib/nav/official-login-urls";
 
 type VoiceStatus = {
@@ -71,6 +72,9 @@ export function DialerWorkspace({
         <p className="text-sm text-[var(--gc-muted)] mt-1">
           Uses existing GHL numbers only. No Twilio or Telnyx.
         </p>
+        <div className="mt-3">
+          <OpenPortalLaunch href={OFFICIAL_GHL_LOGIN_URL} />
+        </div>
       </div>
 
       <div className="flex items-center justify-between gap-3">
