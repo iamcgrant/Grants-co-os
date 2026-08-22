@@ -6,6 +6,7 @@ import { probeCognitoHealth } from "@/lib/integrations/cognito/health";
 import { isGhlApiReady } from "@/lib/integrations/ghl/http";
 import { probeGhlSmsEmailPath, probeGhlVoiceHealth } from "@/lib/integrations/ghl/probes";
 import { probeTelegramTeam } from "@/lib/integrations/telegram/workspace";
+import { probeGmailInbox } from "@/lib/integrations/gmail/workspace";
 import { getGcEnvironment } from "@/lib/integrations/env";
 import { probeDisputeFoxApi } from "@/lib/integrations/disputefox/probe";
 import { probeSmartCreditHealth } from "@/lib/credit/smartcredit-health";
@@ -181,10 +182,11 @@ export async function collectSystemHealth(): Promise<{
   const outboundEmailAt = isoOrNull(lastGhlOutboundEmail?.createdAt);
   const ghlWebhookAt = isoOrNull(lastGhlWebhook?.processedAt);
 
-  const [smsEmailProbe, voiceProbe, telegramProbe] = await Promise.all([
+  const [smsEmailProbe, voiceProbe, telegramProbe, gmailProbe] = await Promise.all([
     probeGhlSmsEmailPath(),
     probeGhlVoiceHealth(),
     probeTelegramTeam(),
+    probeGmailInbox(),
   ]);
 
   const ghlAuth = ghlAuthHealth(ghlReady, authSuccessAt);
@@ -232,6 +234,14 @@ export async function collectSystemHealth(): Promise<{
     { ...email, lastCheckedAt: checkedAt },
     { ...voice, lastCheckedAt: checkedAt },
     { ...telegram, lastCheckedAt: checkedAt },
+    {
+      component: "gmail",
+      label: "Work Gmail",
+      status: gmailProbe.status,
+      detail: gmailProbe.detail,
+      lastSuccessAt: gmailProbe.lastSuccessAt,
+      lastCheckedAt: checkedAt,
+    },
     { ...ghlWebhook, lastCheckedAt: checkedAt },
     { ...disputeFox, lastCheckedAt: checkedAt },
     { ...smartCredit, lastCheckedAt: checkedAt },

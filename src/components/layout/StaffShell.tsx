@@ -33,6 +33,8 @@ export function StaffShell({
     const base = href.split("?")[0];
     if (href.includes("view=jona") && pathname.includes("view=jona")) return true;
     if (base === "/team-chat" && (pathBase === "/team-chat" || pathname.includes("tab=team"))) return true;
+    if (href.includes("tab=gmail")) return pathname.includes("tab=gmail");
+    if (base === "/inbox" && pathname.includes("tab=gmail")) return false;
     if (base === "/home") return pathBase === "/home";
     if (base === "/credit") {
       return (

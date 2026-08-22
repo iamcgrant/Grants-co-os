@@ -83,6 +83,8 @@ describe("Credit & Disputes navigation", () => {
     expect(nav.find((item) => item.label === "Cloud Tax Office")?.href).toBe("/tax/cloud-tax-office");
     expect(nav.find((item) => item.label === "Cognito")?.href).toBe("/tax/cognito");
     expect(nav.find((item) => item.label === "SBTPG")?.href).toBe("/tax/sbtpg");
+    expect(nav.find((item) => item.label === "Telegram")?.href).toBe("/team-chat");
+    expect(nav.find((item) => item.label === "Gmail")?.href).toBe("/inbox?tab=gmail");
   });
 
   it("keeps mobile bottom nav lean", () => {

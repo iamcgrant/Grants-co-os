@@ -142,7 +142,7 @@ export default async function MorePage() {
           </div>
           <div className="gc-card">
             <p className="text-[0.62rem] tracking-[0.14em] uppercase text-[var(--gc-muted)] mb-2">Communication</p>
-            <p className="font-medium mb-1">GHL client desk · Telegram team</p>
+            <p className="font-medium mb-1">GHL client desk · Telegram · Gmail</p>
             <p className="text-xs text-[var(--gc-muted)]">
               GHL SMS/email/voice desk · Telegram team · {ghlReady ? "LeadConnector configured" : "Awaiting Integration"}
             </p>
