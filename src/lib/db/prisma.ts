@@ -5,6 +5,7 @@
 import path from "node:path";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient } from "@/generated/prisma/client";
+import { createPostgresPrismaClient } from "@/lib/db/prisma-postgres";
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
@@ -19,13 +20,7 @@ function createPrismaClient(): PrismaClient {
   const url = process.env.DATABASE_URL || "";
 
   if (isPostgresUrl(url)) {
-    // Production / Vercel + Neon|Supabase path. Generated with prisma/schema.postgres.prisma.
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { Pool } = require("pg") as typeof import("pg");
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { PrismaPg } = require("@prisma/adapter-pg") as typeof import("@prisma/adapter-pg");
-    const pool = new Pool({ connectionString: url });
-    return new PrismaClient({ adapter: new PrismaPg(pool) });
+    return createPostgresPrismaClient(url);
   }
 
   // Local Cloud Agent / Vitest — unchanged sqlite adapter path.
