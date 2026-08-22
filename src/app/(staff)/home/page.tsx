@@ -79,7 +79,7 @@ export default async function HomePage() {
             href={COMMAND_CENTER_TOTAL_REVENUE_HREF}
             spark={sparkCollect.slice(-7)}
             hint="Grants & Co Consultants"
-            trend="Season-to-date"
+            trend="SEASON-TO-DATE"
             tone="ok"
           />
           <MetricTile
@@ -144,8 +144,8 @@ export default async function HomePage() {
           </Panel>
 
           <Panel
-            title="Revenue trend"
-            eyebrow="Grants & Co Consultants · season-to-date"
+            title="Total Company Revenue"
+            eyebrow="Grants & Co Consultants · SEASON-TO-DATE"
             className="gc-span-7"
             action={
               <OfficialLoginLink
@@ -156,12 +156,12 @@ export default async function HomePage() {
             }
           >
             <p className="text-xs text-[var(--gc-muted)] mb-3">
-              Total company revenue is season-to-date. Today and this week stay empty without a dated
-              Grants Pay charge. Unfunded is pending only and is not added.
+              Revenue trend is season-to-date and matches Total Revenue. Today and this week stay empty
+              without a dated Grants Pay charge. Unfunded is pending only and is not added.
             </p>
             <p className="display text-xl text-[var(--gc-ice)] mb-3">{monthLabel}</p>
             <LineChart
-              series={[{ name: "Total Revenue", color: "#b2d4ff", values: data.revenueTrend.values }]}
+              series={[{ name: "Total Company Revenue", color: "#b2d4ff", values: data.revenueTrend.values }]}
               labels={data.revenueTrend.labels}
             />
             <div className="gc-dash-grid gc-dash-grid-4 mt-4">

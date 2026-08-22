@@ -99,8 +99,10 @@ describe("Command Center Total Revenue mapping", () => {
     expect(home).toMatch(/COMMAND_CENTER_UPDATE_REVENUE_LABEL/);
     expect(home).toMatch(/OfficialLoginLink/);
     expect(home).toMatch(/OfficialFeeSummaryPersistForm/);
-    expect(home).toMatch(/Season-to-date/);
+    expect(home).toMatch(/SEASON-TO-DATE/);
     expect(home).toMatch(/Revenue trend/);
+    expect(home).toMatch(/Total Company Revenue/);
+    expect(home).toMatch(/Grants & Co Consultants/);
     expect(home).not.toMatch(/117700|117,700/);
     expect(home).not.toMatch(/SBTPG/);
     expect(home).not.toMatch(/taxpayer/i);
