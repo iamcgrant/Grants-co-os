@@ -2,11 +2,11 @@
  * SmartCredit sponsored enrollment — preserve Grants & Co affiliate attribution.
  *
  * Configure via env (never hard-code secrets or personal login passwords):
- * - SMARTCREDIT_SPONSOR_URL  → your personal/partner signup link
+ * - SMARTCREDIT_SPONSOR_URL  → partner signup link
  * - SMARTCREDIT_SPONSOR_CODE → sponsor/partner code if separate from the URL
  *
- * Example URL shape (yours may differ):
- *   https://www.smartcredit.com/join/?pid=YOUR_PID
+ * Production Grants & Co value (set in Vercel / Cursor Secrets, not in code):
+ *   SMARTCREDIT_SPONSOR_URL=https://www.smartcredit.com/join/?pid=69411
  *
  * Important: never strip or overwrite `pid` / affiliate params — that is the payout attribution.
  */

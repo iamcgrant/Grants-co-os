@@ -94,8 +94,8 @@ There is **no public SmartCredit score or client-list API**. Do not scrape. Offi
 **Health:** `CONNECTED` only after a live `SMARTCREDIT_API_PROBE_URL` GET, or a recorded OS operation (session, enrollment, submitted case). `SMARTCREDIT_SPONSOR_URL` / `SMARTCREDIT_API_KEY` presence is never `CONNECTED`.
 
 **Attribution (still required for enroll payouts):**
-1. Full sponsor URL → `SMARTCREDIT_SPONSOR_URL` (best)  
-   Example shape: `https://www.smartcredit.com/join/?pid=YOUR_PID`
+1. Full sponsor URL → `SMARTCREDIT_SPONSOR_URL` (Vercel / Cursor Secrets, not hardcoded)  
+   Production Grants & Co: `https://www.smartcredit.com/join/?pid=69411`
 2. And/or sponsor code → `SMARTCREDIT_SPONSOR_CODE`
 
 Optional future partner API (not required for the desk):
