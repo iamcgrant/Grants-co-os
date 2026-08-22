@@ -4,9 +4,9 @@ Matching is **exact hostname equality** (case-insensitive). No wildcards. No `*.
 
 `app.gohighlevel.com` does **not** allow `gohighlevel.com`, `www.gohighlevel.com`, or `foo.app.gohighlevel.com`.
 
-Only **top-level** navigations, redirects, and `window.open` / popups are filtered. Subresources (XHR, scripts, websockets, images) are not rewritten and are not header-stripped. That is intentional: this spike does not intercept provider traffic.
+Only **top-level** navigations, redirects, and `window.open` / popups are filtered. Subresources (XHR, scripts, websockets, images) are not rewritten and are not header-stripped.
 
-## Locked first-wave hosts
+## Official first-wave hosts
 
 | Desk | Official start URL | Allowed hosts (exact) |
 |------|--------------------|------------------------|
@@ -20,6 +20,8 @@ Only **top-level** navigations, redirects, and `window.open` / popups are filter
 
 Source of truth: `src/main/desks.js`.
 
+Messages is not a host allowlist desk. It is a trusted local workspace and is hidden unless a server-signed owner entitlement is valid.
+
 ## What happens off-allowlist
 
 | Event | Behavior |
@@ -28,10 +30,10 @@ Source of truth: `src/main/desks.js`.
 | `http:`, `javascript:`, `file:`, `grantscoos://`, invalid URL | Block. Do not open. |
 | Allowed-host popup | Unprivileged window, same partition, no preload |
 | Unknown-host popup | Denied in-shell; https may open in the system browser |
-| User clicks **Open securely in browser** | Official **start URL** only, https, system browser, spike stays open |
+| **Open securely in browser** | Shown only after a failed load, blocked navigation, certificate error, or crashed renderer. Official **start URL** only. |
 
-Additional exact hosts must be added **explicitly** after a Windows observation — never via suffix matching or a guessed CDN list.
+Additional exact hosts must be added **explicitly** after observation — never via suffix matching or a guessed CDN list.
 
 ## Protocols we will not add
 
-No provider has officially documented a `grantscoos://` (or other Grants-controlled) redirect URI for these six products. This spike does not register one.
+No provider has officially documented a `grantscoos://` redirect URI for these products. Grant & Co OS does not register one.

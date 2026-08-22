@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'"
+    />
+    <title>Messages</title>
+    <link rel="stylesheet" href="./messages.css" />
+  </head>
+  <body>
+    <div id="app" class="app">
+      <section id="setup" class="setup">
+        <h1>Messages</h1>
+        <p class="lede">
+          Uses the Messages app already signed in on this Mac. Grant &amp; Co OS does not ask for
+          your Apple ID and is not an Apple-supported public iMessage API.
+        </p>
+        <p id="setup-status" class="status">Checking this Mac…</p>
+        <ul class="panes">
+          <li>
+            <span>Messages Data / Full Disk Access</span>
+            <button type="button" data-pane="messages-data">Open System Settings</button>
+          </li>
+          <li>
+            <span>Accessibility</span>
+            <button type="button" data-pane="accessibility">Open System Settings</button>
+          </li>
+          <li>
+            <span>Automation</span>
+            <button type="button" data-pane="automation">Open System Settings</button>
+          </li>
+          <li>
+            <span>Contacts</span>
+            <button type="button" data-pane="contacts">Open System Settings</button>
+          </li>
+        </ul>
+        <div class="actions">
+          <button type="button" id="btn-recheck">Recheck</button>
+          <button type="button" id="btn-open-messages">Open Apple Messages</button>
+        </div>
+      </section>
+      <section id="inbox" class="inbox" hidden>
+        <aside>
+          <header>
+            <strong>Messages</strong>
+            <button type="button" id="btn-disconnect">Disconnect Messages</button>
+          </header>
+          <input id="search" type="search" placeholder="Search" autocomplete="off" />
+          <nav id="conversations"></nav>
+        </aside>
+        <section class="thread">
+          <header>
+            <strong id="thread-title">Select a conversation</strong>
+            <button type="button" id="btn-open-thread">Open in Apple Messages</button>
+          </header>
+          <div id="thread-body" class="thread-body"></div>
+          <form id="composer">
+            <input id="compose-text" type="text" maxlength="8000" placeholder="Message" autocomplete="off" />
+            <button type="button" id="btn-attach">Attach</button>
+            <button type="submit">Send</button>
+          </form>
+        </section>
+      </section>
+    </div>
+    <script src="./messages.js"></script>
+  </body>
+</html>
