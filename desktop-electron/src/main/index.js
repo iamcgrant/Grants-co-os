@@ -129,7 +129,7 @@ function authReturnMessage(desk, host) {
   return (
     `${desk.title} left the exact allowlist (${host || "unknown host"}). ` +
     `The official login stays available here. If sign-in needs another host, ` +
-    `use Open securely in browser, finish there, then return to this spike. ` +
+    `use Open securely in browser, finish there, then return to Grant & Co OS. ` +
     `There is no grantscoos:// return — no provider documents that redirect.`
   );
 }
@@ -146,7 +146,7 @@ function handleUnknownNavigation(desk, decision, { openExternal }) {
     openHttpsInSystemBrowser(decision.url).catch(() => {});
   }
   setNotice({
-    kind: "warn",
+    kind: "system-browser",
     message: authReturnMessage(desk, decision.host),
   });
 }
@@ -209,7 +209,7 @@ function preparePartition(desk) {
     callback(false);
     setNotice({
       kind: "warn",
-      message: `Denied “${permission}” on ${desk.title}. This spike does not grant vendor-page permissions.`,
+      message: `Denied “${permission}” on ${desk.title}. Grant & Co OS does not grant extra permissions to vendor pages.`,
     });
   });
   ses.setPermissionCheckHandler(() => false);
@@ -337,7 +337,7 @@ async function openOfficialInBrowser(id) {
   setNotice({
     kind: opened ? "info" : "error",
     message: opened
-      ? `Opened the official ${desk.title} login in your system browser. This spike stays open. Return here after sign-in. No grantscoos:// return exists.`
+      ? `Opened the official ${desk.title} login in your system browser. Grant & Co OS stays open. Return here after sign-in. No grantscoos:// return exists.`
       : `Could not open the official ${desk.title} URL.`,
   });
   return snapshot();
@@ -364,7 +364,7 @@ function createWindow() {
     height: 900,
     minWidth: 1100,
     minHeight: 720,
-    title: "Grants & Co OS — Electron spike",
+    title: "Grant & Co OS",
     backgroundColor: "#16161a",
     show: false,
   });
