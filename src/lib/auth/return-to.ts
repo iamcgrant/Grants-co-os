@@ -29,6 +29,7 @@ export function loginHref(returnTo?: string | null): string {
 }
 
 export function pathAfterLogin(role: string, returnTo?: string | null): string {
+  if (returnTo?.startsWith("/apply")) return returnTo;
   if (role === "CLIENT") return "/portal";
   return safeStaffReturnTo(returnTo) ?? "/home";
 }

@@ -21,6 +21,7 @@ import { nextSequence } from "./loan-number";
 import { calculateQualification, type QualInput, type QualOutput } from "./qualification";
 import { SectionStore } from "./section-store";
 import { encryptSsn, last4, toPublic } from "./ssn-vault";
+import { getPrismaLosService, PrismaMortgageLosService } from "./prisma-service";
 
 export { toHttpResponse };
 
@@ -347,7 +348,12 @@ export class MortgageLosService {
       sections: publicBodies,
       borrower: this.publicBorrower(applicationId),
       qualificationSnapshot: rec.qualificationSnapshot,
-      events: rec.events.map((e) => ({ type: e.type, payload: e.payload, createdAt: e.createdAt })),
+      events: rec.events.map((e) => ({
+        type: e.type,
+        applicationId: e.applicationId,
+        payload: e.payload,
+        createdAt: e.createdAt,
+      })),
     };
   }
 
@@ -411,8 +417,12 @@ export class MortgageLosService {
 }
 
 let singleton = new MortgageLosService();
+let usePrismaStore = process.env.LOS_USE_MEMORY !== "true" && process.env.VITEST !== "true";
 
-export function getLosService(): MortgageLosService {
+export function getLosService(): MortgageLosService | PrismaMortgageLosService {
+  if (usePrismaStore) {
+    return getPrismaLosService();
+  }
   return singleton;
 }
 

@@ -109,7 +109,8 @@ describe("official portal URL constants", () => {
     expect(PORTAL_EMBED_INVESTIGATION.equifax).toMatch(/frame-ancestors 'self'/);
     expect(PORTAL_EMBED_INVESTIGATION.proxy).toMatch(/No cookie-safe TOS-safe vendor reverse proxy/);
     const vercel = fs.readFileSync(path.join(process.cwd(), "vercel.json"), "utf8");
-    expect(vercel).toMatch(/"rewrites":\s*\[\s*\]/);
+    expect(vercel).toMatch(/apply\.grantandconsultants\.com/);
+    expect(vercel).not.toMatch(/gohighlevel|telegram\.org|experian\.com|equifax\.com/i);
     const proxy = fs.readFileSync(path.join(process.cwd(), "src/proxy.ts"), "utf8");
     expect(proxy).toMatch(/x-gc-pathname/);
     expect(proxy).not.toMatch(/gohighlevel|telegram\.org|experian\.com|equifax\.com/i);

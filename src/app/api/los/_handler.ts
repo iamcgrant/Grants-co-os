@@ -1,11 +1,20 @@
 /**
  * Shared Next.js App Router helpers. No next/server types required.
- * Handlers call the in-memory MORTGAGE_LOS service (swap for Prisma in grants-co-os).
  */
 import { getLosService, toHttpResponse } from "@/lib/los/service";
 import { LosHttpError } from "@/lib/los/errors";
+import type { PrismaMortgageLosService } from "@/lib/los/prisma-service";
+import type { MortgageLosService } from "@/lib/los/service";
 
 export { getLosService, toHttpResponse, LosHttpError };
+
+export type LosServiceInstance = MortgageLosService | PrismaMortgageLosService;
+
+export async function callLos<T>(
+  fn: (los: LosServiceInstance) => T | Promise<T>,
+): Promise<T> {
+  return await fn(getLosService());
+}
 
 export async function readJson(request: Request): Promise<any> {
   try {

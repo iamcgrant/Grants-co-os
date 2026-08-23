@@ -22,5 +22,11 @@
       ]
     }
   ],
-  "rewrites": []
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/apply/$1",
+      "has": [{ "type": "host", "value": "apply.grantandconsultants.com" }]
+    }
+  ]
 }
