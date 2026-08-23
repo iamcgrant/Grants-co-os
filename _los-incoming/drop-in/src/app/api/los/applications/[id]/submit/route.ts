@@ -1,0 +1,11 @@
+import { getLosService, readParams, toHttpResponse } from "../../../_handler";
+
+/** POST /api/los/applications/:id/submit */
+export async function POST(_request: Request, ctx: { params: { id: string } | Promise<{ id: string }> }) {
+  try {
+    const { id } = await readParams(ctx);
+    return Response.json(getLosService().submitApplication({ applicationId: id }));
+  } catch (err) {
+    return toHttpResponse(err);
+  }
+}

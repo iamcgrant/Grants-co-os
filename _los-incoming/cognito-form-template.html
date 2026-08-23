@@ -1,0 +1,412 @@
+<form
+				ref='form'
+				lang='en'
+				class='ð cog-cognito cog-form cog-4'
+				:class='["is-"+submitStatus,
+					isChameleon ? "cog-cognito--chameleon" : "cog-cognito--styled",
+				{
+					"cog-form--light-background": flags.forceLightBackgroundClass || (!isChameleon && true)
+					,"cog-form--dark-background": !flags.forceLightBackgroundClass && !isChameleon && false
+					,"cog-form--maximal-branding": flags.branding && !flags.minimalBranding
+					,"cog-form--show-all-pages": showAllPages || !enablePaging
+					,"cog-form--confirmation-has-entry-details": showConfirmation && entryDetailsVisible
+					,"cog-cognito--protect-css": flags.protectCss
+					
+					
+				}]'
+				:aria-labelledby='flags.hideHeader ? null : "cog-heading-4"'
+				:aria-label='flags.hideHeader ? "Grant \u0026 Co Consultants  Home Buying \u0026 Credit Readiness Intake" : null'
+				tabindex='-1'
+				@submit.prevent
+			>
+			<div ref='formContainer' class='cog-form__container'><div class='cog-form__content'><c-header ref='header'
+				:visible='!flags.hideHeader'
+				title='Grant &amp; Co Consultants  Home Buying &amp; Credit Readiness Intake'
+				:description='available ? "" : ""'
+				:logo='typeof themeSettings.logo === "string" ? themeSettings.logo : "https://www.cognitoforms.com/file/XcRdbx9Kg9ciGQDduw7U7oUm7lm45qiVY3VXUoaf_V633zLMryONg047fB4rix9I"'
+				:alt='themeSettings.logoAlt || ""'
+				:show-confirmation=showConfirmation
+				:layout='themeSettings.headerLayout || "column"'
+				:alignment='themeSettings.headerAlignment || "center"' /><template v-if='!flags.archived && ((available || isExistingEntry) && session.isValidSharedLink)'><div class='cog-body' ref='body'><c-confirmation
+				ref='confirmation'
+				:entry='entry'
+				:order='order'
+				:confirmation-message='action ? action.Confirmation.Message : null'
+				:redirect-enabled='flags.redirect'
+				:show-users-redirected='flags.showUsersRedirected'
+				:redirect-url='action ? action.Confirmation.RedirectUrl : null'
+				:visible='readonly && showConfirmation'
+				:documents='documents'
+				@show-entry-details='handleEntryDetailsVisibility'
+				@redirect='redirect'
+				@entering='confirmationEntered'
+				:include-entry-details='action ? action.Confirmation.IncludeEntryDetails : null' :action='action'><c-order payment-processor='' :entry='entry' :order='order' :process-payment='processPayment'  v-if='showOrder' :readonly='true' :show-header='false' show-line-items show-sub-total :save-card='false' :has-payable-action='hasPayableAction' :order-amount-label='$resource("order-total-label")'><template v-slot:paymentDetails>
+					<c-transaction-details :order='order' />
+					<c-billing-info :order='order' />
+				</template></c-order></c-confirmation><portal name="order-4" :to="paymentVuePortalKey" v-if="onLastPage" ><c-order payment-processor='' :entry='entry' :order='order' :process-payment='processPayment'  v-if='showOrder && !showConfirmation && !orderInReadonlyMode' ref='orderComponent' :payment-unavailable-highlighted='paymentUnavailableHighlighted' show-line-items show-sub-total :save-card='false' :has-payable-action='hasPayableAction' :order-amount-label='$resource("payment-amount-due")'><template
+					v-if='flags.payment'
+					v-slot:payment='paymentSlot'>
+					<c-payment ref='paymentComponent'
+							:entry='entry'
+							:save-card='paymentSlot.saveCard'
+							:error-message='paymentError'
+							:use-theme-settings='useThemeSettings'
+							@authentication-complete='authenticationComplete'
+							@focus='resetPaymentError'
+					>
+						<template v-slot='{inputStyles, saveCard}'></template>
+					</c-payment>
+				</template></c-order></portal><c-page
+				v-slot='pageSlot'
+				@next='navigate({forward: true, validateCaptcha: $event.validateCaptcha})'
+				@back='navigate({forward: false})'
+				@save='save({validateCaptcha: $event.validateCaptcha})'
+				@beforeEnter='pageBeforeEnter'
+				@entering='pageEntering'
+				@entered='pageEntered'
+				@clicked-submit='handleSubmit($event)'
+				:submit-button='nextButton'
+				:show-submission-warning='flags.showSubmissionWarning'
+				:is-submission='lastVisiblePageNumber === 1'
+				:submit-status='submitStatus'
+				:save-status='saveStatus'
+				:allow-save='flags.saveAndResume'
+				:paging='enablePaging'
+				:show-navigation='showNavigation && flags.submissionSettings && !showConfirmation'
+				:visible='true'
+				:current='showAllPages || !enablePaging || (pageNumber === 1 && !showConfirmation)'
+				:number='1'
+				:hide-number='!enablePaging || readonly || false'
+				:visible-number='visiblePageNumber'
+				next-button='Submit' title='' :allowed-actions='allowedActions' :current-action='action'><c-order payment-processor='' :entry='entry' :order='order' :process-payment='processPayment'  v-if='showOrder && !showConfirmation && orderInReadonlyMode' :readonly='true' :show-header='false' show-line-items show-sub-total :save-card='false' :has-payable-action='hasPayableAction' :order-amount-label='$resource("order-total-label")'><template v-slot:paymentDetails>
+					<c-transaction-details :order='order' />
+					<c-billing-info :order='order' />
+				</template></c-order><c-row key='row-0'><c-section source='Section1ClientInformation' v-slot='sectionSlot' field-index='2' ><c-row key='row-1'><c-field 
+					source='FullName'
+					v-slot='fieldSlot'
+					type='name'
+					subtype='none'
+					field-index='2'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					><c-name :name='fieldSlot.field.value'  :readonly='fieldSlot.field.readonly' properties='First,Last' format='[First] [Last]' /></c-field></c-row><c-row key='row-2'><c-field 
+					source='PhoneNumber'
+					v-slot='fieldSlot'
+					type='phone'
+					subtype='usphone'
+					field-index='3'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					><c-input :type='flags.mobile ? "tel" : "text"'  :id='fieldSlot.field.id' v-model='fieldSlot.field.displayValue' :readonly='fieldSlot.field.readonly' mask='(###) ###-#### x########' autocomplete='tel-national' /></c-field></c-row><c-row key='row-3'><c-field 
+					source='EmailAddress'
+					v-slot='fieldSlot'
+					type='email'
+					subtype='none'
+					field-index='4'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					><c-input :type='flags.mobile ? "email" : "text"' autocomplete='email'  :id='fieldSlot.field.id' v-model='fieldSlot.field.displayValue' :readonly='fieldSlot.field.readonly' /></c-field></c-row><c-row key='row-4'><c-field 
+					source='DateOfBirth'
+					v-slot='fieldSlot'
+					type='date'
+					subtype='date'
+					field-index='5'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					><c-date :chameleon='isChameleon' :mobile='flags.mobile'  :id='fieldSlot.field.id' :readonly='fieldSlot.field.readonly' v-model='fieldSlot.field.displayValue' scope='4' /></c-field></c-row><c-row key='row-5'><c-field 
+					source='SocialSecurityNumber'
+					v-slot='fieldSlot'
+					type='text'
+					subtype='singleline'
+					field-index='6'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					><c-input type='text'  :id='fieldSlot.field.id' v-model='fieldSlot.field.displayValue' :readonly='fieldSlot.field.readonly' /></c-field></c-row><c-row key='row-6'><c-field 
+					source='CurrentAddressFullAddressWithCityStateZip'
+					v-slot='fieldSlot'
+					type='address'
+					subtype='usaddress'
+					field-index='7'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					><c-address :address='fieldSlot.field.value'  :id='fieldSlot.field.id' :readonly='fieldSlot.field.readonly' type='us' properties='Line1,Line2,City,State,PostalCode' scope='4' :chameleon='isChameleon' :mobile='flags.mobile' :autocomplete='false'  /></c-field></c-row></c-section></c-row><c-row key='row-7'><c-section source='Section2IDVerification' v-slot='sectionSlot' field-index='3' ><c-row key='row-8'><c-field 
+					source='UploadDriversLicenseOrStateID'
+					v-slot='fieldSlot'
+					type='file'
+					subtype='none'
+					field-index='2'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					><c-upload  :id='fieldSlot.field.id' v-model='fieldSlot.field.value':max-files='10':max-size='session.fileUploadLimit' :allowed-types='["jpg","jpeg","png","pdf"]' :banned-types='["action","apk","app","bat","bin","cmd","com","command","cpl","csh","dll","exe","htm","html","gadget","inf1","ins","inx","ipa","isu","job","js","jse","ksh","lnk","msc","msi","msp","mst","osx","out","paf","pif","prg","ps1","pyd","pyw","pyz","pyzw","reg","rgs","run","scr","sct","sh","shb","shs","u3p","vb","vbe","vbs","vbscript","workflow","ws","wsf","wsh"]' :readonly='fieldSlot.field.readonly' :encrypt='flags.encrypt' :file-service='fileService' @file-uploaded='fileUploaded' @focus-removed='recordFocusPlace' /></c-field></c-row></c-section></c-row><c-row key='row-9'><c-section source='Section3CreditProgramSelection' v-slot='sectionSlot' field-index='4' ><c-row key='row-10'><c-field 
+					source='AreYouIncludingCreditRepairWithYourHomePackage'
+					v-slot='fieldSlot'
+					type='choice'
+					subtype='radiobuttons'
+					field-index='2'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					><c-choice v-slot='choiceSlot' :checkable='true' :columns='0' :file-service='fileService'  :choices='fieldSlot.field.lastTarget.AreYouIncludingCreditRepairWithYourHomePackage_Choices'><c-radio-group @focus-lost='fieldSlot.focusLost' :options='choiceSlot.options' :columns='0'   :readonly='fieldSlot.field.readonly' v-model='fieldSlot.field.displayValue' :hide-choice-labels='false' images-in-choice-fields-enabled /></c-choice></c-field></c-row><c-row key='row-11'><c-col  :parent-cols='sectionSlot.cols'><c-content content='&lt;p>&lt;strong>Credit Repair Instruction (If Yes)&lt;/strong>&lt;/p>&lt;p>You must create a Credit Hero Score account immediately after submitting this form. This is required to begin your credit process.&lt;/p>' /></c-col></c-row><c-row key='row-12'><c-field 
+					source='UploadScreenshotOrConfirmationOfCreditHeroScoreAccount'
+					v-slot='fieldSlot'
+					type='file'
+					subtype='none'
+					field-index='3'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					><c-upload  :id='fieldSlot.field.id' v-model='fieldSlot.field.value':max-files='10':max-size='session.fileUploadLimit' :allowed-types='["jpg","jpeg","png","pdf"]' :banned-types='["action","apk","app","bat","bin","cmd","com","command","cpl","csh","dll","exe","htm","html","gadget","inf1","ins","inx","ipa","isu","job","js","jse","ksh","lnk","msc","msi","msp","mst","osx","out","paf","pif","prg","ps1","pyd","pyw","pyz","pyzw","reg","rgs","run","scr","sct","sh","shb","shs","u3p","vb","vbe","vbs","vbscript","workflow","ws","wsf","wsh"]' :readonly='fieldSlot.field.readonly' :encrypt='flags.encrypt' :file-service='fileService' @file-uploaded='fileUploaded' @focus-removed='recordFocusPlace' /></c-field></c-row><c-row key='row-13'><c-col  :parent-cols='sectionSlot.cols'><c-content content='&lt;p>&lt;strong>MyFICO Instruction (If No)&lt;/strong>&lt;/p>&lt;p>You must provide your MyFICO mortgage scores. Minimum qualifying score is 620.&lt;/p>' /></c-col></c-row><c-row key='row-14'><c-field 
+					source='UploadMyFICOMortgageScoreScreenshot'
+					v-slot='fieldSlot'
+					type='file'
+					subtype='none'
+					field-index='4'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					><c-upload  :id='fieldSlot.field.id' v-model='fieldSlot.field.value':max-files='10':max-size='session.fileUploadLimit' :allowed-types='["jpg","jpeg","png","pdf"]' :banned-types='["action","apk","app","bat","bin","cmd","com","command","cpl","csh","dll","exe","htm","html","gadget","inf1","ins","inx","ipa","isu","job","js","jse","ksh","lnk","msc","msi","msp","mst","osx","out","paf","pif","prg","ps1","pyd","pyw","pyz","pyzw","reg","rgs","run","scr","sct","sh","shb","shs","u3p","vb","vbe","vbs","vbscript","workflow","ws","wsf","wsh"]' :readonly='fieldSlot.field.readonly' :encrypt='flags.encrypt' :file-service='fileService' @file-uploaded='fileUploaded' @focus-removed='recordFocusPlace' /></c-field></c-row></c-section></c-row><c-row key='row-15'><c-section source='Section4DownPaymentAssistance' v-slot='sectionSlot' field-index='5' ><c-row key='row-16'><c-field 
+					source='IAmInterestedInDownPaymentAssistance1800'
+					v-slot='fieldSlot'
+					type='yesno'
+					subtype='checkbox'
+					field-index='2'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					 :hide-label='!$source.readonly'><c-checkbox  :label='fieldSlot.field.label' :inactive-text='fieldSlot.field.options[1].displayValue' :active-text='fieldSlot.field.options[0].displayValue'  :required='fieldSlot.field.required' :readonly='fieldSlot.field.readonly' v-model='fieldSlot.field.value' /></c-field></c-row><c-row key='row-17'><c-col  :parent-cols='sectionSlot.cols'><c-content content='&lt;p>&lt;strong>Down Payment Assistance Note&lt;/strong>&lt;/p>&lt;p>Down Payment Assistance will be added to your package. This still keeps you at a discounted rate compared to standard closing costs. We recommend new construction homes such as DR Horton to maximize incentives.&lt;/p>' /></c-col></c-row></c-section></c-row><c-row key='row-18'><c-section source='Section5ProcessDisclosure' v-slot='sectionSlot' field-index='6' ><c-row key='row-19'><c-col  :parent-cols='sectionSlot.cols'><c-content content='&lt;p>&lt;strong>Account Creation Disclosure&lt;/strong>&lt;/p>&lt;p>You understand that a separate name, phone number, and email will be created on your behalf for lender and transaction purposes. Upon closing, you will receive all login credentials and account access.&lt;/p>' /></c-col></c-row><c-row key='row-20'><c-col  :parent-cols='sectionSlot.cols'><c-content content='&lt;p>&lt;strong>Agent Assignment&lt;/strong>&lt;/p>&lt;p>Our in-house agent, Taylor Carroll, will assist with showings, negotiations, and transaction coordination throughout the home buying process.&lt;/p>' /></c-col></c-row></c-section></c-row><c-row key='row-21'><c-section source='Section6CreditPurchaseRules' v-slot='sectionSlot' field-index='7' ><c-row key='row-22'><c-field 
+					source='IAgreeNotToApplyForNewCreditDuringThisProcess'
+					v-slot='fieldSlot'
+					type='yesno'
+					subtype='checkbox'
+					field-index='2'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					 :hide-label='!$source.readonly'><c-checkbox  :label='fieldSlot.field.label' :inactive-text='fieldSlot.field.options[1].displayValue' :active-text='fieldSlot.field.options[0].displayValue'  :required='fieldSlot.field.required' :readonly='fieldSlot.field.readonly' v-model='fieldSlot.field.value' /></c-field></c-row><c-row key='row-23'><c-field 
+					source='IAgreeNotToMakeLargePurchases'
+					v-slot='fieldSlot'
+					type='yesno'
+					subtype='checkbox'
+					field-index='3'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					 :hide-label='!$source.readonly'><c-checkbox  :label='fieldSlot.field.label' :inactive-text='fieldSlot.field.options[1].displayValue' :active-text='fieldSlot.field.options[0].displayValue'  :required='fieldSlot.field.required' :readonly='fieldSlot.field.readonly' v-model='fieldSlot.field.value' /></c-field></c-row><c-row key='row-24'><c-field 
+					source='IAgreeNotToAddOrRemoveAccountsWithoutApproval'
+					v-slot='fieldSlot'
+					type='yesno'
+					subtype='checkbox'
+					field-index='4'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					 :hide-label='!$source.readonly'><c-checkbox  :label='fieldSlot.field.label' :inactive-text='fieldSlot.field.options[1].displayValue' :active-text='fieldSlot.field.options[0].displayValue'  :required='fieldSlot.field.required' :readonly='fieldSlot.field.readonly' v-model='fieldSlot.field.value' /></c-field></c-row><c-row key='row-25'><c-field 
+					source='IUnderstandThisMayNegativelyImpactMyApproval'
+					v-slot='fieldSlot'
+					type='yesno'
+					subtype='checkbox'
+					field-index='5'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					 :hide-label='!$source.readonly'><c-checkbox  :label='fieldSlot.field.label' :inactive-text='fieldSlot.field.options[1].displayValue' :active-text='fieldSlot.field.options[0].displayValue'  :required='fieldSlot.field.required' :readonly='fieldSlot.field.readonly' v-model='fieldSlot.field.value' /></c-field></c-row></c-section></c-row><c-row key='row-26'><c-section source='Section7PaymentCommitment' v-slot='sectionSlot' field-index='8' ><c-row key='row-27'><c-field 
+					source='IUnderstandThisIsANonrefundableServiceAndPaymentMustBeMadeBeforeServicesBegin'
+					v-slot='fieldSlot'
+					type='yesno'
+					subtype='checkbox'
+					field-index='2'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					 :hide-label='!$source.readonly'><c-checkbox  :label='fieldSlot.field.label' :inactive-text='fieldSlot.field.options[1].displayValue' :active-text='fieldSlot.field.options[0].displayValue'  :required='fieldSlot.field.required' :readonly='fieldSlot.field.readonly' v-model='fieldSlot.field.value' /></c-field></c-row><c-row key='row-28'><c-field 
+					source='IUnderstandServicesWillNotBeginUntilPaymentHasCleared'
+					v-slot='fieldSlot'
+					type='yesno'
+					subtype='checkbox'
+					field-index='3'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					 :hide-label='!$source.readonly'><c-checkbox  :label='fieldSlot.field.label' :inactive-text='fieldSlot.field.options[1].displayValue' :active-text='fieldSlot.field.options[0].displayValue'  :required='fieldSlot.field.required' :readonly='fieldSlot.field.readonly' v-model='fieldSlot.field.value' /></c-field></c-row></c-section></c-row><c-row key='row-29'><c-section source='Section8CancellationFees' v-slot='sectionSlot' field-index='9' ><c-row key='row-30'><c-field 
+					source='IUnderstandThatIfICancelAfterStartingThisProcessIWillIncurA1800CancellationFeePayableToTheRealtyCompany'
+					v-slot='fieldSlot'
+					type='yesno'
+					subtype='checkbox'
+					field-index='2'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					 :hide-label='!$source.readonly'><c-checkbox  :label='fieldSlot.field.label' :inactive-text='fieldSlot.field.options[1].displayValue' :active-text='fieldSlot.field.options[0].displayValue'  :required='fieldSlot.field.required' :readonly='fieldSlot.field.readonly' v-model='fieldSlot.field.value' /></c-field></c-row><c-row key='row-31'><c-field 
+					source='IUnderstandThisIsNotAProcessWhereICanStartAndChangeMyMind'
+					v-slot='fieldSlot'
+					type='yesno'
+					subtype='checkbox'
+					field-index='3'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					 :hide-label='!$source.readonly'><c-checkbox  :label='fieldSlot.field.label' :inactive-text='fieldSlot.field.options[1].displayValue' :active-text='fieldSlot.field.options[0].displayValue'  :required='fieldSlot.field.required' :readonly='fieldSlot.field.readonly' v-model='fieldSlot.field.value' /></c-field></c-row></c-section></c-row><c-row key='row-32'><c-section source='Section9LegalDisclosure' v-slot='sectionSlot' field-index='10' ><c-row key='row-33'><c-col  :parent-cols='sectionSlot.cols'><c-content content='&lt;p>&lt;strong>No Guarantees&lt;/strong>&lt;/p>&lt;p>No outcome, credit score increase, loan approval, interest rate, or property acquisition is guaranteed.&lt;/p>' /></c-col></c-row><c-row key='row-34'><c-col  :parent-cols='sectionSlot.cols'><c-content content='&lt;p>&lt;strong>Client Financial Responsibilities&lt;/strong>&lt;/p>&lt;p>Client is responsible for all home buying costs including inspections, appraisals, earnest money, down payment, and closing costs. &lt;/p>' /></c-col></c-row></c-section></c-row><c-row key='row-35'><c-section source='Section10Signature' v-slot='sectionSlot' field-index='11' ><c-row key='row-36'><c-field 
+					source='FullNameTypedSignature'
+					v-slot='fieldSlot'
+					type='name'
+					subtype='none'
+					field-index='2'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					><c-name :name='fieldSlot.field.value'  :readonly='fieldSlot.field.readonly' properties='First,Last' format='[First] [Last]' /></c-field></c-row><c-row key='row-37'><c-field  v-if='flags.signatureField || !flags.conditionalVisibility'
+					source='SignatureDrawn'
+					v-slot='fieldSlot'
+					type='signature'
+					subtype='none'
+					field-index='3'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					><c-signature :signature='fieldSlot.field.value'  :id='fieldSlot.field.id' :readonly='fieldSlot.field.readonly' :mobile='flags.mobile' :file-service='fileService' /></c-field></c-row><c-row key='row-38'><c-field 
+					source='DateAuto'
+					v-slot='fieldSlot'
+					type='date'
+					subtype='date'
+					field-index='4'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					><c-date :chameleon='isChameleon' :mobile='flags.mobile'  :id='fieldSlot.field.id' :readonly='fieldSlot.field.readonly' v-model='fieldSlot.field.displayValue' scope='4' /></c-field></c-row><c-row key='row-39'><c-field 
+					source='IAgreeToAllTermsAndAuthorizeGrantCoConsultantsToProceed'
+					v-slot='fieldSlot'
+					type='yesno'
+					subtype='checkbox'
+					field-index='5'
+					:render='!pageSlot.virtual'
+					
+					
+					 :parent-cols='sectionSlot.cols'
+					
+					
+					
+					
+					 :hide-label='!$source.readonly'><c-checkbox  :label='fieldSlot.field.label' :inactive-text='fieldSlot.field.options[1].displayValue' :active-text='fieldSlot.field.options[0].displayValue'  :required='fieldSlot.field.required' :readonly='fieldSlot.field.readonly' v-model='fieldSlot.field.value' /></c-field></c-row></c-section></c-row><portal-target :name="paymentVuePortalKey" v-if="!showPageBreaks || (onLastPage && currentPage.number === 1)" /></c-page></div><c-save-resume-dialog
+				v-if='flags.saveAndResume && flags.submissionSettings && showSaveAndResumeDialog'
+				v-bind='saveResumeInfo'
+				:embedded='flags.embedded'
+				
+				@send-email='emailResumeLink'
+				@close='closeSaveResumeDialog' /></template><template v-else-if='!session.isValidSharedLink' ><c-invalid-form type='invalid-share-link' :not-available-message='notAvailableMessage' /></template><template v-else><c-invalid-form type='form-not-available' not-available-message='This form is not currently available.' /></template><c-abuse v-if='flags.abuseLink' /><c-branding v-if='flags.branding' :needs-font='true' :minimal-branding='flags.minimalBranding' CRSReferral='https://www.cognitoforms.com//?crs=cmVmcHVibGljOjpHcmFudENvQ29uc3VsdGFudHM=&utm_source=Customer-Referral&utm_medium=form&utm_campaign=Form' /></div></div></form>

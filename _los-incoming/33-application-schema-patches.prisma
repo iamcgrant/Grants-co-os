@@ -1,0 +1,76 @@
+// PATCHES for URLA application layer. Append to 04-prisma-schema.prisma.
+// Do not invent a second LoanFile. These feed existing LoanFile + MortgageApplication.
+
+enum ApplicationSectionCode {
+  COMPLIANCE
+  BORROWER
+  CO_BORROWER
+  EMPLOYMENT
+  ASSETS
+  LIABILITIES
+  REO
+  LOAN
+  DECLARATIONS
+}
+
+enum ApplicationSectionStatus {
+  EMPTY
+  IN_PROGRESS
+  COMPLETE
+  BLOCKED
+}
+
+/// Save/resume + completion tracking. LoanFile remains source of truth for origination stage.
+model ApplicationSectionState {
+  id              String                   @id @default(cuid())
+  applicationId   String
+  borrowerId      String?                  // set for BORROWER / CO_BORROWER / per-person employment
+  section         ApplicationSectionCode
+  status          ApplicationSectionStatus @default(EMPTY)
+  lastSavedAt     DateTime?
+  errorsJson      String                   @default("[]")
+  application     MortgageApplication      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  @@unique([applicationId, borrowerId, section])
+  @@index([applicationId, status])
+}
+
+/// URLA two-year housing history. Current address is the row with endDate = null.
+model BorrowerAddressHistory {
+  id                 String             @id @default(cuid())
+  borrowerId         String
+  street             String
+  line2              String?
+  city               String
+  state              String
+  zip                String
+  startOn            DateTime
+  endOn              DateTime?          // null = current
+  housingTenure      HousingTenureKind
+  monthlyRentCents   Int?
+  isMailing          Boolean            @default(false)
+  sortOrder          Int                @default(0)
+  borrower           MortgageBorrower   @relation(fields: [borrowerId], references: [id], onDelete: Cascade)
+  @@index([borrowerId, endOn])
+}
+
+// ADD to MortgageBorrower:
+//   addressHistory BorrowerAddressHistory[]
+//   sectionStates  ApplicationSectionState[]
+// ADD to Employment:
+//   endDate DateTime?
+//   monthlyRentNone  — not here
+// ADD to MortgageReo:
+//   propertyType PropertyTypeKind?
+//   occupancy OccupancyKind?
+//   status String? // RETAIN | SELL | PENDING_SALE
+//   mortgageCreditor String?
+//   mortgageBalanceCents Int?
+//   mortgageMonthlyCents Int?
+//   rentalIncomeMonthlyCents Int?
+//   intendedSold Boolean @default(false)
+
+enum ReoDisposition {
+  RETAIN
+  SELL
+  PENDING_SALE
+}

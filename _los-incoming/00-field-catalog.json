@@ -1,0 +1,1332 @@
+{
+  "meta": {
+    "product": "Grants & Co Mortgage Readiness OS",
+    "company": "Grants & Co Consultants",
+    "extractedAt": "2026-08-23T15:07:00-04:00",
+    "extractedAtNote": "15:07 ET (UTC-4); live Cognito fetch 19:07 UTC",
+    "piiPolicy": "No live client PII. Field names and example formats only.",
+    "doNotInvent": true
+  },
+  "cognito": {
+    "status": "FOUND",
+    "method": "Public form shell HTML -> seamless.js -> GET https://www.cognitoforms.com/svc/load-form/form-def/{dataKey}/{formId} (JS IIFE with Vue template + modelOptions). Session POST /svc/load-form/new-session/{dataKey}/{formId}?embedContext=public used only for flags; tokens not stored.",
+    "url": "https://www.cognitoforms.com/GrantCoConsultants/GrantCoConsultantsHomeBuyingCreditReadinessIntake",
+    "title": "Grant & Co Consultants  Home Buying & Credit Readiness Intake",
+    "internalName": "GrantCoConsultantsHomeBuyingCreditReadinessIntake",
+    "organizationName": "Grant & Co Consultants",
+    "organizationId": "773bc7eb-f96c-43fb-ad9c-9257434e7bef",
+    "formId": "4",
+    "dataKey": "QZTmaMu3bEOpm_9ZKbBBPw",
+    "publicRole": "Applicant",
+    "entryFormat": "[Section1ClientInformation.FullName]",
+    "flagsFound": {
+      "saveAndResume": false,
+      "signatureField": true,
+      "tableField": true,
+      "paging": true,
+      "encrypt": false,
+      "payment": false,
+      "requirePaymentExpression": false,
+      "conditionalVisibilityFlag": true,
+      "workflowEnabled": true,
+      "addressAutocomplete": true,
+      "blankSignaturePreventionEnabled": true
+    },
+    "fileUpload": {
+      "allowedTypes": [
+        "jpg",
+        "jpeg",
+        "png",
+        "pdf"
+      ],
+      "maxFilesPerField": 10,
+      "sessionFileUploadLimit": 250,
+      "sessionFileUploadLimitUnit": "UNKNOWN (Cognito session.fileUploadLimit; commonly MB)",
+      "encryptUploads": false
+    },
+    "submit": {
+      "pagingObserved": "Single visible page. Template is-submission when lastVisiblePageNumber === 1.",
+      "primaryAction": {
+        "id": 0,
+        "actionName": "Submit Application",
+        "buttonText": "Submit Application",
+        "allowedWhen": "Entry.Status = Incomplete AND Entry.Role = Applicant",
+        "newStatus": "Under Review"
+      },
+      "cancelAction": {
+        "id": 6,
+        "actionName": "Cancel",
+        "buttonText": "Cancel",
+        "newStatus": "Cancelled",
+        "visibilityOnPublicForm": "UNKNOWN whether Cancel button is shown to Applicant on the public page; action exists in workflow model"
+      },
+      "confirmation": {
+        "behavior": "ConfirmationPage",
+        "message": "Thank you for filling out the form. Your response has been recorded.",
+        "includeEntryDetails": false,
+        "redirectUrl": null
+      },
+      "paymentOnSubmit": false
+    },
+    "workflowStatusesFound": [
+      {
+        "id": 0,
+        "name": "Incomplete",
+        "color": "#d0dbdb"
+      },
+      {
+        "id": 1,
+        "name": "Under Review",
+        "color": "#00B3AB"
+      },
+      {
+        "id": 2,
+        "name": "Awaiting Documents",
+        "color": "#f9cf62"
+      },
+      {
+        "id": 3,
+        "name": "Payment Pending",
+        "color": "#94cc3f"
+      },
+      {
+        "id": 4,
+        "name": "In Process",
+        "color": "#b873d3"
+      },
+      {
+        "id": 5,
+        "name": "Completed",
+        "color": "#d85427"
+      },
+      {
+        "id": 6,
+        "name": "Cancelled",
+        "color": "#72a6d3"
+      }
+    ],
+    "workflowRolesMentioned": [
+      "Applicant",
+      "Grant & Co Admin",
+      "Loan Coordinator"
+    ],
+    "conditionalLogic": {
+      "fieldLevelShowHideInTemplate": "NOT FOUND (no v-if on credit-path fields or content blocks)",
+      "creditPathHelperText": "FOUND always-visible helper HTML titled If Yes / If No",
+      "creditPathFileRequiredInSchema": "NOT FOUND — Credit Hero and MyFICO file fields have no required:true",
+      "signatureDrawnVIf": "FOUND platform flag: flags.signatureField || !flags.conditionalVisibility",
+      "yesNoMustBeTrue": "FOUND — several Boolean fields validate value === true (must check Yes)"
+    },
+    "header": {
+      "title": "Grant & Co Consultants  Home Buying & Credit Readiness Intake",
+      "description": "FOUND empty string",
+      "hideHeading": true,
+      "logoCdn": "https://www.cognitoforms.com/file/XcRdbx9Kg9ciGQDduw7U7oUm7lm45qiVY3VXUoaf_V633zLMryONg047fB4rix9I"
+    },
+    "sections": [
+      {
+        "id": "Section1ClientInformation",
+        "label": "Section 1: Client Information",
+        "kind": "inputs",
+        "fields": [
+          {
+            "source": "FullName",
+            "label": "Full Name",
+            "type": "name",
+            "subtype": "none",
+            "uiProperties": [
+              "First",
+              "Last"
+            ],
+            "nameTypeAlsoHasUnused": [
+              "Middle",
+              "MiddleInitial",
+              "Prefix",
+              "Suffix"
+            ],
+            "required": true,
+            "requiredRule": "First and Last required (validateRequiredName)",
+            "helptext": "Enter your full legal name as it appears on government ID.",
+            "format": "[First] [Last]"
+          },
+          {
+            "source": "PhoneNumber",
+            "label": "Phone Number",
+            "type": "phone",
+            "subtype": "usphone",
+            "required": true,
+            "helptext": "Provide a number we can use to contact you about your home purchase.",
+            "mask": "(###) ###-#### x########",
+            "formatDescription": "###-###-#### x####",
+            "exampleFormat": "(678) 555-0100"
+          },
+          {
+            "source": "EmailAddress",
+            "label": "Email Address",
+            "type": "email",
+            "required": true,
+            "helptext": "We will use this email for all communications and account setups.",
+            "exampleFormat": "name@address.xyz"
+          },
+          {
+            "source": "DateOfBirth",
+            "label": "Date of Birth",
+            "type": "date",
+            "subtype": "date",
+            "required": true,
+            "helptext": "Required for identity verification.",
+            "format": "d (culture short date M/d/yyyy)",
+            "exampleFormat": "08-06-1991 (as shown on URLA PDF); Cognito culture pattern M/d/yyyy"
+          },
+          {
+            "source": "SocialSecurityNumber",
+            "label": "Social Security Number",
+            "type": "text",
+            "subtype": "singleline",
+            "required": true,
+            "helptextHtml": "<p>Enter your full Social Security number.</p>",
+            "mask": "NOT FOUND",
+            "encrypt": false,
+            "securityNote": "Plaintext text input. Form encrypt flag false. OS must vault; never log full SSN."
+          },
+          {
+            "source": "CurrentAddressFullAddressWithCityStateZip",
+            "label": "Current Address (Full address with city, state, zip)",
+            "type": "address",
+            "subtype": "usaddress",
+            "required": true,
+            "requiredComponents": [
+              "Line1",
+              "City",
+              "State",
+              "PostalCode"
+            ],
+            "optionalComponents": [
+              "Line2",
+              "Line3"
+            ],
+            "defaults": {
+              "Country": "United States",
+              "CountryCode": "US"
+            },
+            "helptext": "Provide your current residential address including city, state, and postal code.",
+            "validation": "validateRequiredAddress + validateZipCode"
+          }
+        ]
+      },
+      {
+        "id": "Section2IDVerification",
+        "label": "Section 2: ID Verification",
+        "kind": "inputs",
+        "fields": [
+          {
+            "source": "UploadDriversLicenseOrStateID",
+            "label": "Upload Driver’s License or State ID",
+            "type": "file",
+            "required": true,
+            "helptext": "Upload a clear, readable photo or scan of your government-issued ID (front and back if possible).",
+            "maxFiles": 10,
+            "allowedTypes": [
+              "jpg",
+              "jpeg",
+              "png",
+              "pdf"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "Section3CreditProgramSelection",
+        "label": "Section 3: Credit & Program Selection",
+        "kind": "inputs",
+        "fields": [
+          {
+            "source": "AreYouIncludingCreditRepairWithYourHomePackage",
+            "label": "Are you including Credit Repair with your Home Package?",
+            "type": "choice",
+            "subtype": "radiobuttons",
+            "required": true,
+            "helptext": "Select Yes if you want credit repair included. Select No if you will provide MyFICO mortgage scores.",
+            "choices": [
+              "Yes — Requires Credit Hero Score account",
+              "No — Requires MyFICO login upload"
+            ]
+          },
+          {
+            "source": "UploadScreenshotOrConfirmationOfCreditHeroScoreAccount",
+            "label": "Upload screenshot or confirmation of Credit Hero Score account",
+            "type": "file",
+            "required": false,
+            "requiredNote": "Schema has no required:true. Helper text says required if Yes selected. Template has no v-if hide.",
+            "helptext": "Required if you selected Yes above. Upload a screenshot or confirmation showing your Credit Hero Score account creation.",
+            "maxFiles": 10,
+            "allowedTypes": [
+              "jpg",
+              "jpeg",
+              "png",
+              "pdf"
+            ]
+          },
+          {
+            "kind": "content",
+            "title": "Credit Repair Instruction (If Yes)",
+            "htmlPlain": "You must create a Credit Hero Score account immediately after submitting this form. This is required to begin your credit process.",
+            "conditionalInTemplate": "NOT FOUND (always rendered)"
+          },
+          {
+            "source": "UploadMyFICOMortgageScoreScreenshot",
+            "label": "Upload MyFICO mortgage score screenshot",
+            "type": "file",
+            "required": false,
+            "requiredNote": "Schema has no required:true. Helper text says required if No selected. Template has no v-if hide.",
+            "helptext": "Required if you selected No above. Upload a screenshot of your MyFICO mortgage scores (must meet minimum qualifying score of 620).",
+            "maxFiles": 10,
+            "allowedTypes": [
+              "jpg",
+              "jpeg",
+              "png",
+              "pdf"
+            ]
+          },
+          {
+            "kind": "content",
+            "title": "MyFICO Instruction (If No)",
+            "htmlPlain": "You must provide your MyFICO mortgage scores. Minimum qualifying score is 620.",
+            "conditionalInTemplate": "NOT FOUND (always rendered)"
+          }
+        ]
+      },
+      {
+        "id": "Section4DownPaymentAssistance",
+        "label": "Section 4: Down Payment Assistance",
+        "kind": "inputs",
+        "fields": [
+          {
+            "source": "IAmInterestedInDownPaymentAssistance1800",
+            "label": "I am interested in Down Payment Assistance (+$1,800)",
+            "type": "yesno",
+            "subtype": "checkbox",
+            "required": false,
+            "default": false,
+            "helptext": "Checking this will add Down Payment Assistance to your package for an additional $1,800.",
+            "hideLabel": true,
+            "format": "Yes;No"
+          },
+          {
+            "kind": "content",
+            "title": "Down Payment Assistance Note",
+            "htmlPlain": "Down Payment Assistance will be added to your package. This still keeps you at a discounted rate compared to standard closing costs. We recommend new construction homes such as DR Horton to maximize incentives."
+          }
+        ]
+      },
+      {
+        "id": "Section5ProcessDisclosure",
+        "label": "Section 5: Process Disclosure",
+        "kind": "content_only",
+        "fields": [
+          {
+            "kind": "content",
+            "title": "Account Creation Disclosure",
+            "htmlPlain": "You understand that a separate name, phone number, and email will be created on your behalf for lender and transaction purposes. Upon closing, you will receive all login credentials and account access."
+          },
+          {
+            "kind": "content",
+            "title": "Agent Assignment",
+            "htmlPlain": "Our in-house agent, Taylor Carroll, will assist with showings, negotiations, and transaction coordination throughout the home buying process."
+          }
+        ],
+        "acknowledgementCheckbox": "NOT FOUND (shown as HTML only; covered only by final I-agree)"
+      },
+      {
+        "id": "Section6CreditPurchaseRules",
+        "label": "Section 6: Credit & Purchase Rules",
+        "kind": "inputs",
+        "fields": [
+          {
+            "source": "IAgreeNotToApplyForNewCreditDuringThisProcess",
+            "label": "I agree not to apply for new credit during this process",
+            "type": "yesno",
+            "subtype": "checkbox",
+            "required": true,
+            "mustBeTrue": true,
+            "default": false,
+            "hideLabel": true
+          },
+          {
+            "source": "IAgreeNotToMakeLargePurchases",
+            "label": "I agree not to make large purchases",
+            "type": "yesno",
+            "subtype": "checkbox",
+            "required": true,
+            "mustBeTrue": true,
+            "default": false,
+            "hideLabel": true
+          },
+          {
+            "source": "IAgreeNotToAddOrRemoveAccountsWithoutApproval",
+            "label": "I agree not to add or remove accounts without approval",
+            "type": "yesno",
+            "subtype": "checkbox",
+            "required": true,
+            "mustBeTrue": true,
+            "default": false,
+            "hideLabel": true
+          },
+          {
+            "source": "IUnderstandThisMayNegativelyImpactMyApproval",
+            "label": "I understand this may negatively impact my approval",
+            "type": "yesno",
+            "subtype": "checkbox",
+            "required": true,
+            "mustBeTrue": true,
+            "default": false,
+            "hideLabel": true,
+            "helptext": "Acknowledges that changes to credit or accounts may negatively impact loan approval."
+          }
+        ]
+      },
+      {
+        "id": "Section7PaymentCommitment",
+        "label": "Section 7: Payment & Commitment",
+        "kind": "inputs",
+        "note": "No payment-processor field on this form (paymentProcessor None; Require_Payment_Expression false). These are acknowledgements only.",
+        "fields": [
+          {
+            "source": "IUnderstandThisIsANonrefundableServiceAndPaymentMustBeMadeBeforeServicesBegin",
+            "label": "I understand this is a non-refundable service and payment must be made before services begin",
+            "type": "yesno",
+            "subtype": "checkbox",
+            "required": true,
+            "mustBeTrue": true,
+            "default": false,
+            "hideLabel": true,
+            "helptext": "By checking, you acknowledge payment is non-refundable and required prior to service start."
+          },
+          {
+            "source": "IUnderstandServicesWillNotBeginUntilPaymentHasCleared",
+            "label": "I understand services will not begin until payment has cleared",
+            "type": "yesno",
+            "subtype": "checkbox",
+            "required": true,
+            "mustBeTrue": true,
+            "default": false,
+            "hideLabel": true
+          }
+        ]
+      },
+      {
+        "id": "Section8CancellationFees",
+        "label": "Section 8: Cancellation & Fees",
+        "kind": "inputs",
+        "fields": [
+          {
+            "source": "IUnderstandThatIfICancelAfterStartingThisProcessIWillIncurA1800CancellationFeePayableToTheRealtyCompany",
+            "label": "I understand that if I cancel after starting this process, I will incur a $1,800 cancellation fee payable to the realty company",
+            "type": "yesno",
+            "subtype": "checkbox",
+            "required": true,
+            "mustBeTrue": true,
+            "default": false,
+            "hideLabel": true,
+            "helptextHtml": "<p>Acknowledges the $1,800 cancellation fee if you cancel after the process has started.</p>"
+          },
+          {
+            "source": "IUnderstandThisIsNotAProcessWhereICanStartAndChangeMyMind",
+            "label": "I understand this is not a process where I can start and change my mind",
+            "type": "yesno",
+            "subtype": "checkbox",
+            "required": true,
+            "mustBeTrue": true,
+            "default": false,
+            "hideLabel": true
+          }
+        ]
+      },
+      {
+        "id": "Section9LegalDisclosure",
+        "label": "Section 9: Legal Disclosure",
+        "kind": "content_only",
+        "fields": [
+          {
+            "kind": "content",
+            "title": "No Guarantees",
+            "htmlPlain": "No outcome, credit score increase, loan approval, interest rate, or property acquisition is guaranteed."
+          },
+          {
+            "kind": "content",
+            "title": "Client Financial Responsibilities",
+            "htmlPlain": "Client is responsible for all home buying costs including inspections, appraisals, earnest money, down payment, and closing costs."
+          }
+        ],
+        "acknowledgementCheckbox": "NOT FOUND (shown as HTML only; covered only by final I-agree)"
+      },
+      {
+        "id": "Section10Signature",
+        "label": "Section 10: Signature",
+        "kind": "inputs",
+        "fields": [
+          {
+            "source": "FullNameTypedSignature",
+            "label": "Full Name (Typed Signature)",
+            "type": "name",
+            "uiProperties": [
+              "First",
+              "Last"
+            ],
+            "required": true,
+            "helptext": "Type your full legal name as your electronic signature."
+          },
+          {
+            "source": "SignatureDrawn",
+            "label": "Signature (Drawn)",
+            "type": "signature",
+            "required": true,
+            "requiredRule": "validateRequiredSignature on Svg",
+            "helptext": "Draw your signature in the signature field.",
+            "templateVIf": "flags.signatureField || !flags.conditionalVisibility"
+          },
+          {
+            "source": "DateAuto",
+            "label": "Date (Auto)",
+            "type": "date",
+            "required": true,
+            "helptext": "This date will be auto-populated with the date you sign.",
+            "defaultOrCalcInModel": "NOT FOUND (no default/get on the DateAuto type; auto-fill behavior UNKNOWN beyond helptext)"
+          },
+          {
+            "source": "IAgreeToAllTermsAndAuthorizeGrantCoConsultantsToProceed",
+            "label": "I agree to all terms and authorize Grant & Co Consultants to proceed",
+            "type": "yesno",
+            "subtype": "checkbox",
+            "required": true,
+            "mustBeTrue": true,
+            "default": false,
+            "hideLabel": true
+          }
+        ]
+      }
+    ]
+  },
+  "urlaPdf": {
+    "status": "FOUND",
+    "source": "Attached loan-application PDF transcribed with pdftotext. URLA-style consumer-facing application (not a blank 1003). Client values omitted.",
+    "submittedLabelFormat": "Loan Application for {First Last}",
+    "submittedOnFormat": "Thursday, 20 Aug 2026 at 10:06 AM MDT",
+    "sections": [
+      {
+        "id": "address_confidentiality_program",
+        "label": "Address Confidentiality Program",
+        "fields": [
+          {
+            "name": "Address confidentiality program",
+            "type": "yesno",
+            "example": "no"
+          }
+        ]
+      },
+      {
+        "id": "credit_authorization",
+        "label": "Credit authorization",
+        "fields": [
+          {
+            "name": "{First}'s Credit authorization",
+            "type": "agreement",
+            "example": "i agree"
+          }
+        ]
+      },
+      {
+        "id": "confirmation_release",
+        "label": "Confirmation & information release authorization",
+        "fields": [
+          {
+            "name": "Confirmation & information release authorization",
+            "type": "agreement",
+            "example": "i agree"
+          }
+        ]
+      },
+      {
+        "id": "borrower_identity",
+        "label": "Tell us a little about yourself",
+        "fields": [
+          {
+            "name": "First name on driver's license",
+            "type": "text"
+          },
+          {
+            "name": "Middle name",
+            "type": "text"
+          },
+          {
+            "name": "Last name on driver's license",
+            "type": "text"
+          },
+          {
+            "name": "Mobile phone number",
+            "type": "phone",
+            "exampleFormat": "(###) ###-####"
+          },
+          {
+            "name": "Email",
+            "type": "email"
+          },
+          {
+            "name": "Date of birth",
+            "type": "date",
+            "exampleFormat": "MM-DD-YYYY"
+          },
+          {
+            "name": "What best describes your situation?",
+            "type": "choice",
+            "observedValue": "U.S. Citizen",
+            "otherOptions": "UNKNOWN"
+          },
+          {
+            "name": "Did you (or your deceased spouse) ever serve, or are you currently serving, in the United States Armed Forces?",
+            "type": "yesno"
+          },
+          {
+            "name": "Your preferred language",
+            "type": "choice",
+            "observedValue": "English",
+            "otherOptions": "UNKNOWN"
+          },
+          {
+            "name": "Work E-mail",
+            "type": "email",
+            "observedEmpty": true
+          }
+        ]
+      },
+      {
+        "id": "family",
+        "label": "What is your family situation?",
+        "fields": [
+          {
+            "name": "What is your marital status?",
+            "type": "choice",
+            "observedValue": "Unmarried",
+            "otherOptions": "UNKNOWN"
+          },
+          {
+            "name": "Is there a person who is not your legal spouse, but who currently has real property rights similar to those of a legal spouse?",
+            "type": "yesno"
+          },
+          {
+            "name": "How many dependents do you have?",
+            "type": "integer"
+          }
+        ]
+      },
+      {
+        "id": "current_living",
+        "label": "Tell us about your current living situation",
+        "fields": [
+          {
+            "name": "Current street address",
+            "type": "text"
+          },
+          {
+            "name": "City",
+            "type": "text"
+          },
+          {
+            "name": "State",
+            "type": "text"
+          },
+          {
+            "name": "Zip code",
+            "type": "text"
+          },
+          {
+            "name": "Is your current address your mailing address?",
+            "type": "yesno"
+          },
+          {
+            "name": "Years",
+            "type": "integer",
+            "note": "years at address"
+          },
+          {
+            "name": "Months",
+            "type": "integer",
+            "note": "months at address"
+          },
+          {
+            "name": "Mailing address fields",
+            "presence": "UNKNOWN — not shown because mailing=current was yes"
+          }
+        ]
+      },
+      {
+        "id": "employment",
+        "label": "Let's talk about your employment history",
+        "fields": [
+          {
+            "name": "What best describes your current situation?",
+            "type": "choice",
+            "observedValue": "I'm currently employed",
+            "otherOptions": "UNKNOWN"
+          },
+          {
+            "name": "What type of employment would you like to add?",
+            "type": "choice",
+            "observedValue": "Employed by a business",
+            "otherOptions": "UNKNOWN (self/other implied by prompt, not listed on this PDF)"
+          },
+          {
+            "name": "Employer or business name",
+            "type": "text"
+          },
+          {
+            "name": "Employer or business street address",
+            "type": "text"
+          },
+          {
+            "name": "City",
+            "type": "text"
+          },
+          {
+            "name": "State",
+            "type": "text"
+          },
+          {
+            "name": "Zip",
+            "type": "text"
+          },
+          {
+            "name": "Employer phone number",
+            "type": "phone"
+          },
+          {
+            "name": "Start date",
+            "type": "date",
+            "exampleFormat": "MM-DD-YYYY"
+          },
+          {
+            "name": "Years in Line of Work",
+            "type": "integer"
+          },
+          {
+            "name": "Months in Line of Work",
+            "type": "integer"
+          },
+          {
+            "name": "Are you employed by a family member, property seller, real estate agent, or other party to the transaction?",
+            "type": "yesno"
+          },
+          {
+            "name": "What is your job title?",
+            "type": "text"
+          },
+          {
+            "name": "Is this your current employment?",
+            "type": "yesno"
+          },
+          {
+            "name": "Monthly income before taxes",
+            "type": "currency"
+          },
+          {
+            "name": "Do you receive any additional monthly income from this position, such as overtime, commission or bonuses?",
+            "type": "yesno"
+          }
+        ]
+      },
+      {
+        "id": "other_income",
+        "label": "Let us know if you have any other income sources",
+        "fields": [
+          {
+            "name": "Borrower other income does not apply",
+            "type": "does_not_apply_flag"
+          }
+        ]
+      },
+      {
+        "id": "hmda",
+        "label": "Tell us about your demographics - it's optional of course",
+        "optional": true,
+        "fields": [
+          {
+            "name": "Ethnicity",
+            "type": "multi_choice",
+            "observedValue": "I do not wish to provide this information"
+          },
+          {
+            "name": "Race",
+            "type": "multi_choice",
+            "observedValue": "I do not wish to provide this information"
+          },
+          {
+            "name": "Gender",
+            "type": "multi_choice",
+            "observedValue": "I do not wish to provide this information"
+          }
+        ]
+      },
+      {
+        "id": "additional_applicants",
+        "label": "Do you want to add any additional applicants?",
+        "fields": [
+          {
+            "name": "Add an additional applicant?",
+            "type": "yesno"
+          },
+          {
+            "name": "Co-borrower field set",
+            "presence": "UNKNOWN — not shown because additional applicant = no"
+          }
+        ]
+      },
+      {
+        "id": "real_estate_owned",
+        "label": "Tell us about the real estate you own",
+        "fields": [
+          {
+            "name": "Do you own or rent at your current address ({street})?",
+            "type": "choice",
+            "observedValue": "Do not currently pay rent",
+            "otherOptions": "UNKNOWN (own/rent implied by prompt)"
+          },
+          {
+            "name": "Do you or the Co-borrower, if applicable, own any other real estate?",
+            "type": "yesno"
+          },
+          {
+            "name": "REO property details",
+            "presence": "UNKNOWN — not shown because own other RE = no"
+          }
+        ]
+      },
+      {
+        "id": "assets",
+        "label": "Help us understand your finances",
+        "repeatable": true,
+        "fields": [
+          {
+            "name": "Verification of assets",
+            "type": "integer_or_count",
+            "observedValue": "0",
+            "note": "exact meaning UNKNOWN; displayed as 0 on this PDF"
+          },
+          {
+            "name": "Financial institution name",
+            "type": "text"
+          },
+          {
+            "name": "Account type",
+            "type": "choice",
+            "observedValue": "Checking Account",
+            "otherOptions": "UNKNOWN"
+          },
+          {
+            "name": "Last 4 digits of the account number",
+            "type": "text",
+            "exampleFormat": "####"
+          },
+          {
+            "name": "Estimated balance",
+            "type": "currency"
+          }
+        ]
+      },
+      {
+        "id": "gifts_grants",
+        "label": "Tell us about any gifts or grants you might be receiving to put towards this loan",
+        "fields": [
+          {
+            "name": "Gifts grants does not apply",
+            "type": "does_not_apply_flag"
+          }
+        ]
+      },
+      {
+        "id": "other_assets",
+        "label": "Let us know if you have any other assets you’d like us to consider for your loan",
+        "fields": [
+          {
+            "name": "Other assets does not apply",
+            "type": "does_not_apply_flag"
+          }
+        ]
+      },
+      {
+        "id": "liabilities",
+        "label": "Tell us about any liabilities or debts you might have that we’ll need to consider",
+        "fields": [
+          {
+            "name": "Other liabilities does not apply",
+            "type": "does_not_apply_flag"
+          }
+        ]
+      },
+      {
+        "id": "loan_needs",
+        "label": "Tell us about your loan needs",
+        "fields": [
+          {
+            "name": "What are you needing a loan for?",
+            "type": "choice",
+            "observedValue": "Purchase",
+            "otherOptions": "UNKNOWN (refi implied by prompt, not listed on this PDF)"
+          },
+          {
+            "name": "Estimated purchase price",
+            "type": "currency"
+          },
+          {
+            "name": "Down Payment",
+            "type": "currency"
+          },
+          {
+            "name": "What is the primary source for your down payment?",
+            "type": "choice",
+            "observedValue": "Checking/Savings",
+            "otherOptions": "UNKNOWN"
+          },
+          {
+            "name": "Loan amount needed",
+            "type": "currency"
+          }
+        ]
+      },
+      {
+        "id": "property",
+        "label": "Tell us about the property for this loan",
+        "fields": [
+          {
+            "name": "Property type",
+            "type": "choice",
+            "observedValue": "Single Family",
+            "otherOptions": "UNKNOWN"
+          },
+          {
+            "name": "What do you plan to use the property for?",
+            "type": "choice",
+            "observedValue": "Primary Residence",
+            "otherOptions": "UNKNOWN"
+          },
+          {
+            "name": "If you are considering purchasing a home from a D. R. Horton family of brands, please provide the Subdivision/Community name.",
+            "type": "text"
+          },
+          {
+            "name": "Have you entered into a buyer-broker agreement with a Real Estate Agent?",
+            "type": "yesno"
+          },
+          {
+            "name": "Is this loan for a specific home that you have already selected?",
+            "type": "yesno"
+          },
+          {
+            "name": "Address of property",
+            "type": "text"
+          },
+          {
+            "name": "City",
+            "type": "text"
+          },
+          {
+            "name": "State",
+            "type": "text"
+          },
+          {
+            "name": "Zip Code",
+            "type": "text"
+          },
+          {
+            "name": "Address of property (repeated block)",
+            "note": "FOUND duplicated address block on the PDF transcript"
+          }
+        ]
+      },
+      {
+        "id": "declarations",
+        "label": "We’ll need the following declarations from you and your co-borrower if you’re applying with one",
+        "fields": [
+          {
+            "name": "Do you intend to occupy the property as your primary residence?",
+            "type": "yesno"
+          },
+          {
+            "name": "Have you had an ownership interest in another property in the last three years?",
+            "type": "yesno"
+          },
+          {
+            "name": "Do you have a family relationship or business affiliation with the seller of the property?",
+            "type": "yesno"
+          },
+          {
+            "name": "Are you borrowing any money for this real estate transaction (e.g. for closing costs or down payment) or obtaining any money from another party, such as the seller or realtor, that you have not disclosed on this loan application?",
+            "type": "yesno"
+          },
+          {
+            "name": "Have you or will you be applying for a mortgage loan on another property (not the property securing this loan) on or before closing this transaction that was not disclosed on this application?",
+            "type": "yesno"
+          },
+          {
+            "name": "Have you or will you be applying for new credit (e.g. installment loan, credit card, etc.) on or before closing this loan that is not disclosed on this application?",
+            "type": "yesno"
+          },
+          {
+            "name": "Will this property be subject to a lien that could take priority over the first mortgage lien, such as a clean energy lien paid through your property taxes (e.g. the Property Assessed Clean Energy Program)?",
+            "type": "yesno"
+          },
+          {
+            "name": "Are you a co-signor or guarantor on any debt or loan that is not disclosed on this application?",
+            "type": "yesno"
+          },
+          {
+            "name": "Are there any outstanding judgments against you?",
+            "type": "yesno"
+          },
+          {
+            "name": "Are you currently delinquent or in default on a federal debt?",
+            "type": "yesno"
+          },
+          {
+            "name": "Are you party to a lawsuit where you have possible personal financial liability?",
+            "type": "yesno"
+          },
+          {
+            "name": "Have you conveyed title to any property in lieu of foreclosure in the last 7 years?",
+            "type": "yesno"
+          },
+          {
+            "name": "Within the last 7 years have you had a pre-foreclosure sale or short sale where the property was sold to a third party and a lender accepted less than the outstanding mortgage balance due?",
+            "type": "yesno"
+          },
+          {
+            "name": "Have you had a property foreclosed upon in the last 7 years?",
+            "type": "yesno"
+          },
+          {
+            "name": "Have you declared bankruptcy within the past 7 years?",
+            "type": "yesno"
+          }
+        ]
+      }
+    ]
+  },
+  "brainFallback": {
+    "status": "SEARCHED",
+    "result": "No dump of this Home Buying & Credit Readiness Cognito form was found under /workspace/grants-co-brain. Brain notes a different Cognito use: tax intake. DisputeFox is the credit/dispute board. GHL is CRM. returning-client-luxury-email is an email skill, not an intake field list."
+  },
+  "gaps": {
+    "onUrlaNotOnCognito": [
+      "Address Confidentiality Program",
+      "Credit authorization (soft-pull / hard-pull consent as a standalone agree)",
+      "Confirmation & information release authorization",
+      "Middle name (Cognito FullName UI is First+Last only)",
+      "Citizenship / immigration situation",
+      "Military service (self or deceased spouse)",
+      "Preferred language",
+      "Work email",
+      "Marital status",
+      "Non-spouse property rights",
+      "Dependents count",
+      "Mailing vs current address + years/months at address",
+      "Own / rent / do not currently pay rent at current address",
+      "Employment history (employer, address, phone, start, line-of-work tenure, related-party employment, title, current flag)",
+      "Monthly income before taxes + overtime/commission/bonus",
+      "Other income",
+      "Optional HMDA ethnicity/race/gender",
+      "Additional applicants / co-borrower",
+      "Other real estate owned",
+      "Asset accounts (institution, type, last 4, estimated balance)",
+      "Gifts/grants",
+      "Other assets",
+      "Liabilities",
+      "Loan purpose / purchase price / down payment amount / down payment source / loan amount",
+      "Subject property type, occupancy, specific home selected, property address",
+      "D.R. Horton subdivision/community (URLA has a dedicated field; Cognito only mentions DR Horton in DPA helper text)",
+      "Buyer-broker agreement with a real estate agent (URLA field; Cognito names Taylor Carroll in disclosure copy only)",
+      "URLA declarations (occupy primary, 3-year ownership, seller affiliation, undisclosed borrowed funds, other mortgage apps, new credit, PACE/priority lien, co-signor, judgments, federal debt default, lawsuit, DIL, short sale, foreclosure, bankruptcy — 7 year lookbacks)"
+    ],
+    "onCognitoNotOnUrla": [
+      "Social Security Number (full; plaintext on Cognito)",
+      "Driver’s license / state ID file upload",
+      "Credit repair vs MyFICO program split",
+      "Credit Hero Score account creation instruction + screenshot upload",
+      "MyFICO mortgage score screenshot + stated minimum 620",
+      "Down Payment Assistance +$1,800 opt-in",
+      "DR Horton new-construction recommendation (helper text, not a field)",
+      "Separate lender/transaction identity (name/phone/email created on client behalf) disclosure",
+      "In-house agent assignment (Taylor Carroll) disclosure",
+      "Credit/purchase behavior rules (no new credit, no large purchases, no add/remove accounts)",
+      "Non-refundable service / payment-before-start / payment-must-clear acknowledgements",
+      "$1,800 cancellation fee payable to the realty company",
+      "Not a start-and-change-your-mind acknowledgement",
+      "No-guarantees legal copy (score / approval / rate / property)",
+      "Client pays inspections, appraisals, earnest money, down payment, closing costs",
+      "Typed name signature + drawn signature + Date (Auto) + final I-agree to proceed"
+    ]
+  },
+  "recommendedDataModel": [
+    {
+      "id": "party_identity",
+      "purpose": "Who the client is for readiness + later lender packet. Not a 1003.",
+      "from": [
+        "Cognito S1",
+        "URLA identity"
+      ],
+      "fields": [
+        "legal_first",
+        "legal_middle",
+        "legal_last",
+        "mobile",
+        "email",
+        "work_email",
+        "dob",
+        "ssn_vaulted",
+        "citizenship_status",
+        "military_service",
+        "preferred_language",
+        "id_document"
+      ]
+    },
+    {
+      "id": "household",
+      "purpose": "Readiness counseling snapshot",
+      "from": [
+        "URLA family"
+      ],
+      "fields": [
+        "marital_status",
+        "nonspouse_property_rights",
+        "dependents_count"
+      ]
+    },
+    {
+      "id": "housing_now",
+      "purpose": "Stability + ACP",
+      "from": [
+        "Cognito address",
+        "URLA living/REO"
+      ],
+      "fields": [
+        "current_address",
+        "mailing_same",
+        "years_months_at_address",
+        "own_rent_norent",
+        "address_confidentiality_program"
+      ]
+    },
+    {
+      "id": "credit_program",
+      "purpose": "Grants & Co readiness path (DisputeFox / score board later)",
+      "from": [
+        "Cognito S3"
+      ],
+      "fields": [
+        "include_credit_repair",
+        "credit_hero_proof",
+        "myfico_proof",
+        "stated_min_score_copy_620_confirm_with_charles"
+      ]
+    },
+    {
+      "id": "credit_behavior_lock",
+      "purpose": "Service rules while file is open",
+      "from": [
+        "Cognito S6"
+      ],
+      "fields": [
+        "no_new_credit",
+        "no_large_purchases",
+        "no_account_changes_without_approval",
+        "impact_acknowledgement"
+      ]
+    },
+    {
+      "id": "income_employment_snapshot",
+      "purpose": "Readiness / referral completeness, not underwriting",
+      "from": [
+        "URLA employment"
+      ],
+      "fields": [
+        "employment_status",
+        "employment_type",
+        "employer",
+        "start_date",
+        "line_of_work_tenure",
+        "related_party",
+        "title",
+        "monthly_income_gross",
+        "ot_comm_bonus_flag",
+        "other_income_flag"
+      ]
+    },
+    {
+      "id": "money_snapshot",
+      "purpose": "File-ready packet for lender referral",
+      "from": [
+        "URLA assets/liabilities/gifts"
+      ],
+      "fields": [
+        "asset_accounts[]",
+        "gifts_grants_flag",
+        "other_assets_flag",
+        "liabilities_flag"
+      ]
+    },
+    {
+      "id": "home_intent",
+      "purpose": "What they want to buy — referral context, not origination",
+      "from": [
+        "Cognito DPA",
+        "URLA loan/property"
+      ],
+      "fields": [
+        "loan_purpose",
+        "purchase_price_est",
+        "down_payment_est",
+        "down_payment_source",
+        "loan_amount_est",
+        "property_type",
+        "occupancy",
+        "specific_home_selected",
+        "property_address",
+        "dr_horton_community",
+        "dpa_opt_in_1800",
+        "buyer_broker_agreement",
+        "assigned_agent_name"
+      ]
+    },
+    {
+      "id": "declarations_redflags",
+      "purpose": "Early risk flags for counseling; copy URLA 5 lookbacks",
+      "from": [
+        "URLA declarations"
+      ],
+      "fields": [
+        "occupy_primary",
+        "ownership_last_3y",
+        "seller_affiliation",
+        "undisclosed_borrowed_funds",
+        "other_mortgage_apps",
+        "new_credit_before_close",
+        "pace_priority_lien",
+        "cosignor",
+        "judgments",
+        "federal_debt_default",
+        "lawsuit",
+        "dil_7y",
+        "short_sale_7y",
+        "foreclosure_7y",
+        "bankruptcy_7y"
+      ]
+    },
+    {
+      "id": "consents_agreements",
+      "purpose": "Legal gate before work starts. Not lender NMLS origination.",
+      "from": [
+        "Cognito S5-S10",
+        "URLA auths"
+      ],
+      "fields": [
+        "credit_authorization",
+        "info_release",
+        "synthetic_lender_identity_disclosure",
+        "no_guarantees",
+        "client_pays_homebuying_costs",
+        "nonrefundable_service",
+        "payment_must_clear",
+        "cancel_fee_1800_realty",
+        "not_change_mind",
+        "typed_signature",
+        "drawn_signature",
+        "signed_at",
+        "ip_user_agent"
+      ]
+    },
+    {
+      "id": "document_vault",
+      "purpose": "Files for readiness + lender handoff",
+      "from": [
+        "Cognito uploads",
+        "URLA implied"
+      ],
+      "fields": [
+        "gov_id",
+        "credit_hero_or_myfico_proof",
+        "income_docs_implied",
+        "asset_statements_implied"
+      ]
+    },
+    {
+      "id": "ops_routing",
+      "purpose": "CRM + credit board, not APIs invented here",
+      "from": [
+        "session/workflow",
+        "brain"
+      ],
+      "fields": [
+        "ghl_contact_id",
+        "disputefox_client_id",
+        "readiness_status",
+        "referred_lender_flag"
+      ],
+      "systems": {
+        "crm": "GHL",
+        "creditBoard": "DisputeFox"
+      },
+      "apiKeys": "DO NOT INVENT"
+    }
+  ],
+  "documentUploads": [
+    {
+      "doc": "Driver’s license or state ID (front and back if possible)",
+      "source": "Cognito",
+      "status": "FOUND",
+      "required": true,
+      "types": [
+        "jpg",
+        "jpeg",
+        "png",
+        "pdf"
+      ],
+      "maxFiles": 10
+    },
+    {
+      "doc": "Credit Hero Score account screenshot/confirmation",
+      "source": "Cognito",
+      "status": "FOUND",
+      "required": "Helper text says required if credit-repair=Yes; schema required=false; no template hide"
+    },
+    {
+      "doc": "MyFICO mortgage score screenshot (copy states min 620)",
+      "source": "Cognito",
+      "status": "FOUND",
+      "required": "Helper text says required if credit-repair=No; schema required=false; no template hide"
+    },
+    {
+      "doc": "Paystubs / W-2 / tax returns",
+      "source": "URLA",
+      "status": "IMPLIED not FOUND — employment/income fields exist; no upload field on this PDF"
+    },
+    {
+      "doc": "Bank / asset statements",
+      "source": "URLA",
+      "status": "IMPLIED not FOUND — asset account fields exist; no upload field on this PDF"
+    },
+    {
+      "doc": "Gift letter",
+      "source": "URLA",
+      "status": "IMPLIED not FOUND — gifts/grants section exists; this sample marked does-not-apply; no upload field"
+    },
+    {
+      "doc": "Credit authorization wet/e-sign artifact",
+      "source": "URLA",
+      "status": "FOUND as agree control, not a file upload"
+    },
+    {
+      "doc": "Drawn + typed e-signature",
+      "source": "Cognito",
+      "status": "FOUND",
+      "required": true
+    }
+  ]
+}
