@@ -3,7 +3,7 @@
 /** Local chrome metrics. Content WebContentsViews sit in the remaining rect. */
 const CHROME = Object.freeze({
   sidebarWidth: 236,
-  bannerHeight: 34,
+  bannerHeight: 0,
   tabHeight: 40,
   toolbarHeight: 52,
   noticeHeight: 56,

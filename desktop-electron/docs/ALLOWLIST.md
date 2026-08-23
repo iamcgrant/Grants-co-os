@@ -17,6 +17,7 @@ Only **top-level** navigations, redirects, and `window.open` / popups are filter
 | Equifax | `https://www.equifax.com/personal/credit-report-services/credit-dispute` | `www.equifax.com` |
 | DisputeFox | `https://pulse.disputeprocess.com/jsp/client/login.jsp` | `pulse.disputeprocess.com` |
 | Cloud Tax | `https://grantandco.cloudtaxoffice.com/proavalon/` | `grantandco.cloudtaxoffice.com` |
+| CFPB | `https://www.consumerfinance.gov/complaint/` | `www.consumerfinance.gov` |
 
 Source of truth: `src/main/desks.js`.
 
@@ -34,4 +35,4 @@ Additional exact hosts must be added **explicitly** after a Windows observation 
 
 ## Protocols we will not add
 
-No provider has officially documented a `grantscoos://` (or other Grants-controlled) redirect URI for these six products. This spike does not register one.
+No provider has officially documented a `grantscoos://` (or other Grants-controlled) redirect URI for these seven products. This spike does not register one.

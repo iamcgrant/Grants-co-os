@@ -21,6 +21,7 @@ Each of the following loads in its **own** unprivileged `WebContentsView` (not a
 | Equifax | `https://www.equifax.com/personal/credit-report-services/credit-dispute` | `www.equifax.com` | `persist:gc-equifax` |
 | DisputeFox | `https://pulse.disputeprocess.com/jsp/client/login.jsp` | `pulse.disputeprocess.com` | `persist:gc-disputefox` |
 | Cloud Tax | `https://grantandco.cloudtaxoffice.com/proavalon/` | `grantandco.cloudtaxoffice.com` | `persist:gc-cloud-tax` |
+| CFPB | `https://www.consumerfinance.gov/complaint/` | `www.consumerfinance.gov` | `persist:gc-cfpb` |
 
 See `docs/ALLOWLIST.md` for the matching rules. See `docs/TEST-CRITERIA.md` for the empty compatibility matrix.
 

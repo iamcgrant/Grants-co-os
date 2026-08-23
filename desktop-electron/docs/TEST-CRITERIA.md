@@ -37,13 +37,14 @@ For each desk, mark only after a Windows session:
 | Equifax | *untested* | *untested* | *untested* | *untested* | *untested* | *untested* | *untested* | *untested* | |
 | DisputeFox | *untested* | *untested* | *untested* | *untested* | *untested* | *untested* | *untested* | *untested* | |
 | Cloud Tax | *untested* | *untested* | *untested* | *untested* | *untested* | *untested* | *untested* | *untested* | |
+| CFPB | *untested* | *untested* | *untested* | *untested* | *untested* | *untested* | *untested* | *untested* | |
 
 ## Shell criteria (can be exercised without vendor passwords)
 
 These still should be confirmed on Windows. Linux smoke only proves the process starts.
 
-- [ ] Banner states this is a disposable spike, not production / not Tauri
-- [ ] Sidebar lists only OS Home + the six approved vendors
+- [ ] Chrome has no yellow top banner; vendor views start at the tab strip
+- [ ] Sidebar lists only OS Home + the seven approved vendors
 - [ ] Chrome HTML is local; live OS is not in the preload renderer
 - [ ] Back / forward / reload / close update the active desk
 - [ ] Loading indicator appears while a view is loading

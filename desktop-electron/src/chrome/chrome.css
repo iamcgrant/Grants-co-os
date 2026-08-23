@@ -7,7 +7,7 @@
   --muted: #929292;
   --line: rgba(178, 212, 255, 0.16);
   --sidebar: 236px;
-  --banner: 34px;
+  --banner: 0px;
   --tabs: 40px;
   --toolbar: 52px;
 }
@@ -101,20 +101,6 @@ h1 {
   display: flex;
   flex-direction: column;
   min-width: 0;
-}
-
-.banner {
-  height: var(--banner);
-  display: flex;
-  align-items: center;
-  padding: 0 14px;
-  background: #2a220c;
-  color: var(--gold);
-  font-size: 11px;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .tabs {
