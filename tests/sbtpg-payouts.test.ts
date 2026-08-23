@@ -65,8 +65,11 @@ describe("SBTPG collected payouts", () => {
     expect(home).not.toMatch(/tax program/i);
     expect(home).not.toMatch(/Fee Summary/);
     expect(home).not.toMatch(/\bERO\b/);
+    expect(home).not.toMatch(/\/tax\/sbtpg/);
     expect(home).toMatch(/totalRevenueCents/);
     expect(home).toMatch(/Total Company Revenue/);
+    expect(page).toMatch(/taxpayers/);
+    expect(page).toMatch(/SBTPG/);
   });
 
   it("counts PAID/FUNDED official payouts in Command Center collected totals", async () => {

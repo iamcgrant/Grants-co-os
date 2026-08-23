@@ -109,6 +109,8 @@ describe("Command Center Total Revenue mapping", () => {
     expect(home).not.toMatch(/\bERO\b/);
     expect(home).not.toMatch(/SbtpgPayoutForm|SbtpgFeeSummaryIngestForm/);
     expect(home).not.toMatch(/cheerio|puppeteer|playwright/i);
+    expect(home).not.toMatch(/\/tax\/sbtpg/);
+    expect(home).not.toMatch(/href=["']\/tax\//);
   });
 
   it("draws the Command Center chart at the official season-to-date total, not an invented series", () => {

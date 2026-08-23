@@ -64,7 +64,6 @@ export default async function HomePage() {
           <MetricTile
             label="Total Company Revenue"
             value={formatUsd(data.finance.totalRevenueCents)}
-            href="/tax/sbtpg"
             spark={sparkCollect.slice(-7)}
             hint="Grants & Co Consultants"
             trend="SEASON-TO-DATE"
@@ -73,7 +72,6 @@ export default async function HomePage() {
           <MetricTile
             label="Unfunded"
             value={formatUsd(data.finance.unfundedCents)}
-            href="/tax/sbtpg"
             hint="Pending · not in Total Company Revenue"
             tone="warn"
           />
@@ -84,7 +82,6 @@ export default async function HomePage() {
                 ? "—"
                 : formatUsd(data.finance.collectedTodayCents)
             }
-            href="/tax/sbtpg"
             hint="No official daily split"
             tone="ice"
           />
