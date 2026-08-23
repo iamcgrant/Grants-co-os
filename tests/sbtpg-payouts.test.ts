@@ -5,6 +5,29 @@ import { resetSqliteFromSchema } from "./helpers/sqlite-schema";
 
 const testDb = path.join(process.cwd(), "prisma", "test-sbtpg-payouts.db");
 
+describe("Command Center home stays off the SBTPG desk", () => {
+  it("does not scrape the SBTPG portal or link home revenue tiles there", () => {
+    const page = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/sbtpg/page.tsx"), "utf8");
+    const home = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/home/page.tsx"), "utf8");
+    expect(page).toMatch(/SbtpgPayoutForm/);
+    expect(page).toMatch(/loadSbtpgDesk/);
+    expect(page).not.toMatch(/cheerio|puppeteer|playwright/i);
+    expect(page).not.toMatch(/https:\/\/pro\.sbtpg\.com/);
+    expect(home).not.toMatch(/SbtpgPayoutForm/);
+    expect(home).not.toMatch(/SbtpgFeeSummaryIngestForm/);
+    expect(home).not.toMatch(/SBTPG/);
+    expect(home).not.toMatch(/taxpayer/i);
+    expect(home).not.toMatch(/tax program/i);
+    expect(home).not.toMatch(/Fee Summary/);
+    expect(home).not.toMatch(/\bERO\b/);
+    expect(home).not.toMatch(/\/tax\/sbtpg/);
+    expect(home).toMatch(/totalRevenueCents/);
+    expect(home).toMatch(/Total Company Revenue/);
+    expect(page).toMatch(/taxpayers/);
+    expect(page).toMatch(/SBTPG/);
+  });
+});
+
 describe("SBTPG collected payouts", () => {
   let prisma: import("../src/generated/prisma/client").PrismaClient;
   let recordSbtpgPayout: typeof import("../src/lib/tax/payouts").recordSbtpgPayout;
@@ -49,27 +72,6 @@ describe("SBTPG collected payouts", () => {
     for (const f of [testDb, `${testDb}-journal`, `${testDb}-wal`, `${testDb}-shm`]) {
       if (fs.existsSync(f)) fs.unlinkSync(f);
     }
-  });
-
-  it("does not scrape the SBTPG portal", () => {
-    const page = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/tax/sbtpg/page.tsx"), "utf8");
-    const home = fs.readFileSync(path.join(process.cwd(), "src/app/(staff)/home/page.tsx"), "utf8");
-    expect(page).toMatch(/SbtpgPayoutForm/);
-    expect(page).toMatch(/loadSbtpgDesk/);
-    expect(page).not.toMatch(/cheerio|puppeteer|playwright/i);
-    expect(page).not.toMatch(/https:\/\/pro\.sbtpg\.com/);
-    expect(home).not.toMatch(/SbtpgPayoutForm/);
-    expect(home).not.toMatch(/SbtpgFeeSummaryIngestForm/);
-    expect(home).not.toMatch(/SBTPG/);
-    expect(home).not.toMatch(/taxpayer/i);
-    expect(home).not.toMatch(/tax program/i);
-    expect(home).not.toMatch(/Fee Summary/);
-    expect(home).not.toMatch(/\bERO\b/);
-    expect(home).not.toMatch(/\/tax\/sbtpg/);
-    expect(home).toMatch(/totalRevenueCents/);
-    expect(home).toMatch(/Total Company Revenue/);
-    expect(page).toMatch(/taxpayers/);
-    expect(page).toMatch(/SBTPG/);
   });
 
   it("counts PAID/FUNDED official payouts in Command Center collected totals", async () => {
