@@ -131,11 +131,7 @@ export class MortgageLosService {
     this.apps.set(applicationId, rec);
     return {
       applicationId,
-      loanFile: {
-        loanNumber: loanFile.loanNumber,
-        originationStage: loanFile.originationStage,
-        ...loanFile,
-      },
+      loanFile: { ...loanFile },
       sections: emptySections(),
     };
   }
