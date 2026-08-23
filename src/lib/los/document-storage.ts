@@ -42,22 +42,26 @@ export async function storeDocumentBytes(input: StoreDocumentInput): Promise<voi
 
   if (useFs) {
     const fs = await import("node:fs/promises");
-    const root = process.env.LOS_DOCUMENT_ROOT || path.join(process.cwd(), "data", "los-documents");
+    const root =
+      process.env.LOS_DOCUMENT_ROOT ||
+      path.join(/* turbopackIgnore: true */ process.cwd(), "data", "los-documents");
     const rel = input.storageKey.replace(/^los\//, "");
-    const filePath = path.join(root, rel);
+    const filePath = path.join(/* turbopackIgnore: true */ root, rel);
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     await fs.writeFile(filePath, input.bytes);
     return;
   }
 
+  const payload = new Uint8Array(input.bytes);
+
   await prisma.documentBlob.upsert({
     where: { documentId: input.documentId },
     create: {
       documentId: input.documentId,
-      bytes: input.bytes,
+      bytes: payload,
     },
     update: {
-      bytes: input.bytes,
+      bytes: payload,
     },
   });
 }
@@ -74,9 +78,13 @@ export async function readDocumentBytes(documentId: string, storageKey: string):
   if (useFs) {
     try {
       const fs = await import("node:fs/promises");
-      const root = process.env.LOS_DOCUMENT_ROOT || path.join(process.cwd(), "data", "los-documents");
+      const root =
+        process.env.LOS_DOCUMENT_ROOT ||
+        path.join(/* turbopackIgnore: true */ process.cwd(), "data", "los-documents");
       const rel = storageKey.replace(/^los\//, "");
-      return await fs.readFile(path.join(root, rel));
+      return await fs.readFile(
+        path.join(/* turbopackIgnore: true */ root, rel),
+      );
     } catch {
       return null;
     }

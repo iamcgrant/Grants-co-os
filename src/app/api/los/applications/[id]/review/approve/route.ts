@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/session";
 import { assertPermission } from "@/lib/rbac/permissions";
 import { approveInternalReview } from "@/lib/los/review-payment";
-import { readParams, toHttpResponse } from "../../_handler";
+import { readParams, toHttpResponse } from "../../../../_handler";
 
 /** POST /api/los/applications/:id/review/approve — staff queues file for review (Option B) */
 export async function POST(
