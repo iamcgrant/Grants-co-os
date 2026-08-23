@@ -97,20 +97,17 @@ describe("Command Center Total Revenue mapping", () => {
     expect(home).toMatch(/Revenue trend/);
     expect(home).toMatch(/name: "Total Company Revenue"/);
     expect(home).toMatch(/data\.finance\.totalRevenueCents/);
-    expect(home).toMatch(/data\.finance\.unfundedCents/);
-    expect(home).toMatch(/label="Unfunded"/);
     expect(official.paidCents).toBe(11_770_000);
     expect(home).not.toMatch(/117700|117,700/);
     expect(home).not.toMatch(/totalRevenueSource|totalRevenueTaxpayerCount|unfundedTaxpayerCount/);
-    expect(home).not.toMatch(/SBTPG/);
-    expect(home).not.toMatch(/taxpayer/i);
+    expect(home).not.toMatch(/unfundedCents|label="Unfunded"/);
+    expect(home).not.toMatch(/SBTPG|sbtpg|taxpayer|Fee Summary|\bERO\b|\bTY\b/i);
     expect(home).not.toMatch(/tax program/i);
-    expect(home).not.toMatch(/Fee Summary/);
-    expect(home).not.toMatch(/\bERO\b/);
     expect(home).not.toMatch(/SbtpgPayoutForm|SbtpgFeeSummaryIngestForm/);
     expect(home).not.toMatch(/cheerio|puppeteer|playwright/i);
-    expect(home).not.toMatch(/\/tax\/sbtpg/);
-    expect(home).not.toMatch(/href=["']\/tax\//);
+    expect(home).not.toMatch(/\/tax\/sbtpg|href=["']\/tax\/|inbox\?tab=ghl/);
+    expect(home).not.toMatch(/GHL|LeadConnector|gohighlevel|live API|GHL linked/i);
+    expect(home).not.toMatch(/GhlSyncPanel|GhlConversationPullPanel|clientSourceLabel/);
   });
 
   it("draws the Command Center chart at the official season-to-date total, not an invented series", () => {

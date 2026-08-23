@@ -15,12 +15,10 @@ describe("Command Center home stays off the SBTPG desk", () => {
     expect(page).not.toMatch(/https:\/\/pro\.sbtpg\.com/);
     expect(home).not.toMatch(/SbtpgPayoutForm/);
     expect(home).not.toMatch(/SbtpgFeeSummaryIngestForm/);
-    expect(home).not.toMatch(/SBTPG/);
-    expect(home).not.toMatch(/taxpayer/i);
+    expect(home).not.toMatch(/SBTPG|sbtpg|taxpayer|Fee Summary|\bERO\b|\bTY\b|Unfunded/i);
     expect(home).not.toMatch(/tax program/i);
-    expect(home).not.toMatch(/Fee Summary/);
-    expect(home).not.toMatch(/\bERO\b/);
-    expect(home).not.toMatch(/\/tax\/sbtpg/);
+    expect(home).not.toMatch(/\/tax\/sbtpg|href=["']\/tax\//);
+    expect(home).not.toMatch(/GHL|LeadConnector|live API|GHL linked/i);
     expect(home).toMatch(/totalRevenueCents/);
     expect(home).toMatch(/Total Company Revenue/);
     expect(page).toMatch(/taxpayers/);
