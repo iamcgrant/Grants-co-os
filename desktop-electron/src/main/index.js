@@ -33,6 +33,11 @@ if (SMOKE && process.platform === "linux") {
   app.commandLine.appendSwitch("disable-dev-shm-usage");
 }
 
+/** macOS only: skip HTTP/3 so isolated WebContentsView loads that fail QUIC can use HTTP/2. Before app ready. */
+if (process.platform === "darwin") {
+  app.commandLine.appendSwitch("disable-quic");
+}
+
 /** @type {import('electron').BaseWindow | null} */
 let mainWindow = null;
 /** @type {import('electron').WebContentsView | null} */

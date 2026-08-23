@@ -10,13 +10,15 @@ Only **top-level** navigations, redirects, and `window.open` / popups are filter
 
 | Desk | Official start URL | Allowed hosts (exact) |
 |------|--------------------|------------------------|
-| OS Home | `https://os.grantandconsultants.com/` | `os.grantandconsultants.com` |
+| OS Home | `https://os.grantandconsultants.com/login` | `os.grantandconsultants.com` |
 | GHL | `https://app.gohighlevel.com/` | `app.gohighlevel.com` |
 | Telegram | `https://web.telegram.org/a/` | `web.telegram.org` |
 | Experian | `https://www.experian.com/consumer/upload/` | `www.experian.com` |
 | Equifax | `https://www.equifax.com/personal/credit-report-services/credit-dispute` | `www.equifax.com` |
 | DisputeFox | `https://pulse.disputeprocess.com/jsp/client/login.jsp` | `pulse.disputeprocess.com` |
 | Cloud Tax | `https://grantandco.cloudtaxoffice.com/proavalon/` | `grantandco.cloudtaxoffice.com` |
+
+OS Home starts at `/login` so the first `WebContentsView` load skips the `/` → `/login` 307. Allowed hosts stay exact `os.grantandconsultants.com` only.
 
 Source of truth: `src/main/desks.js`.
 

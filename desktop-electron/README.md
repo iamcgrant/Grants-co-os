@@ -14,7 +14,7 @@ Each of the following loads in its **own** unprivileged `WebContentsView` (not a
 
 | Desk | Official start URL | Exact allowlisted host | Partition |
 |------|--------------------|------------------------|-----------|
-| OS Home | `https://os.grantandconsultants.com/` | `os.grantandconsultants.com` | `persist:gc-os` |
+| OS Home | `https://os.grantandconsultants.com/login` | `os.grantandconsultants.com` | `persist:gc-os` |
 | GHL | `https://app.gohighlevel.com/` | `app.gohighlevel.com` | `persist:gc-ghl` |
 | Telegram | `https://web.telegram.org/a/` | `web.telegram.org` | `persist:gc-telegram` |
 | Experian | `https://www.experian.com/consumer/upload/` | `www.experian.com` | `persist:gc-experian` |
@@ -76,6 +76,10 @@ npx electron . --smoke
 ```
 
 On some Linux VMs Electron needs `xvfb-run` and the smoke flag adds `--no-sandbox` **only** for `--smoke` on Linux. Windows `npm start` does not disable the Chromium sandbox.
+
+## macOS (observed load, not a Windows proof)
+
+OS Home starts at `/login` so the first `WebContentsView` load skips the `/` → `/login` 307. On `darwin` only, Chromium `disable-quic` is appended **before** `app` ready. Sandbox stays on. User-Agent is not spoofed. Headers are not stripped. Certificate errors are not ignored. This is not evidence that Windows is fixed.
 
 ## Security rules this spike follows
 
