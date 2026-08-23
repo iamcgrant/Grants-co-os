@@ -48,7 +48,7 @@ These still should be confirmed on Windows. Linux smoke only proves the process 
 - [ ] Back / forward / reload / close update the active desk
 - [ ] Loading indicator appears while a view is loading
 - [ ] Failed main-frame load shows an error notice in chrome (no injected vendor script)
-- [ ] Permission prompts from a vendor page are denied and noticed
+- [ ] Permission prompts from a vendor page: `storage-access` / `top-level-storage-access` allowed (login cookies in the isolated partition); all others denied and noticed
 - [ ] `npm test` passes (allowlist + desk lock + no iframe/webview in chrome)
 
 ## Honest non-claims
