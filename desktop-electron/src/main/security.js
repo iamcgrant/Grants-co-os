@@ -2,7 +2,7 @@
 
 /**
  * Renderer privileges. Vendor + OS views never get a preload.
- * Chrome may use a preload that only exposes spike IPC — never Electron internals.
+ * Local chrome / About / Messages may use a narrow preload — never Electron internals.
  */
 
 function unprivilegedWebPreferences(partition) {
@@ -19,11 +19,25 @@ function unprivilegedWebPreferences(partition) {
 }
 
 function chromeWebPreferences(preloadPath) {
-  return {
+  const prefs = {
     nodeIntegration: false,
     contextIsolation: true,
     sandbox: true,
     partition: "gc-chrome-local",
+    webSecurity: true,
+    allowRunningInsecureContent: false,
+    navigateOnDragDrop: false,
+  };
+  if (preloadPath) prefs.preload = preloadPath;
+  return prefs;
+}
+
+function messagesWebPreferences(preloadPath) {
+  return {
+    nodeIntegration: false,
+    contextIsolation: true,
+    sandbox: true,
+    partition: "gc-messages-local",
     preload: preloadPath,
     webSecurity: true,
     allowRunningInsecureContent: false,
@@ -46,8 +60,17 @@ function assertUnprivilegedPrefs(prefs) {
   }
 }
 
+function assertMessagesPrefs(prefs) {
+  assertUnprivilegedPrefs({ ...prefs, preload: undefined });
+  if (!prefs.preload) {
+    throw new Error("messages view requires its own preload");
+  }
+}
+
 module.exports = {
   unprivilegedWebPreferences,
   chromeWebPreferences,
+  messagesWebPreferences,
   assertUnprivilegedPrefs,
+  assertMessagesPrefs,
 };
