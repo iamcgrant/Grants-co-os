@@ -4,19 +4,16 @@ import { Role } from "@/generated/prisma/client";
 import { getCurrentUser } from "@/lib/auth/session";
 import { formatUsd } from "@/lib/payments/dashboard";
 import {
-  clientSourceLabel,
   getJonaProcessingBoard,
   getOwnerCommandCenter,
   getSimonCareBoard,
+  isCommandCenterHomeIntegration,
 } from "@/lib/ops/command-center";
 import { roleHomeLabel, type StaffRole } from "@/lib/nav/role-nav";
 import { prisma } from "@/lib/db/prisma";
 import { MetricTile, Panel, StatRow } from "@/components/ui/density";
 import { DonutChart, LineChart } from "@/components/ui/charts";
-import { GhlSyncPanel } from "@/components/integrations/GhlSyncPanel";
-import { GhlConversationPullPanel } from "@/components/integrations/GhlConversationPullPanel";
 import { DeskEmptyState } from "@/components/desk/DeskEmptyState";
-import { hasPermission } from "@/lib/rbac/permissions";
 
 const STAGE_COLORS = ["#b2d4ff", "#f5b82a", "#67a671", "#6887d6", "#fdd79a", "#ff6b6b", "#94a1b2", "#ffffff"];
 
@@ -36,13 +33,6 @@ export default async function HomePage() {
             <p className="gc-eyebrow mb-1">Owner command</p>
             <h1 className="text-3xl md:text-[2.35rem] mb-1 leading-none">{roleHomeLabel(user.role as StaffRole)}</h1>
             <p className="text-[var(--gc-muted)] text-sm">
-              {data.integrationHealth.dataPlane} data plane · money · team · exceptions · systems
-              {" · "}
-              GHL{" "}
-              {data.integrationHealth.ghlReady
-                ? `${data.ops.ghlLinked} linked · ${data.ops.ghlLiveLinked} live API`
-                : "Awaiting Integration"}
-              {" · "}
               Total Company Revenue {formatUsd(data.finance.totalRevenueCents)} · Grants &amp; Co Consultants · SEASON-TO-DATE
             </p>
           </div>
@@ -59,41 +49,28 @@ export default async function HomePage() {
           </div>
         </div>
 
-        {/* KPI strip — always 4 across on desktop */}
         <div className="gc-dash-grid gc-dash-grid-4">
           <MetricTile
             label="Total Company Revenue"
             value={formatUsd(data.finance.totalRevenueCents)}
-            href="/tax/sbtpg"
             spark={sparkCollect.slice(-7)}
             hint="Grants & Co Consultants"
             trend="SEASON-TO-DATE"
             tone="ok"
           />
           <MetricTile
-            label="Unfunded"
-            value={formatUsd(data.finance.unfundedCents)}
-            href="/tax/sbtpg"
-            hint="Pending · not in Total Company Revenue"
-            tone="warn"
-          />
-          <MetricTile
-            label="Collected today"
-            value={
-              data.finance.sbtpgCollectedTodayCents === 0 && data.finance.grantsPayTodayCents === 0
-                ? "—"
-                : formatUsd(data.finance.collectedTodayCents)
-            }
-            href="/tax/sbtpg"
-            hint="No official daily split"
-            tone="ice"
-          />
-          <MetricTile
             label="Active clients"
             value={data.ops.activeClients}
             href="/clients"
-            hint={`${data.ops.ghlLinked} GHL linked · ${data.ops.newClients} new`}
+            hint={`${data.ops.newClients} new`}
             tone="ice"
+          />
+          <MetricTile label="New enrollments" value={data.ops.newClients} href="/clients" />
+          <MetricTile
+            label="Needs attention"
+            value={data.ops.stuckClients}
+            href="/work?view=attention"
+            tone="danger"
           />
         </div>
 
@@ -103,7 +80,7 @@ export default async function HomePage() {
             {data.ops.activeClients === 0 ? (
               <DeskEmptyState
                 detail="No Grants clients in this data plane yet. Totals stay honest zeros until a client exists."
-                nextAction="Add a client or pull GHL contacts onto existing masters."
+                nextAction="Add a Grants client."
               />
             ) : null}
             <div className="flex flex-col sm:flex-row gap-5 items-center">
@@ -138,27 +115,12 @@ export default async function HomePage() {
             action={<span className="display text-xl text-[var(--gc-ice)]">{monthLabel}</span>}
           >
             <p className="text-xs text-[var(--gc-muted)] mb-3">
-              Total Company Revenue is SEASON-TO-DATE. Today and this week stay empty without a dated
-              Grants Pay charge. Unfunded is pending only and is not added.
+              Total Company Revenue is Grants &amp; Co Consultants SEASON-TO-DATE.
             </p>
             <LineChart
               series={[{ name: "Total Company Revenue", color: "#b2d4ff", values: data.revenueTrend.values }]}
               labels={data.revenueTrend.labels}
             />
-            <div className="gc-dash-grid gc-dash-grid-4 mt-4">
-              <MetricTile
-                label="Collected this week"
-                value={
-                  data.finance.sbtpgCollectedWeekCents === 0 && data.finance.grantsPayWeekCents === 0
-                    ? "—"
-                    : formatUsd(data.finance.collectedWeekCents)
-                }
-                hint="No official weekly split"
-              />
-              <MetricTile label="FCA" value={formatUsd(data.finance.fcaCents)} />
-              <MetricTile label="Auto Collect" value={formatUsd(data.finance.autoCollectCents)} />
-              <MetricTile label="Pending settlement" value={formatUsd(data.finance.pendingSettlementCents)} />
-            </div>
           </Panel>
         </div>
 
@@ -198,7 +160,7 @@ export default async function HomePage() {
             <div className="divide-y divide-[var(--gc-border)] max-h-[280px] overflow-y-auto">
               {data.attention.length === 0 && (
                 <p className="py-4 text-sm text-[var(--gc-muted)]">
-                  No clients in OS yet. Pull GHL contacts onto masters or add a Grants client.
+                  No clients in OS yet. Add a Grants client.
                 </p>
               )}
               {data.attention.map((c) => (
@@ -208,7 +170,7 @@ export default async function HomePage() {
                       {c.firstName} {c.lastName}
                     </p>
                     <p className="text-xs text-[var(--gc-muted)] truncate">
-                      {c.grantsClientId} · {clientSourceLabel(c.identifiers)} · {c.nextAction || "Review"}
+                      {c.grantsClientId} · {c.nextAction || "Review"}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
@@ -225,19 +187,13 @@ export default async function HomePage() {
           <Panel title="System status" eyebrow="Integrations" className="gc-span-3" action={<Link href="/more#systems" className="text-[0.65rem] uppercase tracking-wider text-[var(--gc-ice)]">All</Link>}>
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2 py-1.5">
-                <span className="text-sm">GoHighLevel</span>
-                <span className={`gc-status ${data.integrationHealth.ghlReady ? "gc-status-ok" : "gc-status-warn"}`}>
-                  {data.integrationHealth.ghlReady ? "API ready" : "Awaiting Integration"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-2 py-1.5">
                 <span className="text-sm">DisputeFox</span>
                 <span className={`gc-status ${data.integrationHealth.disputeFoxReady ? "gc-status-ok" : "gc-status-warn"}`}>
-                  {data.integrationHealth.disputeFoxReady ? "API ready" : "Awaiting Integration"}
+                  {data.integrationHealth.disputeFoxReady ? "Ready" : "Awaiting Integration"}
                 </span>
               </div>
               {data.integrations
-                .filter((i) => !["gohighlevel", "disputefox"].includes(i.provider))
+                .filter((i) => isCommandCenterHomeIntegration(i.provider))
                 .slice(0, 4)
                 .map((i) => (
                   <div key={i.id} className="flex items-center justify-between gap-2 py-1.5">
@@ -251,29 +207,9 @@ export default async function HomePage() {
                 ))}
               <StatRow label="Pulse pending" value={data.communication.pulsePending} href="/credit-pulse" />
               <StatRow label="Client msgs (7d)" value={data.communication.unreadClientMessages} href="/inbox" />
-              <StatRow
-                label="GHL inbox"
-                value={data.communication.ghlConversations}
-                href="/inbox?tab=ghl"
-                tone={data.communication.ghlInboxReady ? "default" : "warn"}
-              />
-              <StatRow label="GHL inbound email" value={data.communication.ghlInboundEmail} href="/inbox?tab=ghl" />
-              <StatRow
-                label="GHL missed / inbound"
-                value={data.communication.ghlMissed}
-                href="/inbox?tab=ghl"
-                tone={data.communication.ghlMissed ? "warn" : "default"}
-              />
             </div>
           </Panel>
         </div>
-
-        {hasPermission(user.role, "MANAGE_OPERATIONS") && (
-          <div className="space-y-4">
-            <GhlSyncPanel canSync />
-            <GhlConversationPullPanel canSync />
-          </div>
-        )}
 
         {data.recentScores.length > 0 && (
           <Panel title="Recent score movement" eyebrow="Credit intelligence" action={<Link href="/credit-pulse" className="text-[0.65rem] uppercase tracking-wider text-[var(--gc-ice)]">Open</Link>}>
@@ -321,7 +257,7 @@ export default async function HomePage() {
                     {c.firstName} {c.lastName}
                   </p>
                   <p className="text-sm text-[var(--gc-muted)]">
-                    {c.grantsClientId} · {clientSourceLabel(c.identifiers)} · {c.nextAction || "Open Client 360"}
+                    {c.grantsClientId} · {c.nextAction || "Open Client 360"}
                   </p>
                 </div>
                 <span className="gc-status gc-status-ice">{c.stage.replaceAll("_", " ")}</span>
@@ -357,7 +293,7 @@ export default async function HomePage() {
                     {c.firstName} {c.lastName}
                   </p>
                   <p className="text-sm text-[var(--gc-muted)]">
-                    {c.grantsClientId} · {clientSourceLabel(c.identifiers)} · {c.nextAction || "Open dossier"}
+                    {c.grantsClientId} · {c.nextAction || "Open dossier"}
                     {c.disputeRounds[0] ? ` · Round ${c.disputeRounds[0].roundNumber}` : ""}
                   </p>
                 </div>
