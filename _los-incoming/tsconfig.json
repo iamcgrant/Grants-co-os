@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@los/*": ["src/los/*"]
+    },
+    "noEmit": true,
+    "isolatedModules": true
+  },
+  "include": ["src", "tests", "drop-in"]
+}

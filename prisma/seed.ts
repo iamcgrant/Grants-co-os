@@ -79,11 +79,16 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.idSequence.deleteMany();
   await prisma.systemEvent.deleteMany();
+  await prisma.losAutomationEvent.deleteMany();
+  await prisma.mortgageApplication.deleteMany();
+  await prisma.lenderOrgSettings.deleteMany();
 
   await prisma.idSequence.createMany({
     data: [
       { name: "grants_client", value: 0 },
       { name: "invoice", value: 1047 },
+      { name: "gc_loan", value: 0 },
+      { name: "payment_request", value: 1000 },
     ],
   });
 
@@ -153,6 +158,23 @@ async function main() {
       },
     },
     include: { billingPolicies: true },
+  });
+
+  await prisma.service.create({
+    data: {
+      code: "MORTGAGE_LOS",
+      name: "Mortgage Loan Origination",
+      description: "Mortgage loan origination module",
+      basePriceCents: 75000,
+    },
+  });
+
+  await prisma.lenderOrgSettings.create({
+    data: {
+      nmlsId: null,
+      companyNmls: null,
+      licensedStates: [],
+    },
   });
 
   const milestonePolicy = service.billingPolicies.find((p) => p.type === "AFTER_SERVICE_MILESTONE")!;

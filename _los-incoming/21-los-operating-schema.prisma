@@ -1,0 +1,319 @@
+// =============================================================================
+// Grants & Co LOS — OPERATING schema (APPEND)
+// Append to prisma/schema.prisma AND prisma/schema.postgres.prisma
+// Do not recreate User, Client, Session, Document, AuditLog, Task.
+// URLA application models stay in 04-prisma-schema.prisma.
+// LoanFile is the operational root. MortgageApplication is the 1003 payload.
+// Money: integer cents. Ratios: integer basis points (3600 = 36.00%).
+// =============================================================================
+
+enum LoanLifecycleState {
+  DRAFT                  // borrower started, not submitted
+  APPLICATION_IN_PROGRESS
+  APPLICATION_SUBMITTED
+  INITIAL_REVIEW         // LO
+  PROCESSING
+  SUBMITTED_TO_UW
+  CONDITIONAL_APPROVAL
+  CONDITIONS_OUTSTANDING
+  CLEAR_TO_CLOSE
+  APPROVED
+  DENIED
+  SUSPENDED
+  WITHDRAWN
+  FUNDED
+  CLOSED_LOAN
+}
+
+enum LoanStaffFunction {
+  LOAN_OFFICER
+  PROCESSOR
+  UNDERWRITER
+  CLOSER
+}
+
+enum ConditionTiming {
+  PRIOR_TO_DOCS      // PTD
+  PRIOR_TO_CLOSING   // PTC
+  PRIOR_TO_FUNDING   // PTF
+  AT_CLOSING
+  POST_CLOSING
+}
+
+enum ConditionStatus {
+  OPEN
+  REQUESTED
+  RECEIVED
+  REVIEWED
+  CLEARED
+  WAIVED
+  REJECTED
+}
+
+enum LosDocumentStatus {
+  REQUESTED
+  UPLOADED
+  IN_REVIEW
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  WAIVED
+}
+
+enum LosDocumentPackage {
+  INITIAL_DISCLOSURES
+  IDENTITY
+  INCOME
+  ASSETS
+  CREDIT
+  PROPERTY_COLLATERAL
+  INSURANCE
+  TITLE
+  UNDERWRITING
+  CLOSING
+  POST_CLOSING
+}
+
+enum UnderwritingDecisionKind {
+  APPROVE
+  APPROVE_WITH_CONDITIONS
+  SUSPEND
+  DENY
+  REFER
+}
+
+enum QualificationGuidelineSet {
+  CONVENTIONAL_PLACEHOLDER
+  FHA_PLACEHOLDER
+  VA_PLACEHOLDER
+  USDA_PLACEHOLDER
+  MANUAL
+}
+
+model LenderOrgSettings {
+  id              String   @id @default(cuid())
+  /// Empty until Charles/counsel provide. Do not invent.
+  companyNmlsId   String?
+  originatorNmlsId String?
+  licensedStatesJson String @default("[]")
+  defaultGuidelineSet QualificationGuidelineSet @default(CONVENTIONAL_PLACEHOLDER)
+  frontDtiLimitBps Int     @default(2800) // 28.00% placeholder, configurable
+  backDtiLimitBps  Int     @default(3600) // 36.00% placeholder, configurable
+  ltvLimitBps      Int     @default(9700) // 97.00% placeholder, configurable
+  updatedAt       DateTime @updatedAt
+}
+
+model LoanFile {
+  id                    String             @id @default(cuid())
+  loanNumber            String             @unique // GC-LN-######
+  applicationId         String             @unique
+  primaryClientId       String
+  coBorrowerClientId    String?
+  state                 LoanLifecycleState @default(DRAFT)
+  purpose               String             // PURCHASE | REFINANCE
+  occupancy             String?
+  propertyType          String?
+  purchasePriceCents    Int?
+  appraisedValueCents   Int?
+  downPaymentCents      Int?
+  loanAmountCents       Int?
+  noteRateBps           Int?               // 650 = 6.50%
+  termMonths            Int?               @default(360)
+  monthlyPitiCents      Int?
+  guidelineSet          QualificationGuidelineSet @default(CONVENTIONAL_PLACEHOLDER)
+  currentQualSnapshotId String?
+  exampleData           Boolean            @default(false)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  assignments           LoanStaffAssignment[]
+  conditions            LoanCondition[]
+  documents             LosDocument[]
+  qualSnapshots         QualificationSnapshot[]
+  decisions             UnderwritingDecision[]
+  actionPlans           BorrowerActionPlan[]
+  domainEvents          LoanDomainEvent[]
+  processingItems       ProcessingChecklistItem[]
+  notes                 LoanFileNote[]
+
+  @@index([state])
+  @@index([primaryClientId])
+  @@index([createdAt])
+}
+
+model LoanStaffAssignment {
+  id            String           @id @default(cuid())
+  loanFileId    String
+  loanFile      LoanFile         @relation(fields: [loanFileId], references: [id], onDelete: Cascade)
+  userId        String
+  function      LoanStaffFunction
+  active        Boolean          @default(true)
+  assignedAt    DateTime         @default(now())
+  @@unique([loanFileId, function, userId])
+  @@index([userId, active])
+}
+
+model LoanCondition {
+  id              String           @id @default(cuid())
+  loanFileId      String
+  loanFile        LoanFile         @relation(fields: [loanFileId], references: [id], onDelete: Cascade)
+  catalogCode     String?
+  title           String
+  timing          ConditionTiming  @default(PRIOR_TO_CLOSING)
+  status          ConditionStatus  @default(OPEN)
+  ownerFunction   LoanStaffFunction @default(PROCESSOR)
+  borrowerAction  Boolean          @default(true)
+  dueAt           DateTime?
+  clearedAt       DateTime?
+  waivedAt        DateTime?
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  documents       LosDocument[]
+  @@index([loanFileId, status])
+}
+
+model ConditionCatalogItem {
+  id          String          @id @default(cuid())
+  code        String          @unique // VOE, VOD, VOI, ID, HOI, APPRAISAL, TITLE, CREDIT_HERO, MYFICO, TAX_TX
+  title       String
+  timing      ConditionTiming
+  package     LosDocumentPackage
+  borrowerAction Boolean      @default(true)
+  active      Boolean         @default(true)
+}
+
+model LosDocument {
+  id              String             @id @default(cuid())
+  loanFileId      String
+  loanFile        LoanFile           @relation(fields: [loanFileId], references: [id], onDelete: Cascade)
+  conditionId     String?
+  condition       LoanCondition?     @relation(fields: [conditionId], references: [id])
+  /// Prefer linking existing Document.storageKey rather than a second blob store.
+  documentId      String?
+  package         LosDocumentPackage
+  typeCode        String             // DL_FRONT, PAYSTUB, W2, BANK_STMT, etc.
+  status          LosDocumentStatus  @default(REQUESTED)
+  requestedFrom   String?            // BORROWER | EMPLOYER | THIRD_PARTY
+  expiresAt       DateTime?
+  reviewedByUserId String?
+  rejectionReason String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  @@index([loanFileId, package, status])
+}
+
+model QualificationSnapshot {
+  id                    String   @id @default(cuid())
+  loanFileId            String
+  loanFile              LoanFile @relation(fields: [loanFileId], references: [id], onDelete: Cascade)
+  guidelineSet          QualificationGuidelineSet
+  grossMonthlyIncomeCents Int
+  otherMonthlyIncomeCents Int
+  totalMonthlyIncomeCents Int
+  housingExpenseCents   Int      // PITI
+  otherDebtCents        Int
+  totalDebtCents        Int
+  frontDtiBps           Int      // housing / gross
+  backDtiBps            Int      // total debt / gross
+  purchasePriceCents    Int
+  appraisedValueCents   Int
+  valueBasisCents       Int      // min(purchase, appraised) if both
+  loanAmountCents       Int
+  ltvBps                Int
+  cltvBps               Int
+  subordinateCents      Int      @default(0)
+  assetVerifiedCents    Int
+  reservesMonthsBps     Int      // 600 = 6.00 months
+  frontLimitBps         Int
+  backLimitBps          Int
+  ltvLimitBps           Int
+  withinFront           Boolean
+  withinBack            Boolean
+  withinLtv             Boolean
+  ruleHitsJson          String   @default("[]")
+  calculatedAt          DateTime @default(now())
+  calculatedBy          String   // SYSTEM | userId
+  @@index([loanFileId, calculatedAt])
+}
+
+model UnderwritingDecision {
+  id              String                   @id @default(cuid())
+  loanFileId      String
+  loanFile        LoanFile                 @relation(fields: [loanFileId], references: [id], onDelete: Cascade)
+  kind            UnderwritingDecisionKind
+  reasonCodesJson String                   @default("[]")
+  narrative       String?
+  /// Production: Charles/OWNER must confirm until licensing gate is explicit.
+  requiresOwnerConfirm Boolean             @default(true)
+  ownerConfirmedAt DateTime?
+  decidedByUserId String
+  decidedAt       DateTime                 @default(now())
+  @@index([loanFileId, decidedAt])
+}
+
+model ProcessingChecklistItem {
+  id           String   @id @default(cuid())
+  loanFileId   String
+  loanFile     LoanFile @relation(fields: [loanFileId], references: [id], onDelete: Cascade)
+  area         String   // INCOME | ASSETS | CREDIT | COLLATERAL | DISCLOSURES | IDENTITY
+  code         String
+  title        String
+  done         Boolean  @default(false)
+  doneAt       DateTime?
+  doneByUserId String?
+  @@unique([loanFileId, area, code])
+}
+
+model BorrowerActionPlan {
+  id          String   @id @default(cuid())
+  loanFileId  String
+  loanFile    LoanFile @relation(fields: [loanFileId], references: [id], onDelete: Cascade)
+  status      String   @default("OPEN")
+  createdAt   DateTime @default(now())
+  items       BorrowerActionItem[]
+}
+
+model BorrowerActionItem {
+  id          String   @id @default(cuid())
+  planId      String
+  plan        BorrowerActionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  conditionId String?
+  title       String
+  detail      String?
+  dueAt       DateTime?
+  doneAt      DateTime?
+}
+
+model LoanFileNote {
+  id           String   @id @default(cuid())
+  loanFileId   String
+  loanFile     LoanFile @relation(fields: [loanFileId], references: [id], onDelete: Cascade)
+  authorUserId String
+  body         String
+  createdAt    DateTime @default(now())
+  @@index([loanFileId, createdAt])
+}
+
+model LoanDomainEvent {
+  id           String   @id @default(cuid())
+  loanFileId   String
+  loanFile     LoanFile @relation(fields: [loanFileId], references: [id], onDelete: Cascade)
+  type         String   // see 26-automation-events.md
+  payloadJson  String
+  actorUserId  String?
+  ghlDispatch  String   @default("STUB") // STUB | QUEUED | SENT | FAILED
+  createdAt    DateTime @default(now())
+  @@index([loanFileId, type, createdAt])
+}
+
+/// Grants intelligence overlay — NOT the origination decision.
+model GrantsIntelligenceSnapshot {
+  id                    String   @id @default(cuid())
+  loanFileId            String
+  creditReadinessScore  Int      // 0-100 internal
+  docsReady             Boolean
+  filePrepNotes         String?
+  recommendationsJson   String   @default("[]")
+  createdAt             DateTime @default(now())
+}
