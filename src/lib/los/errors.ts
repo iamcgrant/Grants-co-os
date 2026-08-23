@@ -37,6 +37,14 @@ export function toHttpResponse(err: unknown): Response {
       { status: e.status },
     );
   }
+  if (err instanceof Error) {
+    if (err.message === "UNAUTHORIZED") {
+      return Response.json({ code: "UNAUTHORIZED", message: err.message }, { status: 401 });
+    }
+    if (err.message === "FORBIDDEN") {
+      return Response.json({ code: "FORBIDDEN", message: err.message }, { status: 403 });
+    }
+  }
   const message = err instanceof Error ? err.message : "INTERNAL";
   return Response.json({ code: "INTERNAL", message }, { status: 500 });
 }

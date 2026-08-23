@@ -1,8 +1,10 @@
+import { requireUser } from "@/lib/auth/session";
 import { getLosService, readJson, readParams, toHttpResponse } from "../../../_handler";
 
 /** POST /api/los/applications/:id/compliance */
 export async function POST(request: Request, ctx: { params: { id: string } | Promise<{ id: string }> }) {
   try {
+    await requireUser();
     const { id } = await readParams(ctx);
     const body = await readJson(request);
     const result = getLosService().acknowledgeCompliance({
