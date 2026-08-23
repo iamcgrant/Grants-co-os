@@ -115,6 +115,11 @@ model User {
   messagesSent       Message[]            @relation("MessageSender")
   teamMentions       MessageMention[]
   disputeCases       DisputeCase[]        @relation("DisputeCaseActor")
+  mortgageAssignments  MortgageStaffAssignment[]
+  mortgageNotes        MortgageApplicationNote[]
+  mortgageAuditEvents  MortgageAuditEvent[] @relation("MortgageAuditActor")
+  underwritingDecisions UnderwritingDecision[] @relation("UwDecisionActor")
+  charlesUwGates       UnderwritingDecision[] @relation("CharlesUwGate")
 }
 
 model Session {
@@ -213,6 +218,8 @@ model Client {
   referredByPartner   Partner?              @relation("PartnerReferredClients", fields: [referredByPartnerId], references: [id], onDelete: SetNull)
   partnerReferrals    PartnerReferral[]
   sbtpgPayouts        SbtpgPayout[]
+  mortgageApplications MortgageApplication[]
+  ssnVaults            SsnVault[]
 
   @@unique([emailNormalized])
   @@index([phoneNormalized])
@@ -654,6 +661,8 @@ model Document {
   updatedAt      DateTime  @updatedAt
 
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  mortgageFiles        MortgageDocumentFile[]
+  loanConditionDocs    LoanCondition[]
 
   @@index([clientId])
   @@index([sourceSystem])
@@ -1648,4 +1657,1045 @@ model SystemHealthCheck {
   updatedAt       DateTime @updatedAt
 
   @@index([status])
+}
+enum MortgagePipelineStage {
+  NEW_APPLICATION
+  LEGAL_AGREEMENT_COMPLETED
+  APPLICATION_STARTED
+  APPLICATION_SUBMITTED
+  AI_REVIEW_COMPLETE
+  DOCUMENTS_NEEDED
+  HUMAN_REVIEW
+  MORTGAGE_READY
+  REFERRED_TO_LENDER
+  CLOSED
+}
+
+enum MortgageQualitativeStatus {
+  ON_TRACK
+  NEEDS_DOCUMENTS
+  IN_REVIEW
+}
+
+enum MortgageApplicationStep {
+  AGREEMENT
+  PROFILE
+  EMPLOYMENT
+  ASSETS
+  LIABILITIES
+  CREDIT
+  PROPERTY
+  DECLARATIONS
+  DOCUMENTS
+  REVIEW
+}
+
+enum BorrowerRoleKind {
+  PRIMARY
+  CO_BORROWER
+}
+
+enum CitizenshipResidency {
+  US_CITIZEN
+  PERMANENT_RESIDENT
+  NON_PERMANENT_RESIDENT
+  OTHER
+}
+
+enum MaritalStatusKind {
+  MARRIED
+  SEPARATED
+  UNMARRIED
+}
+
+enum HousingTenureKind {
+  OWN
+  RENT
+  DO_NOT_CURRENTLY_PAY_RENT
+}
+
+enum EmploymentSituation {
+  CURRENTLY_EMPLOYED
+  NOT_CURRENTLY_EMPLOYED
+  SELF_EMPLOYED
+  RETIRED
+  OTHER
+}
+
+enum EmploymentTypeKind {
+  EMPLOYED_BY_A_BUSINESS
+  SELF_EMPLOYED
+  OTHER
+}
+
+enum AssetAccountType {
+  CHECKING
+  SAVINGS
+  RETIREMENT
+  INVESTMENT
+  OTHER
+}
+
+enum LiabilityTypeKind {
+  AUTO
+  REVOLVING
+  STUDENT
+  INSTALLMENT
+  OTHER
+}
+
+enum LoanPurposeKind {
+  PURCHASE
+  REFINANCE
+}
+
+enum DownPaymentSourceKind {
+  CHECKING_SAVINGS
+  GIFT
+  GRANT
+  SALE_OF_ASSET
+  OTHER
+}
+
+enum PropertyTypeKind {
+  SINGLE_FAMILY
+  CONDO
+  TOWNHOUSE
+  MULTI_UNIT
+  MANUFACTURED
+  OTHER
+}
+
+enum OccupancyKind {
+  PRIMARY_RESIDENCE
+  SECOND_HOME
+  INVESTMENT
+}
+
+enum CreditProgramPath {
+  CREDIT_REPAIR_CREDIT_HERO
+  MYFICO_SCREENSHOT
+}
+
+enum MortgageCreditItemKind {
+  COLLECTION
+  CHARGE_OFF
+  LATE_PAYMENT
+  JUDGMENT
+}
+
+enum MortgageDocumentPackage {
+  IDENTITY
+  INCOME
+  ASSETS
+  CREDIT
+  OTHER
+}
+
+enum YesNoUnknown {
+  YES
+  NO
+  UNKNOWN
+}
+
+model MortgageApplication {
+  id                      String                     @id @default(cuid())
+  /// Existing Client master. ONE HUMAN = ONE Client. Never a second person row.
+  clientId                String
+  coBorrowerClientId      String?
+  serviceCode             String                     @default("MORTGAGE_LOS")
+  pipelineStage           MortgagePipelineStage      @default(NEW_APPLICATION)
+  qualitativeStatus       MortgageQualitativeStatus  @default(IN_REVIEW)
+  currentStep             MortgageApplicationStep    @default(AGREEMENT)
+  submittedAt             DateTime?
+  referredToLenderAt      DateTime?
+  closedAt                DateTime?
+  includeCreditRepair     Boolean?
+  creditProgramPath       CreditProgramPath?
+  interestedInDpa1800     Boolean                    @default(false)
+  /// Client-facing free text. Not a bureau score.
+  creditConcernsText      String?
+  ghlContactId            String?
+  ghlSyncStatus           String                     @default("STUB")
+  disputeFoxClientId      String?
+  legalVersionRequired    String                     @default("2026-08-23-cognito-derived-draft-v1")
+  exampleData             Boolean                    @default(false)
+  createdAt               DateTime                   @default(now())
+  updatedAt               DateTime                   @updatedAt
+
+  client                  Client                     @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  borrowers               MortgageBorrower[]
+  legalAcknowledgements   LegalAcknowledgement[]
+  propertyGoal            PropertyGoal?
+  documents               MortgageDocumentFile[]
+  aiReviews               AiReview[]
+  readinessScores         ReadinessScore[]
+  pipelineEvents          PipelineEvent[]
+  auditEvents             MortgageAuditEvent[]
+  assignments             MortgageStaffAssignment[]
+  notes                   MortgageApplicationNote[]
+  gifts                   MortgageGiftGrant[]
+  otherAssets             MortgageOtherAsset[]
+  realEstateOwned         MortgageReo[]
+  loanFile                LoanFile?
+  originationEvents       LoanStageEvent[]
+  conditions              LoanCondition[]
+  actionPlans             BorrowerActionPlan[]
+  qualificationSnapshots  QualificationSnapshot[]
+  underwritingDecisions   UnderwritingDecision[]
+  appraisalOrders         AppraisalOrder[]
+  processingChecklist     ProcessingChecklistItem[]
+  readinessTrack          GrantsReadinessTrack?
+  sectionStates           ApplicationSectionState[]
+  complianceAcknowledgments ComplianceAcknowledgment[]
+
+  @@index([clientId])
+  @@index([pipelineStage])
+  @@index([qualitativeStatus])
+  @@index([ghlContactId])
+}
+
+/// Encrypted SSN vault. NEVER a plaintext ssn column. Last-4 only in UI.
+model SsnVault {
+  id             String   @id @default(cuid())
+  clientId       String
+  borrowerId     String   @unique
+  ssnCiphertext  Bytes
+  ssnLast4       String
+  ssnKeyVersion  String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  client         Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  borrower       MortgageBorrower @relation(fields: [borrowerId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([ssnLast4])
+}
+
+model MortgageBorrower {
+  id                         String               @id @default(cuid())
+  applicationId              String
+  clientId                   String
+  roleKind                   BorrowerRoleKind     @default(PRIMARY)
+  firstNameOnDl              String
+  middleName                 String?
+  lastNameOnDl               String
+  mobilePhone                String?
+  email                      String?
+  workEmail                  String?
+  dateOfBirth                DateTime?
+  citizenshipOrResidency     CitizenshipResidency?
+  militaryService            YesNoUnknown         @default(UNKNOWN)
+  preferredLanguage          String?
+  maritalStatus              MaritalStatusKind?
+  nonSpousePropertyRights    YesNoUnknown         @default(UNKNOWN)
+  dependentsCount            Int                  @default(0)
+  dependentsAgesJson         String?
+  currentStreet              String?
+  currentLine2               String?
+  currentCity                String?
+  currentState               String?
+  currentZip                 String?
+  mailingSameAsCurrent       Boolean              @default(true)
+  mailingStreet              String?
+  mailingCity                String?
+  mailingState               String?
+  mailingZip                 String?
+  yearsAtAddress             Int?
+  monthsAtAddress            Int?
+  ownRentOrNoRent            HousingTenureKind?
+  hmdaEthnicityJson          String?
+  hmdaRaceJson               String?
+  hmdaGenderJson             String?
+  hmdaDoNotWishToProvide     Boolean              @default(false)
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
+
+  application                MortgageApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  ssnVault                   SsnVault?
+  employments                Employment[]
+  incomeSources              IncomeSource[]
+  assetAccounts              AssetAccount[]
+  liabilities                Liability[]
+  declaration                Declaration?
+  creditItems                MortgageCreditItem[]
+  addressHistory              BorrowerAddressHistory[]
+
+  @@index([applicationId])
+  @@index([clientId])
+  @@index([email])
+}
+
+model LegalAcknowledgement {
+  id                         String   @id @default(cuid())
+  applicationId              String
+  documentVersion            String
+  signedAt                   DateTime
+  ipAddress                  String
+  userAgent                  String
+  signatureNameFirst         String
+  signatureNameLast          String
+  signatureImageKey          String?
+  dateSigned                 DateTime
+  agreeNotNewCredit          Boolean
+  agreeNoLargePurchases      Boolean
+  agreeNoAccountChanges      Boolean
+  understandMayImpactApproval Boolean
+  understandNonrefundable    Boolean
+  understandPaymentCleared   Boolean
+  understandCancelFee1800    Boolean
+  understandNoChangeMind     Boolean
+  interestedInDpa1800        Boolean  @default(false)
+  addressConfidentiality     Boolean
+  creditAuthorization        Boolean
+  informationRelease         Boolean
+  eSignConsent               Boolean
+  agreeAllTermsProceed       Boolean
+  acknowledgedTaylorCarroll  Boolean  @default(true)
+  acknowledgedSeparateLenderIdentity Boolean @default(true)
+  loanAuditLenderRights      Boolean  @default(false)
+  acknowledgedNoGuarantees   Boolean  @default(true)
+  createdAt                  DateTime @default(now())
+
+  application                MortgageApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, signedAt])
+}
+
+/// Named disclosures recorded independently of LegalAcknowledgement.
+/// DPA_SELECTION is stored always and is not a submit blocker.
+enum ComplianceDisclosureType {
+  ACCOUNT_CREATION
+  AGENT_ASSIGNMENT
+  CREDIT_NO_NEW
+  CREDIT_NO_LARGE_PURCHASES
+  CREDIT_NO_ACCOUNT_CHANGES
+  CREDIT_IMPACT
+  PAYMENT_NONREFUNDABLE
+  PAYMENT_CLEARED
+  LOAN_AUDIT_LENDER_RIGHTS
+  E_SIGN_CONSENT
+  CREDIT_AUTHORIZATION
+  INFORMATION_RELEASE
+  CANCEL_FEE
+  NO_CHANGE_MIND
+  NO_GUARANTEES
+  ALL_TERMS_PROCEED
+  DPA_SELECTION
+}
+
+/// Per-disclosure acknowledgement. borrowerId is Client.id (borrower_id) until MortgageBorrower exists.
+model ComplianceAcknowledgment {
+  id                String                     @id @default(cuid())
+  applicationId     String
+  /// Client.id used as borrower_id per product owner; MortgageBorrower may not exist yet.
+  borrowerId        String
+  disclosureType    ComplianceDisclosureType
+  acknowledged      Boolean
+  agreementVersion  String                     @default("2026-08-23-cognito-derived-draft-v1")
+  ipAddress         String?
+  userAgent         String?
+  createdAt         DateTime                   @default(now())
+  application       MortgageApplication        @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, disclosureType])
+  @@index([applicationId])
+  @@index([borrowerId])
+}
+
+model Employment {
+  id                      String               @id @default(cuid())
+  borrowerId              String
+  situation               EmploymentSituation
+  employmentType          EmploymentTypeKind?
+  employerName            String?
+  employerStreet          String?
+  employerCity            String?
+  employerState           String?
+  employerZip             String?
+  employerPhone           String?
+  startDate               DateTime?
+  endDate                 DateTime?          // required when isCurrent=false
+  yearsInLineOfWork       Int?
+  monthsInLineOfWork      Int?
+  relatedPartyEmployment  Boolean              @default(false)
+  jobTitle                String?
+  isCurrent               Boolean              @default(true)
+  monthlyIncomeBeforeTaxesCents Int?
+  hasOtCommissionBonus    Boolean              @default(false)
+  otAmountCents           Int?
+  commissionAmountCents   Int?
+  bonusAmountCents        Int?
+  sortOrder               Int                  @default(0)
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
+  borrower                MortgageBorrower     @relation(fields: [borrowerId], references: [id], onDelete: Cascade)
+  @@index([borrowerId])
+}
+
+model IncomeSource {
+  id                 String           @id @default(cuid())
+  borrowerId         String
+  source             String
+  monthlyAmountCents Int
+  doesNotApply       Boolean          @default(false)
+  createdAt          DateTime         @default(now())
+  borrower           MortgageBorrower @relation(fields: [borrowerId], references: [id], onDelete: Cascade)
+  @@index([borrowerId])
+}
+
+model AssetAccount {
+  id                    String           @id @default(cuid())
+  borrowerId            String
+  institutionName       String
+  accountType           AssetAccountType
+  accountLast4          String
+  estimatedBalanceCents Int
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  borrower              MortgageBorrower @relation(fields: [borrowerId], references: [id], onDelete: Cascade)
+  @@index([borrowerId])
+}
+
+model Liability {
+  id                  String             @id @default(cuid())
+  borrowerId          String
+  type                LiabilityTypeKind
+  monthlyPaymentCents Int
+  unpaidBalanceCents  Int
+  toBePaidOff         Boolean            @default(false)
+  doesNotApply        Boolean            @default(false)
+  creditorName        String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  borrower            MortgageBorrower   @relation(fields: [borrowerId], references: [id], onDelete: Cascade)
+  @@index([borrowerId])
+}
+
+model MortgageGiftGrant {
+  id              String               @id @default(cuid())
+  applicationId   String
+  source          String
+  amountCents     Int
+  doesNotApply    Boolean              @default(false)
+  application     MortgageApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  @@index([applicationId])
+}
+
+model MortgageOtherAsset {
+  id              String               @id @default(cuid())
+  applicationId   String
+  description     String
+  amountCents     Int
+  doesNotApply    Boolean              @default(false)
+  application     MortgageApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  @@index([applicationId])
+}
+
+enum ReoDisposition {
+  RETAIN
+  SELL
+  PENDING_SALE
+}
+
+model MortgageReo {
+  id                        String               @id @default(cuid())
+  applicationId             String
+  ownOtherRealEstate        Boolean              @default(false)
+  street                    String?
+  city                      String?
+  state                     String?
+  zip                       String?
+  propertyType              PropertyTypeKind?
+  occupancy                 OccupancyKind?
+  disposition               ReoDisposition?
+  marketValueCents          Int?
+  mortgageCreditor          String?
+  mortgageBalanceCents      Int?
+  mortgageMonthlyCents      Int?
+  rentalIncomeMonthlyCents  Int?
+  application               MortgageApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  @@index([applicationId])
+}
+
+model MortgageCreditItem {
+  id              String                  @id @default(cuid())
+  borrowerId      String
+  kind            MortgageCreditItemKind
+  creditorName    String?
+  amountCents     Int?
+  notes           String?
+  createdAt       DateTime                @default(now())
+  borrower        MortgageBorrower        @relation(fields: [borrowerId], references: [id], onDelete: Cascade)
+  @@index([borrowerId, kind])
+}
+
+model Declaration {
+  id                         String           @id @default(cuid())
+  borrowerId                 String           @unique
+  intendOccupyPrimary        YesNoUnknown     @default(UNKNOWN)
+  ownershipInterestLast3Years YesNoUnknown    @default(UNKNOWN)
+  sellerAffiliation          YesNoUnknown     @default(UNKNOWN)
+  undisclosedBorrowedFunds   YesNoUnknown     @default(UNKNOWN)
+  otherMortgageApplication   YesNoUnknown     @default(UNKNOWN)
+  newCreditBeforeClosing     YesNoUnknown     @default(UNKNOWN)
+  pacePriorityLien           YesNoUnknown     @default(UNKNOWN)
+  cosignorUndisclosed        YesNoUnknown     @default(UNKNOWN)
+  outstandingJudgments       YesNoUnknown     @default(UNKNOWN)
+  federalDebtDefault         YesNoUnknown     @default(UNKNOWN)
+  lawsuitLiability           YesNoUnknown     @default(UNKNOWN)
+  deedInLieuLast7Years       YesNoUnknown     @default(UNKNOWN)
+  shortSaleLast7Years        YesNoUnknown     @default(UNKNOWN)
+  foreclosureLast7Years      YesNoUnknown     @default(UNKNOWN)
+  bankruptcyLast7Years       YesNoUnknown     @default(UNKNOWN)
+  explanationsJson           String?
+  updatedAt                  DateTime         @updatedAt
+  borrower                   MortgageBorrower @relation(fields: [borrowerId], references: [id], onDelete: Cascade)
+}
+
+model PropertyGoal {
+  id                         String               @id @default(cuid())
+  applicationId              String               @unique
+  loanPurpose                LoanPurposeKind?
+  estimatedPurchasePriceCents Int?
+  downPaymentAmountCents     Int?
+  downPaymentSource          DownPaymentSourceKind?
+  loanAmountNeededCents      Int?
+  propertyType               PropertyTypeKind?
+  occupancy                  OccupancyKind?
+  builderSubdivisionCommunity String?
+  buyerBrokerAgreement       YesNoUnknown         @default(UNKNOWN)
+  specificHomeSelected       YesNoUnknown         @default(UNKNOWN)
+  propertyStreet             String?
+  propertyCity               String?
+  propertyState              String?
+  propertyZip                String?
+  realtorName                String?
+  updatedAt                  DateTime             @updatedAt
+  application                MortgageApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+/// DocumentFile. Wraps existing Document (storageKey, category). Sprint 1: metadata + storageKey.
+/// No object-store adapter exists today. Preview may use local/private blob; Vercel Blob later.
+model MortgageDocumentFile {
+  id              String                 @id @default(cuid())
+  applicationId   String
+  documentId      String?
+  package         MortgageDocumentPackage
+  kind            String
+  originalName    String
+  mimeType        String
+  storageKey      String
+  byteSize        Int
+  uploadedByRole  String
+  createdAt       DateTime               @default(now())
+  application     MortgageApplication    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  document        Document?              @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  @@index([applicationId, package])
+}
+
+model AiReview {
+  id                    String               @id @default(cuid())
+  applicationId         String
+  scoringVersion        String
+  missingDocumentsJson  String
+  missingInformationJson String
+  incomeInconsistenciesJson String
+  employmentConcernsJson String
+  creditRiskFactorsJson String
+  recommendedActionsJson String
+  narrative             String?
+  modelId               String?
+  forbiddenLanguageHit  Boolean              @default(false)
+  createdAt             DateTime             @default(now())
+  application           MortgageApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  scores                ReadinessScore[]
+  @@index([applicationId, createdAt])
+}
+
+/// Internal heuristic 0-100. NEVER a credit score. NEVER a loan approval.
+model ReadinessScore {
+  id              String               @id @default(cuid())
+  applicationId   String
+  aiReviewId      String?
+  score           Int
+  strengthsJson   String
+  risksJson       String
+  action          String
+  visibleToClient Boolean              @default(false)
+  createdAt       DateTime             @default(now())
+  application     MortgageApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  aiReview        AiReview?            @relation(fields: [aiReviewId], references: [id], onDelete: SetNull)
+  @@index([applicationId, createdAt])
+}
+
+model PipelineEvent {
+  id              String                 @id @default(cuid())
+  applicationId   String
+  fromStage       MortgagePipelineStage?
+  toStage         MortgagePipelineStage
+  actorUserId     String?
+  reason          String?
+  createdAt       DateTime               @default(now())
+  application     MortgageApplication    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  @@index([applicationId, createdAt])
+}
+
+/// AuditEvent (mortgage-scoped). Also write a row to existing AuditLog with entityType MORTGAGE_APPLICATION.
+model MortgageAuditEvent {
+  id              String               @id @default(cuid())
+  applicationId   String
+  actorId         String?
+  action          String
+  entityType      String
+  entityId        String?
+  metadataJson    String?
+  ipAddress       String?
+  createdAt       DateTime             @default(now())
+  application     MortgageApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  actor           User?                @relation("MortgageAuditActor", fields: [actorId], references: [id])
+  @@index([applicationId, createdAt])
+  @@index([action])
+}
+
+/// StaffAssignment for a loan file. Distinct from ClientAssignment (credit file owner).
+/// assignmentType is LOS function (LO / Processor / UW), NOT a new User.Role enum value.
+model MortgageStaffAssignment {
+  id              String                   @id @default(cuid())
+  applicationId   String
+  staffId         String
+  assignmentType  LoanStaffAssignmentType
+  roleLabel       String?
+  isPrimary       Boolean                  @default(true)
+  createdAt       DateTime                 @default(now())
+  application     MortgageApplication      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  staff           User                     @relation(fields: [staffId], references: [id], onDelete: Restrict)
+  @@unique([applicationId, staffId, assignmentType])
+  @@index([assignmentType, applicationId])
+}
+
+model MortgageApplicationNote {
+  id              String               @id @default(cuid())
+  applicationId   String
+  authorId        String
+  body            String
+  createdAt       DateTime             @default(now())
+  application     MortgageApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  author          User                 @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  @@index([applicationId, createdAt])
+}
+
+// PATCH snippets for existing models (apply by hand when merging):
+//
+// model Client {
+//   ...
+//   mortgageApplications MortgageApplication[]
+//   ssnVaults            SsnVault[]
+// }
+// model User {
+//   ...
+//   mortgageAssignments   MortgageStaffAssignment[]
+//   mortgageNotes         MortgageApplicationNote[]
+//   mortgageAuditEvents   MortgageAuditEvent[] @relation("MortgageAuditActor")
+//   underwritingDecisions UnderwritingDecision[] @relation("UwDecisionActor")
+//   charlesUwGates        UnderwritingDecision[] @relation("CharlesUwGate")
+// }
+// model Document {
+//   ...
+//   mortgageFiles         MortgageDocumentFile[]
+//   loanConditionDocs     LoanCondition[]
+// }
+
+// =============================================================================
+// LOS ORIGINATION LAYER (append). Do not delete URLA borrower models above.
+// Software is LOS-shaped regardless of licensing. nmlsId stays EMPTY by default.
+// Do NOT invent an NMLS number. Going live as an originator = Charles/counsel gate.
+// =============================================================================
+
+enum LoanOriginationStage {
+  APP_STARTED
+  APP_SUBMITTED
+  INITIAL_REVIEW
+  PROCESSING
+  SUBMITTED_TO_UW
+  CONDITIONAL_APPROVAL
+  CONDITIONS_OUTSTANDING
+  CLEAR_TO_CLOSE
+  APPROVED
+  DENIED
+  WITHDRAWN
+  FUNDED
+  CLOSED
+}
+
+/// LOS function on a loan file. Maps onto existing User.Role; is NOT a new Role enum value.
+enum LoanStaffAssignmentType {
+  LOAN_OFFICER
+  PROCESSOR
+  UNDERWRITER
+}
+
+/// PTD = prior to docs (decision package). PTC = prior to closing. PTF = prior to funding.
+enum ConditionTiming {
+  PTD
+  PTC
+  PTF
+}
+
+enum ConditionStatus {
+  OPEN
+  REQUESTED
+  RECEIVED
+  REVIEWED
+  CLEARED
+  WAIVED
+  REJECTED
+}
+
+enum UnderwritingDecisionKind {
+  CONDITIONAL_APPROVE
+  APPROVE
+  DENY
+  SUSPEND
+}
+
+enum AppraisalOrderStatus {
+  NOT_ORDERED
+  ORDERED
+  SCHEDULED
+  RECEIVED
+  REVIEWED
+  WAIVED
+  CANCELED
+}
+
+/// Guideline *placeholders*. Conventional 28/36 are DEFAULTS Charles can change.
+/// Do not treat a selected set as agency approval or investor sign-off.
+enum GuidelineSetKind {
+  CONVENTIONAL
+  FHA
+  VA
+  USDA
+  PORTFOLIO
+  OTHER
+}
+
+enum LosAutomationEventType {
+  LOAN_APP_STARTED
+  LOAN_APP_SUBMITTED
+  LOAN_STAGE_CHANGED
+  LOAN_ASSIGNED
+  CONDITION_OPENED
+  CONDITION_REQUESTED
+  CONDITION_RECEIVED
+  CONDITION_CLEARED
+  CONDITION_WAIVED
+  CONDITION_REJECTED
+  ACTION_PLAN_UPDATED
+  QUALIFICATION_COMPUTED
+  UW_DECISION_RECORDED
+  UW_PRODUCTION_GATE_PENDING
+  UW_PRODUCTION_GATE_RELEASED
+  DOCUMENT_ATTACHED
+  APPRAISAL_STUB_UPDATED
+  READINESS_TRACK_UPDATED
+  GHL_STUB
+  DISPUTEFOX_STUB
+  DPA_SELECTED
+}
+
+/// Singleton-style org licensing row. Seed EMPTY. Never invent NMLS IDs.
+model LenderOrgSettings {
+  id              String     @id @default(cuid())
+  /// Individual NMLS if/when licensed. Optional. Default null.
+  nmlsId          String?
+  /// Company NMLS if/when licensed. Optional. Default null.
+  companyNmls     String?
+  /// JSON array of US state codes, e.g. []. Empty by default.
+  licensedStates  Json
+  dbaName         String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  loanFiles       LoanFile[]
+}
+
+/// One origination file per MortgageApplication. Ratios stored as bps (28.00% = 2800).
+/// Money stored as integer cents. noteRateBps: 6.500% = 650.
+model LoanFile {
+  id                   String                @id @default(cuid())
+  applicationId        String                @unique
+  /// Internal file number (e.g. GC-LN-000001 via IdSequence). NOT an NMLS id.
+  loanNumber           String                @unique
+  purpose              LoanPurposeKind       @default(PURCHASE)
+  purchasePriceCents   Int?
+  appraisedValueCents  Int?
+  loanAmountCents      Int?
+  noteRateBps          Int?
+  termMonths           Int?
+  occupancy            OccupancyKind?
+  ltvBps               Int?
+  cltvBps              Int?
+  frontDtiBps          Int?
+  backDtiBps           Int?
+  reservesMonths       Int?
+  guidelineSet         GuidelineSetKind      @default(CONVENTIONAL)
+  nmlsConfigId         String?
+  originationStage     LoanOriginationStage  @default(APP_STARTED)
+  /// DPA $1,800 add-on. Amount is 180000 cents when selected; 0 otherwise.
+  dpaSelected          Boolean               @default(false)
+  dpaAmountCents       Int                   @default(0)
+  dpaSelectedAt        DateTime?
+  paymentAcknowledged  Boolean               @default(false)
+  paymentAcknowledgedAt DateTime?
+  agreementVersion     String                @default("2026-08-23-cognito-derived-draft-v1")
+  servicePackageAmountCents Int              @default(0)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  application          MortgageApplication   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  nmlsConfig           LenderOrgSettings?    @relation(fields: [nmlsConfigId], references: [id], onDelete: SetNull)
+
+  @@index([originationStage])
+  @@index([loanNumber])
+  @@index([nmlsConfigId])
+}
+
+model LoanStageEvent {
+  id              String                @id @default(cuid())
+  applicationId   String
+  fromStage       LoanOriginationStage?
+  toStage         LoanOriginationStage
+  actorUserId     String?
+  reason          String?
+  createdAt       DateTime              @default(now())
+  application     MortgageApplication   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  @@index([applicationId, createdAt])
+  @@index([toStage])
+}
+
+/// Seed catalog (VOE, VOD, VOI, tax transcripts, ID, insurance, appraisal, title, HOI,
+/// credit-repair completion, Credit Hero, MyFICO). Codes are stable; labels Charles-editable.
+model ConditionCatalogItem {
+  id              String           @id @default(cuid())
+  code            String           @unique
+  label           String
+  timingDefault   ConditionTiming  @default(PTD)
+  borrowerOwned   Boolean          @default(false)
+  requiresUpload  Boolean          @default(true)
+  processorCanClear Boolean        @default(false)
+  active          Boolean          @default(true)
+  sortOrder       Int              @default(0)
+  conditions      LoanCondition[]
+}
+
+model LoanCondition {
+  id              String                 @id @default(cuid())
+  applicationId   String
+  catalogItemId   String?
+  code            String
+  title           String
+  timing          ConditionTiming        @default(PTD)
+  status          ConditionStatus        @default(OPEN)
+  borrowerOwned   Boolean                @default(false)
+  dueAt           DateTime?
+  requestedAt     DateTime?
+  receivedAt      DateTime?
+  reviewedAt      DateTime?
+  clearedAt       DateTime?
+  waivedAt        DateTime?
+  rejectedAt      DateTime?
+  notes           String?
+  documentId      String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  application     MortgageApplication    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  catalogItem     ConditionCatalogItem?  @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
+  document        Document?              @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  actionPlanItems ActionPlanItem[]
+  @@index([applicationId, status])
+  @@index([applicationId, timing])
+  @@index([borrowerOwned, status])
+}
+
+/// Borrower action plan = the set of OPEN/REQUESTED conditions the borrower must complete.
+model BorrowerActionPlan {
+  id              String               @id @default(cuid())
+  applicationId   String
+  title           String               @default("Borrower action plan")
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  application     MortgageApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  items           ActionPlanItem[]
+  @@index([applicationId])
+}
+
+model ActionPlanItem {
+  id              String              @id @default(cuid())
+  planId          String
+  conditionId     String
+  label           String
+  done            Boolean             @default(false)
+  doneAt          DateTime?
+  plan            BorrowerActionPlan  @relation(fields: [planId], references: [id], onDelete: Cascade)
+  condition       LoanCondition       @relation(fields: [conditionId], references: [id], onDelete: Cascade)
+  @@unique([planId, conditionId])
+}
+
+/// Frozen calc output. NEVER a credit score. NEVER the origination decision by itself.
+/// Ratios in bps. Money in cents. See 16-qualification.md.
+model QualificationSnapshot {
+  id                         String               @id @default(cuid())
+  applicationId              String
+  guidelineSet               GuidelineSetKind
+  monthlyQualifyingIncomeCents Int
+  monthlyHousingExpenseCents Int
+  monthlyTotalDebtCents      Int
+  loanAmountCents            Int
+  purchasePriceCents         Int?
+  appraisedValueCents        Int?
+  subordinateLienCents       Int                 @default(0)
+  liquidAssetCents           Int
+  frontDtiBps                Int
+  backDtiBps                 Int
+  ltvBps                     Int?
+  cltvBps                    Int?
+  reservesMonths             Int?
+  frontLimitBps              Int
+  backLimitBps               Int
+  withinFront                Boolean
+  withinBack                 Boolean
+  inputsHash                 String
+  computedAt                 DateTime            @default(now())
+  application                MortgageApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  @@index([applicationId, computedAt])
+}
+
+/// Software has APPROVE/DENY. Production commit requires Charles until he lifts the gate.
+model UnderwritingDecision {
+  id                      String                    @id @default(cuid())
+  applicationId           String
+  kind                    UnderwritingDecisionKind
+  actorUserId             String
+  rationale               String?
+  productionGateRequired  Boolean                   @default(true)
+  productionReleased      Boolean                   @default(false)
+  charlesApprovedAt       DateTime?
+  charlesApprovedById     String?
+  createdAt               DateTime                  @default(now())
+  application             MortgageApplication       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  actor                   User                      @relation("UwDecisionActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  charlesApprover         User?                     @relation("CharlesUwGate", fields: [charlesApprovedById], references: [id], onDelete: SetNull)
+  @@index([applicationId, createdAt])
+}
+
+/// Stub only in milestone 1. No AMC integration.
+model AppraisalOrder {
+  id              String                @id @default(cuid())
+  applicationId   String
+  status          AppraisalOrderStatus  @default(NOT_ORDERED)
+  orderedAt       DateTime?
+  receivedAt      DateTime?
+  valueCents      Int?
+  notes           String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  application     MortgageApplication   @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  @@index([applicationId, status])
+}
+
+model ProcessingChecklistItem {
+  id              String               @id @default(cuid())
+  applicationId   String
+  code            String
+  label           String
+  done            Boolean              @default(false)
+  doneAt          DateTime?
+  doneById        String?
+  sortOrder       Int                  @default(0)
+  createdAt       DateTime             @default(now())
+  application     MortgageApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  @@unique([applicationId, code])
+  @@index([applicationId, done])
+}
+
+/// Grants proprietary overlay. score 0-100 is INTERNAL, not the origination decision,
+/// not a credit score, not a substitute for QualificationSnapshot.
+model GrantsReadinessTrack {
+  id              String               @id @default(cuid())
+  applicationId   String               @unique
+  creditReady     Boolean              @default(false)
+  docsReady       Boolean              @default(false)
+  prepReady       Boolean              @default(false)
+  score           Int                  @default(0)
+  notes           String?
+  updatedAt       DateTime             @updatedAt
+  application     MortgageApplication  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+}
+
+/// Domain event log for LOS automation. Sprint 1: persist only. No live GHL writes.
+model LosAutomationEvent {
+  id              String                  @id @default(cuid())
+  applicationId   String?
+  type            LosAutomationEventType
+  payloadJson     String
+  status          String                  @default("RECORDED")
+  createdAt       DateTime                @default(now())
+  @@index([type, createdAt])
+  @@index([applicationId, createdAt])
+}
+
+
+enum ApplicationSectionCode {
+  COMPLIANCE
+  BORROWER
+  CO_BORROWER
+  EMPLOYMENT
+  ASSETS
+  LIABILITIES
+  REO
+  LOAN
+  DECLARATIONS
+  DOCUMENTS
+}
+
+enum ApplicationSectionStatus {
+  EMPTY
+  IN_PROGRESS
+  COMPLETE
+  BLOCKED
+}
+
+/// Save/resume. LoanFile.originationStage remains operational truth.
+model ApplicationSectionState {
+  id              String                   @id @default(cuid())
+  applicationId   String
+  /// Empty string for loan-level sections (COMPLIANCE, LOAN, DOCUMENTS).
+  borrowerKey     String                   @default("")
+  section         ApplicationSectionCode
+  status          ApplicationSectionStatus @default(EMPTY)
+  lastSavedAt     DateTime?
+  errorsJson      String                   @default("[]")
+  application     MortgageApplication      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  @@unique([applicationId, borrowerKey, section])
+  @@index([applicationId, status])
+}
+
+/// URLA two-year housing history. Current address: endOn = null.
+model BorrowerAddressHistory {
+  id                 String             @id @default(cuid())
+  borrowerId         String
+  street             String
+  line2              String?
+  city               String
+  state              String
+  zip                String
+  startOn            DateTime
+  endOn              DateTime?
+  housingTenure      HousingTenureKind
+  monthlyRentCents   Int?
+  isMailing          Boolean            @default(false)
+  sortOrder          Int                @default(0)
+  borrower           MortgageBorrower   @relation(fields: [borrowerId], references: [id], onDelete: Cascade)
+  @@index([borrowerId, endOn])
 }
