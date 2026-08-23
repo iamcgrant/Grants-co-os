@@ -663,9 +663,20 @@ model Document {
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
   mortgageFiles        MortgageDocumentFile[]
   loanConditionDocs    LoanCondition[]
+  blob                 DocumentBlob?
 
   @@index([clientId])
   @@index([sourceSystem])
+}
+
+/// Secure document bytes for LOS uploads (Postgres/SQLite). storageKey on Document remains the lookup key.
+model DocumentBlob {
+  id         String   @id @default(cuid())
+  documentId String   @unique
+  bytes      Bytes
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 }
 
 model Task {
@@ -2403,6 +2414,8 @@ enum LosAutomationEventType {
   GHL_STUB
   DISPUTEFOX_STUB
   DPA_SELECTED
+  PAYMENT_REQUESTED
+  PAYMENT_CONFIRMED
 }
 
 /// Singleton-style org licensing row. Seed EMPTY. Never invent NMLS IDs.
@@ -2450,6 +2463,12 @@ model LoanFile {
   paymentAcknowledgedAt DateTime?
   agreementVersion     String                @default("2026-08-23-cognito-derived-draft-v1")
   servicePackageAmountCents Int              @default(0)
+  /// After internal review (Option B): payment request + collected service payment.
+  paymentRequestPublicId     String?
+  servicePaymentTransactionId String?
+  servicePaymentAmountCents  Int?
+  servicePaymentAt           DateTime?
+  serviceWorkflowUnlocked    Boolean           @default(false)
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
 

@@ -113,7 +113,11 @@ export function ApplyPortal() {
     undisclosedBorrowedFunds: "NO",
     newCreditBeforeClosing: "NO",
   });
-  const [docMeta, setDocMeta] = useState({ name: "", kind: "IDENTITY" });
+  const [docMeta, setDocMeta] = useState<{ name: string; kind: string; file: File | null }>({
+    name: "",
+    kind: "IDENTITY",
+    file: null,
+  });
 
   const stepIndex = STEPS.findIndex((s) => s.key === step);
   const progressPct = useMemo(() => Math.round(((stepIndex + 1) / STEPS.length) * 100), [stepIndex]);
@@ -271,21 +275,38 @@ export function ApplyPortal() {
     setError("");
     try {
       const id = await ensureApplication();
-      const res = await fetch(`/api/los/applications/${id}/documents`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          kind: docMeta.kind,
-          originalName: docMeta.name,
-          mimeType: "application/octet-stream",
-          byteSize: 0,
-          package: docMeta.kind === "IDENTITY" ? "IDENTITY" : "OTHER",
-        }),
-      });
+      const displayName = docMeta.name || docMeta.file?.name || "document";
+      let res: Response;
+      if (docMeta.file) {
+        const form = new FormData();
+        form.append("file", docMeta.file);
+        form.append("kind", docMeta.kind);
+        form.append(
+          "package",
+          docMeta.kind === "IDENTITY" ? "IDENTITY" : docMeta.kind === "INCOME" ? "INCOME" : "OTHER",
+        );
+        res = await fetch(`/api/los/applications/${id}/documents`, { method: "POST", body: form });
+      } else {
+        res = await fetch(`/api/los/applications/${id}/documents`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kind: docMeta.kind,
+            originalName: displayName,
+            mimeType: "application/octet-stream",
+            byteSize: 0,
+            package: docMeta.kind === "IDENTITY" ? "IDENTITY" : "OTHER",
+          }),
+        });
+      }
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || data.code || "Upload failed");
-      setMessage("Document recorded. Secure upload connects when storage is configured.");
-      setDocMeta({ name: "", kind: "IDENTITY" });
+      setMessage(
+        data.stored
+          ? "Document uploaded and attached to your loan file."
+          : "Document recorded without file bytes.",
+      );
+      setDocMeta({ name: "", kind: "IDENTITY", file: null });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
     }
@@ -524,16 +545,29 @@ export function ApplyPortal() {
       {step === "DOCUMENTS" && (
         <section className="gc-card space-y-3">
           <h2 className="text-lg">Documents</h2>
-          <p className="text-sm text-[var(--gc-muted)]">Record document metadata now. Secure file upload connects when object storage is configured.</p>
+          <p className="text-sm text-[var(--gc-muted)]">Upload ID, income, or other supporting documents. Files are stored securely with your loan file.</p>
           <form onSubmit={onUploadDocument} className="space-y-3">
-            <input className="gc-input" placeholder="Document name" value={docMeta.name} onChange={(e) => setDocMeta({ ...docMeta, name: e.target.value })} required />
+            <input
+              className="gc-input"
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.heic,.webp"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                setDocMeta((prev) => ({
+                  ...prev,
+                  file,
+                  name: prev.name || file?.name || "",
+                }));
+              }}
+            />
+            <input className="gc-input" placeholder="Document label (optional)" value={docMeta.name} onChange={(e) => setDocMeta({ ...docMeta, name: e.target.value })} />
             <select className="gc-input" value={docMeta.kind} onChange={(e) => setDocMeta({ ...docMeta, kind: e.target.value })}>
               <option value="IDENTITY">Identity</option>
               <option value="INCOME">Income</option>
               <option value="ASSETS">Assets</option>
               <option value="OTHER">Other</option>
             </select>
-            <button type="submit" className="gc-btn-secondary w-full">Record document</button>
+            <button type="submit" className="gc-btn-secondary w-full">Upload document</button>
           </form>
           <button type="button" className="gc-btn-primary w-full" onClick={() => setStep("review")}>Continue to review</button>
         </section>

@@ -16,6 +16,7 @@ import {
   type ComplianceDisclosureType,
 } from "./compliance";
 import { applyDpaSelection } from "./dpa";
+import { getMortgageServiceBaseCents } from "./document-storage";
 import { LosHttpError } from "./errors";
 import { createLoanFile, submitApplication as transitionSubmit, type LoanFileRecord } from "./lifecycle";
 import { calculateQualification, type QualInput, type QualOutput } from "./qualification";
@@ -108,6 +109,7 @@ export class PrismaMortgageLosService {
     const { loanNumber } = await nextLoanNumber();
     const loanDefaults = createLoanFile({ seq: 1, agreementVersion: DEFAULT_AGREEMENT_VERSION });
     loanDefaults.loanNumber = loanNumber;
+    const baseCents = await getMortgageServiceBaseCents();
 
     const application = await prisma.$transaction(async (tx) => {
       const app = await tx.mortgageApplication.create({
@@ -125,7 +127,7 @@ export class PrismaMortgageLosService {
           loanNumber,
           originationStage: "APP_STARTED",
           agreementVersion: DEFAULT_AGREEMENT_VERSION,
-          servicePackageAmountCents: 0,
+          servicePackageAmountCents: baseCents,
           dpaAmountCents: 0,
         },
       });
@@ -194,6 +196,10 @@ export class PrismaMortgageLosService {
     }
 
     const dpaChoice = Boolean(input.dpaSelected);
+    const packageBase =
+      loanRow.servicePackageAmountCents - loanRow.dpaAmountCents > 0
+        ? loanRow.servicePackageAmountCents - loanRow.dpaAmountCents
+        : await getMortgageServiceBaseCents();
     acks = recordAcknowledgment({
       existing: acks,
       type: "DPA_SELECTION",
@@ -209,7 +215,7 @@ export class PrismaMortgageLosService {
     const dpa = applyDpaSelection({
       selected: dpaChoice,
       now,
-      currentPackageCents: loanRow.servicePackageAmountCents - loanRow.dpaAmountCents,
+      currentPackageCents: packageBase,
     });
 
     for (const ack of acks) {

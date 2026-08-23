@@ -88,6 +88,7 @@ async function main() {
       { name: "grants_client", value: 0 },
       { name: "invoice", value: 1047 },
       { name: "gc_loan", value: 0 },
+      { name: "payment_request", value: 1000 },
     ],
   });
 
@@ -164,7 +165,7 @@ async function main() {
       code: "MORTGAGE_LOS",
       name: "Mortgage Loan Origination",
       description: "Mortgage loan origination module",
-      basePriceCents: 0,
+      basePriceCents: 75000,
     },
   });
 

@@ -7,6 +7,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 DOMAIN="${1:-os.grantandconsultants.com}"
+APPLY_DOMAIN="${APPLY_DOMAIN:-apply.grantandconsultants.com}"
 
 if [[ -z "${VERCEL_TOKEN:-}" ]]; then
   echo "ACTION_REQUIRED: set VERCEL_TOKEN, then re-run: npm run domain:configure"
@@ -26,10 +27,18 @@ fi
 echo "Adding domain ${DOMAIN} (idempotent)…"
 npx vercel domains add "$DOMAIN" --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}" 2>&1 || true
 
+echo "Adding apply portal domain ${APPLY_DOMAIN} (idempotent)…"
+npx vercel domains add "$APPLY_DOMAIN" --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}" 2>&1 || true
+
 echo ""
 echo "=== EXACT DNS RECORDS FROM VERCEL (apply at your registrar) ==="
+echo "--- ${DOMAIN} ---"
 npx vercel domains inspect "$DOMAIN" --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}" 2>&1 || \
   npx vercel project inspect --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}" 2>&1 || true
+
+echo ""
+echo "--- ${APPLY_DOMAIN} ---"
+npx vercel domains inspect "$APPLY_DOMAIN" --token "$VERCEL_TOKEN" "${SCOPE_ARGS[@]}" 2>&1 || true
 
 echo ""
 echo "After DNS propagates: curl -fsS https://${DOMAIN}/api/health"
