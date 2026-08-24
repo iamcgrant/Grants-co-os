@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0 --port 3000",
     "build": "node scripts/prisma-generate.mjs && next build",
+    "vercel-build": "bash scripts/vercel-build.sh",
     "start": "next start --hostname 0.0.0.0 --port 3000",
     "lint": "eslint",
     "db:generate": "node scripts/prisma-generate.mjs",
