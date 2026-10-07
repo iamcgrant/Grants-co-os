@@ -1,3 +1,5 @@
+import { GRANT_CO_HOME_URL } from "@/components/apply/apply-navigation";
+
 /**
  * LosBrandHeader — spec component. Do NOT generate a logo. Do NOT invent SVG.
  *
@@ -33,8 +35,14 @@ export function LosBrandHeader() {
       className="los-brand-header"
       data-placements="application-header,disclosures,confirmation,borrower-dashboard"
     >
-      <BrandLogo className="los-brand-header__logo" src="/brand/logo.png" alt="Grants & Co" />
+      <a href={GRANT_CO_HOME_URL} className="los-brand-header__home">
+        <BrandLogo className="los-brand-header__logo" src="/brand/logo.png" alt="Grants & Co" />
+      </a>
       <style>{`
+        .los-brand-header__home {
+          display: inline-block;
+          line-height: 0;
+        }
         .los-brand-header__logo {
           display: block;
           width: 180px;
