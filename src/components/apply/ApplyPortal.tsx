@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { applyBackAction } from "@/components/apply/apply-navigation";
 import {
   DISCLOSURE_COPY,
   REQUIRED_FOR_SUBMIT,
@@ -43,6 +44,40 @@ function dollarsToCents(v: string): number {
 function centsToDollars(cents: number | undefined): string {
   if (!cents) return "";
   return (cents / 100).toFixed(2);
+}
+
+function ApplyBackControl({
+  stepIndex,
+  onPrevious,
+}: {
+  stepIndex: number;
+  onPrevious: () => void;
+}) {
+  const action = applyBackAction(stepIndex);
+  switch (action.type) {
+    case "home":
+      return (
+        <button
+          type="button"
+          className="gc-btn-secondary"
+          onClick={() => {
+            window.location.assign(action.href);
+          }}
+        >
+          {action.label}
+        </button>
+      );
+    case "previous":
+      return (
+        <button type="button" className="gc-btn-secondary" onClick={onPrevious}>
+          {action.label}
+        </button>
+      );
+    default: {
+      const _exhaustive: never = action;
+      return _exhaustive;
+    }
+  }
 }
 
 export function ApplyPortal() {
@@ -313,7 +348,14 @@ export function ApplyPortal() {
   }
 
   if (loading && step === "account") {
-    return <p className="text-[var(--gc-muted)]">Loading…</p>;
+    return (
+      <div className="space-y-6">
+        <p className="text-[var(--gc-muted)]">Loading…</p>
+        <nav className="flex justify-between gap-2 pt-4">
+          <ApplyBackControl stepIndex={0} onPrevious={() => undefined} />
+        </nav>
+      </div>
+    );
   }
 
   return (
@@ -588,7 +630,10 @@ export function ApplyPortal() {
       )}
 
       <nav className="flex justify-between gap-2 pt-4">
-        <button type="button" className="gc-btn-secondary" disabled={stepIndex <= 0} onClick={() => setStep(STEPS[Math.max(0, stepIndex - 1)].key)}>Back</button>
+        <ApplyBackControl
+          stepIndex={stepIndex}
+          onPrevious={() => setStep(STEPS[stepIndex - 1].key)}
+        />
         <button type="button" className="gc-btn-secondary" disabled={stepIndex >= STEPS.length - 1} onClick={() => setStep(STEPS[Math.min(STEPS.length - 1, stepIndex + 1)].key)}>Next</button>
       </nav>
     </div>
