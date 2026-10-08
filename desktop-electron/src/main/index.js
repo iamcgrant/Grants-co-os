@@ -16,6 +16,7 @@ const {
   chromeWebPreferences,
   unprivilegedWebPreferences,
   assertUnprivilegedPrefs,
+  isAllowedVendorPermission,
 } = require("./security");
 const { chromeBounds, vendorBounds } = require("./layout");
 const { attachDownloadHandler } = require("./downloads");
@@ -206,13 +207,17 @@ function preparePartition(desk) {
   if (preparedPartitions.has(desk.partition)) return;
   const ses = session.fromPartition(desk.partition);
   ses.setPermissionRequestHandler((_wc, permission, callback) => {
+    if (isAllowedVendorPermission(permission)) {
+      callback(true);
+      return;
+    }
     callback(false);
     setNotice({
       kind: "warn",
-      message: `Denied “${permission}” on ${desk.title}. This spike does not grant vendor-page permissions.`,
+      message: `Denied “${permission}” on ${desk.title}. This spike allows storage-access only so official desks can keep their own login cookies.`,
     });
   });
-  ses.setPermissionCheckHandler(() => false);
+  ses.setPermissionCheckHandler((_wc, permission) => isAllowedVendorPermission(permission));
   attachDownloadHandler(ses, {
     deskTitle: desk.title,
     getWindow: () => mainWindow,

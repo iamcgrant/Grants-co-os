@@ -5,7 +5,11 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const { DESKS, deskById } = require("../src/main/desks");
-const { unprivilegedWebPreferences, chromeWebPreferences } = require("../src/main/security");
+const {
+  unprivilegedWebPreferences,
+  chromeWebPreferences,
+  isAllowedVendorPermission,
+} = require("../src/main/security");
 
 const EXPECTED = [
   ["os", "https://os.grantandconsultants.com/", "os.grantandconsultants.com"],
@@ -61,6 +65,35 @@ describe("renderer privileges", () => {
   });
 });
 
+describe("vendor permission allowlist", () => {
+  it("allows only storage-access so official desks can keep their own login cookies", () => {
+    assert.equal(isAllowedVendorPermission("storage-access"), true);
+    assert.equal(isAllowedVendorPermission("top-level-storage-access"), true);
+  });
+
+  it("denies camera, microphone, geolocation, notifications, clipboard, midi, and media", () => {
+    for (const permission of [
+      "camera",
+      "microphone",
+      "geolocation",
+      "notifications",
+      "clipboard-sanitized-write",
+      "clipboard-read",
+      "midi",
+      "midiSysex",
+      "media",
+      "display-capture",
+      "fullscreen",
+      "openExternal",
+      "pointerLock",
+      "",
+      undefined,
+    ]) {
+      assert.equal(isAllowedVendorPermission(permission), false, permission);
+    }
+  });
+});
+
 describe("spike source invariants", () => {
   const root = path.join(__dirname, "..");
 
@@ -79,5 +112,9 @@ describe("spike source invariants", () => {
     assert.match(main, /There is no grantscoos/);
     assert.match(main, /WebContentsView/);
     assert.match(main, /unprivilegedWebPreferences/);
+    assert.match(main, /isAllowedVendorPermission/);
+    assert.doesNotMatch(main, /setPermissionCheckHandler\(\(\) => false\)/);
+    assert.doesNotMatch(main, /userAgent|setUserAgent|User-Agent/);
+    assert.doesNotMatch(main, /executeJavaScript|insertCSS|webRequest/);
   });
 });
