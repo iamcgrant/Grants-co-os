@@ -1,0 +1,23 @@
+{
+  "name": "@beeper/platform-imessage",
+  "repository": "https://github.com/beeper/platform-imessage",
+  "license": "MIT",
+  "pinnedRef": "cda1545b87db4aeb2ec266bd8f9f335eec67c323",
+  "releasedTag": "v0.24.4",
+  "releasedTagCommit": "78cd285e30a5afc109102553bbbe17ea80d66d27",
+  "audited": "2026-08-22",
+  "use": "Local Messages.app automation via the Swift CLI (stdio only). Not Beeper cloud, not Matrix, not a public Apple iMessage API.",
+  "forbidden": [
+    "BlueBubbles Private API",
+    "AirMessage cloud",
+    "Beeper cloud/Matrix",
+    "pypush/rustpush",
+    "SIP disable",
+    "Barcelona/IMCore injection",
+    "public relay",
+    "LAN listeners",
+    "reverse tunnels",
+    "Apple ID credential capture",
+    "HTTP/REST/WebSocket/local port APIs"
+  ]
+}

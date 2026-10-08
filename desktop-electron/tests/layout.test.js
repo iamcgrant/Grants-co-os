@@ -9,10 +9,7 @@ describe("chrome layout", () => {
     assert.deepEqual(chromeBounds(1440, 900), { x: 0, y: 0, width: 1440, height: 900 });
     const idle = vendorBounds(1440, 900, false);
     assert.equal(idle.x, CHROME.sidebarWidth);
-    assert.equal(
-      idle.y,
-      CHROME.bannerHeight + CHROME.tabHeight + CHROME.toolbarHeight,
-    );
+    assert.equal(idle.y, CHROME.headerHeight + CHROME.tabHeight);
     assert.equal(idle.width, 1440 - CHROME.sidebarWidth);
     assert.equal(idle.height, 900 - idle.y);
   });

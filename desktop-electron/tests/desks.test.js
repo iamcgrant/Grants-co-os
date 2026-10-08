@@ -61,7 +61,7 @@ describe("renderer privileges", () => {
   });
 });
 
-describe("spike source invariants", () => {
+describe("source invariants", () => {
   const root = path.join(__dirname, "..");
 
   it("does not embed vendor pages in chrome via iframe or webview", () => {
@@ -79,5 +79,11 @@ describe("spike source invariants", () => {
     assert.match(main, /There is no grantscoos/);
     assert.match(main, /WebContentsView/);
     assert.match(main, /unprivilegedWebPreferences/);
+  });
+
+  it("locks persist partitions on vendor desks", () => {
+    for (const desk of DESKS) {
+      assert.equal(desk.kind, "vendor");
+    }
   });
 });
