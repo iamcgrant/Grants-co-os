@@ -5,6 +5,10 @@ const assert = require("node:assert/strict");
 const { CHROME, chromeBounds, vendorBounds } = require("../src/main/layout");
 
 describe("chrome layout", () => {
+  it("does not reserve a banner offset above the vendor view", () => {
+    assert.equal(CHROME.bannerHeight, 0);
+  });
+
   it("keeps chrome full-window and vendors in the remaining rect", () => {
     assert.deepEqual(chromeBounds(1440, 900), { x: 0, y: 0, width: 1440, height: 900 });
     const idle = vendorBounds(1440, 900, false);
