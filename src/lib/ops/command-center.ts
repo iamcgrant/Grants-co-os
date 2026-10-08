@@ -15,6 +15,20 @@ const clientQueueInclude = {
   },
 } as const;
 
+const HIDDEN_HOME_INTEGRATIONS = new Set([
+  "gohighlevel",
+  "ghl",
+  "leadconnector",
+  "disputefox",
+  "sbtpg",
+  "cloud_tax_office",
+]);
+
+/** Integrations that may appear on /home. Vendor desks (GHL, tax) stay off Command Center. */
+export function isCommandCenterHomeIntegration(provider: string) {
+  return !HIDDEN_HOME_INTEGRATIONS.has(provider);
+}
+
 export function clientSourceLabel(identifiers: { provider: string; metadataJson: string | null }[]) {
   const ghl = identifiers.find((i) => i.provider === "GHL");
   if (ghl?.metadataJson?.includes('"source":"ghl_api"')) return "GHL live";
