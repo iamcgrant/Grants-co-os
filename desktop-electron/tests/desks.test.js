@@ -8,7 +8,7 @@ const { DESKS, deskById } = require("../src/main/desks");
 const { unprivilegedWebPreferences, chromeWebPreferences } = require("../src/main/security");
 
 const EXPECTED = [
-  ["os", "https://os.grantandconsultants.com/", "os.grantandconsultants.com"],
+  ["os", "https://os.grantandconsultants.com/login", "os.grantandconsultants.com"],
   ["ghl", "https://app.gohighlevel.com/", "app.gohighlevel.com"],
   ["telegram", "https://web.telegram.org/a/", "web.telegram.org"],
   ["experian", "https://www.experian.com/consumer/upload/", "www.experian.com"],
@@ -79,5 +79,12 @@ describe("spike source invariants", () => {
     assert.match(main, /There is no grantscoos/);
     assert.match(main, /WebContentsView/);
     assert.match(main, /unprivilegedWebPreferences/);
+  });
+
+  it("disables QUIC on darwin only and does not weaken TLS or spoof UA", () => {
+    const main = fs.readFileSync(path.join(root, "src/main/index.js"), "utf8");
+    assert.match(main, /process\.platform === "darwin"[\s\S]*appendSwitch\("disable-quic"\)/);
+    assert.doesNotMatch(main, /ignore-certificate-errors/);
+    assert.doesNotMatch(main, /user-agent|userAgent/i);
   });
 });

@@ -14,7 +14,7 @@ const DESKS = Object.freeze([
   Object.freeze({
     id: "os",
     title: "OS Home",
-    startUrl: "https://os.grantandconsultants.com/",
+    startUrl: "https://os.grantandconsultants.com/login",
     partition: "persist:gc-os",
     allowedHosts: Object.freeze(["os.grantandconsultants.com"]),
   }),
