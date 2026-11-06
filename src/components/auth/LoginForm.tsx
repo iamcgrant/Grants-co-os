@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { pathAfterLogin } from "@/lib/auth/return-to";
 
@@ -93,6 +94,11 @@ export function LoginForm({ returnTo }: { returnTo: string | null }) {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+              <p className="mt-2 text-right text-sm">
+                <Link href="/forgot-password" className="text-[var(--gc-gold)]">
+                  Forgot password?
+                </Link>
+              </p>
             </div>
             <label className="flex items-center gap-3 text-sm text-[var(--gc-muted)] pt-1">
               <input

@@ -11,12 +11,13 @@ fn resolve_app_url() -> String {
 }
 
 fn navigate_main_window(app: &tauri::AppHandle, target: &str) {
+  let Ok(url) = target.parse::<tauri::Url>() else {
+    return;
+  };
   if let Some(window) = app.get_webview_window("main") {
-    let escaped = serde_json::to_string(target).unwrap_or_else(|_| format!("\"{}\"", target));
-    let script = format!(
-      "window.__gcNavigated = true; window.location.replace({escaped});"
-    );
-    let _ = window.eval(&script);
+    // Native navigation. The packaged shell's JavaScript location change is ignored
+    // by the macOS webview, which left "Continue manually" doing nothing.
+    let _ = window.navigate(url);
   }
 }
 
@@ -123,7 +124,13 @@ pub fn run() {
       });
 
       if let Ok(Some(urls)) = app.deep_link().get_current() {
-        handle_deep_link(app.handle(), urls);
+        if urls.is_empty() {
+          navigate_main_window(app.handle(), &resolve_app_url());
+        } else {
+          handle_deep_link(app.handle(), urls);
+        }
+      } else {
+        navigate_main_window(app.handle(), &resolve_app_url());
       }
 
       #[cfg(desktop)]

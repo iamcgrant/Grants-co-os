@@ -97,12 +97,12 @@ function SetPasswordForm() {
             <BrandLogo href={null} size="lg" />
           </div>
 
-          <p className="gc-eyebrow text-center mb-3">Owner access</p>
+          <p className="gc-eyebrow text-center mb-3">Account access</p>
           <h1 className="text-center text-4xl md:text-5xl mb-3">Set your password</h1>
           <p className="text-center text-[var(--gc-muted)] mb-10 text-sm leading-relaxed">
             {firstName
-              ? `Welcome, ${firstName}. Choose a strong password for your Owner account.`
-              : "Choose a strong password for your Owner account."}
+              ? `Welcome, ${firstName}. Choose a strong password for your Grants & Co OS account.`
+              : "Choose a strong password for your Grants & Co OS account."}
           </p>
 
           {checking && (

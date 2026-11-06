@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  verifyPasswordSetupToken,
-} from "@/lib/auth/password-setup";
+import { passwordChangeAllowed, verifyPasswordToken } from "@/lib/auth/password-token";
 import { createSession, hashPassword } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
 import { writeAuditLog } from "@/lib/audit/log";
@@ -23,7 +21,7 @@ const schema = z.object({
 /** Public: validate a first-time password setup token (no secrets returned). */
 export async function GET(req: Request) {
   const token = new URL(req.url).searchParams.get("token") || "";
-  const claims = await verifyPasswordSetupToken(token);
+  const claims = await verifyPasswordToken(token);
   if (!claims) {
     return NextResponse.json({ valid: false, error: "Invalid or expired setup link" }, { status: 400 });
   }
@@ -45,7 +43,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ valid: false, error: "Account not found" }, { status: 404 });
   }
 
-  if (!user.mustChangePassword) {
+  if (!passwordChangeAllowed(claims.purpose, user.mustChangePassword)) {
     return NextResponse.json({
       valid: false,
       error: "Password already set — sign in at /login",
@@ -69,7 +67,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Passwords do not match" }, { status: 400 });
     }
 
-    const claims = await verifyPasswordSetupToken(body.token);
+    const claims = await verifyPasswordToken(body.token);
     if (!claims) {
       return NextResponse.json({ error: "Invalid or expired setup link" }, { status: 400 });
     }
@@ -78,7 +76,7 @@ export async function POST(req: Request) {
     if (!user || !user.isActive || user.email.toLowerCase() !== claims.email) {
       return NextResponse.json({ error: "Account not found" }, { status: 404 });
     }
-    if (!user.mustChangePassword) {
+    if (!passwordChangeAllowed(claims.purpose, user.mustChangePassword)) {
       return NextResponse.json(
         { error: "Password already set — use the login page" },
         { status: 400 },
@@ -92,6 +90,11 @@ export async function POST(req: Request) {
         passwordHash,
         mustChangePassword: false,
       },
+    });
+
+    await prisma.session.updateMany({
+      where: { userId: user.id, revokedAt: null },
+      data: { revokedAt: new Date() },
     });
 
     await createSession(updated.id, {

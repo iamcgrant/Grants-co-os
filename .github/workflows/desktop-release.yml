@@ -67,7 +67,7 @@ jobs:
 
       - name: Prepare shell + platform icons
         env:
-          GC_DESKTOP_URL: https://os.grantsandco.com
+          GC_DESKTOP_URL: https://os.grantandconsultants.com
         run: |
           node scripts/prepare-desktop-shell.mjs
           cd desktop && npx tauri icon src-tauri/icons/icon.png
@@ -129,7 +129,7 @@ jobs:
           body: |
             ## Grants & Co OS desktop ${{ github.ref_name }}
 
-            Native shell around production: https://os.grantsandco.com
+            Native shell around production: https://os.grantandconsultants.com
 
             **Unsigned first release** — macOS Gatekeeper / Windows SmartScreen may warn until signing certificates are configured.
 

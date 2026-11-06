@@ -14,6 +14,10 @@ const iconScript = path.join(root, "scripts/generate-desktop-icons.mjs");
 spawnSync(process.execPath, [iconScript], { stdio: "inherit", cwd: root });
 
 const appUrl = process.env.GC_DESKTOP_URL || "https://os.grantandconsultants.com";
+const logoSource = path.join(root, "public/brand/logo-lockup.png");
+if (fs.existsSync(logoSource)) {
+  fs.copyFileSync(logoSource, path.join(outDir, "logo-lockup.png"));
+}
 
 const html = `<!doctype html>
 <html lang="en">
@@ -79,21 +83,11 @@ const html = `<!doctype html>
         max-width: 26rem;
         animation: rise 0.9s ease-out both;
       }
-      .mark {
-        width: 4.5rem;
-        height: 4.5rem;
+      .lockup {
+        display: block;
+        width: min(18rem, 78vw);
+        height: auto;
         margin: 0 auto 1.5rem;
-        border-radius: 1.1rem;
-        border: 1px solid rgba(245, 184, 42, 0.45);
-        display: grid;
-        place-items: center;
-        background: rgba(22, 22, 26, 0.72);
-        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-      }
-      .mark span {
-        font-size: 2rem;
-        color: var(--gc-gold);
-        line-height: 1;
       }
       .eyebrow {
         margin: 0 0 0.75rem;
@@ -163,86 +157,31 @@ const html = `<!doctype html>
     </div>
     <div class="shell">
       <div class="panel">
-        <div class="mark" aria-hidden="true"><span>G</span></div>
+        <img class="lockup" src="logo-lockup.png" alt="Grant &amp; Co Consultants" />
         <p class="eyebrow">Grants &amp; Co</p>
         <h1>Grants &amp; Co OS</h1>
         <p class="sub">Opening your operating system&hellip;</p>
         <div class="bar" aria-hidden="true"><i></i></div>
         <p class="status" id="status">Connecting</p>
-        <a class="fallback" id="fallback" href="${appUrl}" hidden>Continue manually</a>
+        <a class="fallback" id="fallback" href="${appUrl}">Continue</a>
       </div>
     </div>
     <script>
       (function () {
         var APP_URL = ${JSON.stringify(appUrl)};
-        var MAX_ATTEMPTS = 4;
-        var RETRY_MS = 1800;
-        var navigated = false;
-        var statusEl = document.getElementById("status");
         var offlineBanner = document.getElementById("offline-banner");
-        var fallbackLink = document.getElementById("fallback");
-
-        function setStatus(text) {
-          if (statusEl) statusEl.textContent = text;
-        }
 
         function updateOfflineBanner() {
           if (!offlineBanner) return;
           offlineBanner.hidden = navigator.onLine;
         }
 
-        function showFallback() {
-          if (fallbackLink) fallbackLink.hidden = false;
-          setStatus("Tap continue if loading stalls");
-        }
-
-        function navigate() {
-          if (navigated) return;
-          navigated = true;
-          window.__gcNavigated = true;
-          window.location.replace(APP_URL);
-        }
-
-        function probeReachable() {
-          if (!navigator.onLine) return Promise.resolve(false);
-          return fetch(APP_URL, { method: "HEAD", mode: "no-cors", cache: "no-store" })
-            .then(function () { return true; })
-            .catch(function () { return false; });
-        }
-
-        function attemptLaunch(attempt) {
-          if (navigated) return;
-
-          if (!navigator.onLine) {
-            setStatus("Waiting for network");
-            updateOfflineBanner();
-            setTimeout(function () { attemptLaunch(attempt); }, RETRY_MS);
-            return;
-          }
-
-          updateOfflineBanner();
-          setStatus(attempt > 1 ? "Retrying connection (" + attempt + ")" : "Connecting");
-
-          probeReachable().then(function (reachable) {
-            if (navigated) return;
-            if (reachable || attempt >= MAX_ATTEMPTS) {
-              navigate();
-              return;
-            }
-            setTimeout(function () { attemptLaunch(attempt + 1); }, RETRY_MS);
-          });
-        }
-
-        window.addEventListener("online", function () {
-          updateOfflineBanner();
-          if (!navigated) attemptLaunch(1);
-        });
+        window.addEventListener("online", updateOfflineBanner);
         window.addEventListener("offline", updateOfflineBanner);
-
         window.addEventListener("load", function () {
           updateOfflineBanner();
-          setTimeout(function () { attemptLaunch(1); }, 900);
-          setTimeout(showFallback, 6500);
+          window.__gcNavigated = true;
+          window.location.replace(APP_URL);
         });
       })();
     </script>
