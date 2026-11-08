@@ -75,6 +75,7 @@ jobs:
       - name: Build unsigned bundles
         working-directory: desktop
         # No APPLE_* / WINDOWS_* env — unsigned first release.
+        # In-app updates download the public GitHub release; they do not use a signing secret.
         run: |
           if [ -n "${{ matrix.target }}" ]; then
             npm run tauri -- build --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}

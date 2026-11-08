@@ -1,6 +1,8 @@
 //! Grants & Co OS desktop library entry.
 //! Web application remains canonical; this wrapper provides native windowing + plugins.
 
+mod updates;
+
 use tauri::Manager;
 use tauri_plugin_deep_link::DeepLinkExt;
 
@@ -52,8 +54,9 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
   use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
   let show = MenuItem::with_id(app, "show", "Show Grants & Co OS", true, None::<&str>)?;
+  let update = MenuItem::with_id(app, "update", "Check for Updates", true, None::<&str>)?;
   let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-  let menu = Menu::with_items(app, &[&show, &quit])?;
+  let menu = Menu::with_items(app, &[&show, &update, &quit])?;
 
   let Some(icon) = app.default_window_icon().cloned() else {
     return Ok(());
@@ -70,6 +73,7 @@ fn setup_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
           let _ = window.set_focus();
         }
       }
+      "update" => updates::check_now(app.clone()),
       "quit" => app.exit(0),
       _ => {}
     })
@@ -141,7 +145,10 @@ pub fn run() {
       }
 
       #[cfg(desktop)]
-      setup_tray(app.handle())?;
+      {
+        setup_tray(app.handle())?;
+        updates::start(app.handle());
+      }
 
       Ok(())
     })
