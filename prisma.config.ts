@@ -11,7 +11,9 @@ const isPostgres = url.startsWith("postgres://") || url.startsWith("postgresql:/
 export default defineConfig({
   schema: isPostgres ? "prisma/schema.postgres.prisma" : "prisma/schema.prisma",
   migrations: {
-    path: isPostgres ? "prisma/migrations-postgres" : "prisma/migrations",
+    // Production uses `prisma db push`, not migrate. The postgres-only
+    // folder was never created, and Prisma treats that missing path as ENOENT.
+    path: "prisma/migrations",
   },
   datasource: {
     url: process.env["DATABASE_URL"],
