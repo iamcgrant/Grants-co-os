@@ -13,7 +13,7 @@ describe("stay signed in", () => {
     expect(login).toMatch(/rememberMe: z\.boolean\(\)\.optional\(\)\.default\(true\)/);
     expect(login).toMatch(/rememberMe: body\.rememberMe/);
     const form = fs.readFileSync(path.join(process.cwd(), "src/components/auth/LoginForm.tsx"), "utf8");
-    expect(form).toMatch(/Stay signed in/);
+    expect(form).toMatch(/Remember me and stay signed in/);
     expect(form).toMatch(/rememberMe/);
   });
 

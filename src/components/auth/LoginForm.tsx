@@ -9,14 +9,15 @@ import { pathAfterLogin } from "@/lib/auth/return-to";
 
 export function LoginForm({ returnTo }: { returnTo: string | null }) {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function onSubmit(e: FormEvent) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    const email = String(data.get("username") || "");
+    const password = String(data.get("password") || "");
     setLoading(true);
     setError("");
     try {
@@ -67,47 +68,65 @@ export function LoginForm({ returnTo }: { returnTo: string | null }) {
             Sign in to Grants &amp; Co OS — the operating system for Grants &amp; Co Consultants.
           </p>
 
-          <form onSubmit={onSubmit} className="space-y-4 gc-fade-up-delay">
+          <form
+            onSubmit={onSubmit}
+            method="post"
+            action="/api/auth/login"
+            autoComplete="on"
+            className="space-y-4 gc-fade-up-delay"
+          >
             {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
             <div>
-              <label className="block text-[0.7rem] tracking-[0.2em] uppercase text-[var(--gc-muted)] mb-2">
+              <label
+                htmlFor="username"
+                className="block text-[0.7rem] tracking-[0.2em] uppercase text-[var(--gc-muted)] mb-2"
+              >
                 Email
               </label>
               <input
+                id="username"
                 className="gc-input"
                 type="email"
+                name="username"
                 autoComplete="username"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                enterKeyHint="next"
                 required
               />
             </div>
             <div>
-              <label className="block text-[0.7rem] tracking-[0.2em] uppercase text-[var(--gc-muted)] mb-2">
-                Password
-              </label>
-              <input
-                className="gc-input"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              <p className="mt-2 text-right text-sm">
-                <Link href="/forgot-password" className="text-[var(--gc-gold)]">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <label
+                  htmlFor="password"
+                  className="block text-[0.7rem] tracking-[0.2em] uppercase text-[var(--gc-muted)]"
+                >
+                  Password
+                </label>
+                <Link href="/forgot-password" className="text-sm text-[var(--gc-gold)]">
                   Forgot password?
                 </Link>
-              </p>
+              </div>
+              <input
+                id="password"
+                className="gc-input gc-input-password"
+                type="password"
+                name="password"
+                autoComplete="current-password"
+                enterKeyHint="go"
+                required
+              />
             </div>
             <label className="flex items-center gap-3 text-sm text-[var(--gc-muted)] pt-1">
               <input
                 type="checkbox"
+                name="rememberMe"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
                 className="size-4 accent-[var(--gc-gold)]"
               />
-              Stay signed in
+              Remember me and stay signed in
             </label>
             {error && <p className="text-sm text-[var(--gc-danger)]">{error}</p>}
             <button type="submit" className="gc-btn gc-btn-primary w-full mt-2" disabled={loading}>

@@ -252,6 +252,10 @@ a {
   background: rgba(255, 255, 255, 0.06);
 }
 
+.gc-input-password {
+  padding-right: 2.75rem;
+}
+
 .gc-metric {
   padding: 1.1rem 0;
   border-bottom: 1px solid var(--gc-border);
