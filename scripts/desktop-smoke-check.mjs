@@ -74,6 +74,13 @@ if (conf.build?.frontendDist === "https://os.grantandconsultants.com") {
   fail(`frontendDist is "${conf.build?.frontendDist}", expected the live OS URL`);
 }
 
+const windowUrl = conf.app?.windows?.[0]?.url;
+if (windowUrl === "https://os.grantandconsultants.com/login") {
+  pass("main window opens the live login page directly");
+} else {
+  fail(`main window url is "${windowUrl}", expected the live login page`);
+}
+
 if (String(conf.build?.frontendDist || "").includes("os.grantsandco.com")) {
   fail("desktop build still points at os.grantsandco.com, which has no public DNS");
 }

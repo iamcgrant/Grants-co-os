@@ -7,15 +7,15 @@ export type DesktopDownloadLinks = {
   fromEnv: boolean;
 };
 
-const DEFAULT_RELEASES = "https://github.com/iamcgrant/Grants-co-os/releases/tag/desktop-v0.1.4";
+const DEFAULT_RELEASES = "https://github.com/iamcgrant/Grants-co-os/releases/tag/desktop-v0.1.5";
 
-/** Unsigned desktop-v0.1.4. White rounded Mac icon, blue Grant & Co mark. */
+/** Unsigned desktop-v0.1.5. One page load on startup, white rounded blue icon. */
 const DEFAULT_MAC =
-  "https://github.com/iamcgrant/Grants-co-os/releases/download/desktop-v0.1.4/Grants.Co.OS_0.1.4_aarch64.dmg";
+  "https://github.com/iamcgrant/Grants-co-os/releases/download/desktop-v0.1.5/Grants.Co.OS_0.1.5_aarch64.dmg";
 const DEFAULT_WIN =
-  "https://github.com/iamcgrant/Grants-co-os/releases/download/desktop-v0.1.4/Grants.Co.OS_0.1.4_x64-setup.exe";
+  "https://github.com/iamcgrant/Grants-co-os/releases/download/desktop-v0.1.5/Grants.Co.OS_0.1.5_x64-setup.exe";
 const DEFAULT_LINUX =
-  "https://github.com/iamcgrant/Grants-co-os/releases/download/desktop-v0.1.4/Grants.Co.OS_0.1.4_amd64.AppImage";
+  "https://github.com/iamcgrant/Grants-co-os/releases/download/desktop-v0.1.5/Grants.Co.OS_0.1.5_amd64.AppImage";
 
 function readEnv(name: string): string | null {
   const value = process.env[name]?.trim();
@@ -24,7 +24,7 @@ function readEnv(name: string): string | null {
 
 /**
  * Server-side desktop download configuration (public URLs only — no secrets).
- * Env overrides win; otherwise fall back to the published desktop-v0.1.4 release.
+ * Env overrides win; otherwise fall back to the published desktop-v0.1.5 release.
  */
 export function getDesktopDownloadLinks(): DesktopDownloadLinks {
   const macUrl = readEnv("GC_DESKTOP_MAC_URL") || DEFAULT_MAC;

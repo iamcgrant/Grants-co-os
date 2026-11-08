@@ -123,14 +123,21 @@ pub fn run() {
         handle_deep_link(&handle, event.urls());
       });
 
+      // A normal launch already loads the site from tauri.conf.json.
+      // Calling navigate() again during setup aborts that load on macOS and
+      // leaves the window on about:blank (a white screen) the next time the app opens.
+      // Deep links are the only startup navigation.
       if let Ok(Some(urls)) = app.deep_link().get_current() {
-        if urls.is_empty() {
-          navigate_main_window(app.handle(), &resolve_app_url());
-        } else {
-          handle_deep_link(app.handle(), urls);
+        let links: Vec<tauri::Url> = urls
+          .into_iter()
+          .filter(|url| {
+            let value = url.as_str();
+            value.starts_with("grantscoos://")
+          })
+          .collect();
+        if !links.is_empty() {
+          handle_deep_link(app.handle(), links);
         }
-      } else {
-        navigate_main_window(app.handle(), &resolve_app_url());
       }
 
       #[cfg(desktop)]
