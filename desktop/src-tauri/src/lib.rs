@@ -11,12 +11,13 @@ fn resolve_app_url() -> String {
 }
 
 fn navigate_main_window(app: &tauri::AppHandle, target: &str) {
+  let Ok(url) = target.parse::<tauri::Url>() else {
+    return;
+  };
   if let Some(window) = app.get_webview_window("main") {
-    let escaped = serde_json::to_string(target).unwrap_or_else(|_| format!("\"{}\"", target));
-    let script = format!(
-      "window.__gcNavigated = true; window.location.replace({escaped});"
-    );
-    let _ = window.eval(&script);
+    // Native navigation. The packaged shell's JavaScript location change is ignored
+    // by the macOS webview, which left "Continue manually" doing nothing.
+    let _ = window.navigate(url);
   }
 }
 
@@ -122,8 +123,21 @@ pub fn run() {
         handle_deep_link(&handle, event.urls());
       });
 
+      // A normal launch already loads the site from tauri.conf.json.
+      // Calling navigate() again during setup aborts that load on macOS and
+      // leaves the window on about:blank (a white screen) the next time the app opens.
+      // Deep links are the only startup navigation.
       if let Ok(Some(urls)) = app.deep_link().get_current() {
-        handle_deep_link(app.handle(), urls);
+        let links: Vec<tauri::Url> = urls
+          .into_iter()
+          .filter(|url| {
+            let value = url.as_str();
+            value.starts_with("grantscoos://")
+          })
+          .collect();
+        if !links.is_empty() {
+          handle_deep_link(app.handle(), links);
+        }
       }
 
       #[cfg(desktop)]

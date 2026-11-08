@@ -1,6 +1,6 @@
 {
   "name": "grants-co-os-desktop",
-  "version": "0.1.1",
+  "version": "0.1.5",
   "private": true,
   "description": "Grants & Co OS desktop shell (Tauri) — web app remains canonical",
   "scripts": {

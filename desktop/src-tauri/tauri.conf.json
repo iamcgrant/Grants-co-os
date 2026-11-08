@@ -1,19 +1,21 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Grants & Co OS",
-  "version": "0.1.1",
+  "version": "0.1.5",
   "identifier": "com.grantsandco.os",
   "build": {
-    "frontendDist": "../public-desktop",
-    "devUrl": "http://localhost:3000",
+    "frontendDist": "https://os.grantandconsultants.com",
+    "devUrl": "https://os.grantandconsultants.com",
     "beforeDevCommand": "",
-    "beforeBuildCommand": "node ../scripts/prepare-desktop-shell.mjs"
+    "beforeBuildCommand": ""
   },
   "app": {
     "windows": [
       {
         "label": "main",
         "title": "Grants & Co OS",
+        "url": "https://os.grantandconsultants.com/login",
+        "backgroundColor": "#16161a",
         "width": 1280,
         "height": 840,
         "minWidth": 980,

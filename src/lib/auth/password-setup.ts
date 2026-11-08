@@ -1,20 +1,24 @@
 import { randomBytes } from "node:crypto";
-import { SignJWT, jwtVerify } from "jose";
 import { hashPassword } from "@/lib/auth/session";
+import {
+  SETUP_PURPOSE,
+  createPasswordToken,
+  verifyPasswordToken,
+  type PasswordTokenClaims,
+} from "@/lib/auth/password-token";
 import { prisma } from "@/lib/db/prisma";
 
-const SETUP_PURPOSE = "owner_password_setup";
-const SETUP_HOURS = 24;
+export {
+  RESET_PURPOSE,
+  SETUP_PURPOSE,
+  buildSetPasswordUrl,
+  createPasswordToken,
+  passwordChangeAllowed,
+  verifyPasswordToken,
+} from "@/lib/auth/password-token";
 
-function getSecret() {
-  const secret = process.env.AUTH_SECRET || "grants-co-dev-secret-change-me";
-  return new TextEncoder().encode(secret);
-}
-
-export type PasswordSetupClaims = {
+export type PasswordSetupClaims = PasswordTokenClaims & {
   purpose: typeof SETUP_PURPOSE;
-  uid: string;
-  email: string;
 };
 
 /** Create a single-use-style setup JWT (24h). Token itself is the capability. */
@@ -22,35 +26,19 @@ export async function createPasswordSetupToken(input: {
   userId: string;
   email: string;
 }): Promise<{ token: string; expiresAt: Date }> {
-  const expiresAt = new Date(Date.now() + SETUP_HOURS * 60 * 60 * 1000);
-  const token = await new SignJWT({
-    purpose: SETUP_PURPOSE,
-    uid: input.userId,
-    email: input.email.toLowerCase(),
-  })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime(expiresAt)
-    .sign(getSecret());
-
-  return { token, expiresAt };
+  return createPasswordToken({ ...input, purpose: SETUP_PURPOSE });
 }
 
 export async function verifyPasswordSetupToken(
   token: string,
 ): Promise<PasswordSetupClaims | null> {
-  try {
-    const { payload } = await jwtVerify(token, getSecret());
-    if (payload.purpose !== SETUP_PURPOSE) return null;
-    if (typeof payload.uid !== "string" || typeof payload.email !== "string") return null;
-    return {
-      purpose: SETUP_PURPOSE,
-      uid: payload.uid,
-      email: payload.email.toLowerCase(),
-    };
-  } catch {
-    return null;
-  }
+  const claims = await verifyPasswordToken(token);
+  if (!claims || claims.purpose !== SETUP_PURPOSE) return null;
+  return {
+    purpose: SETUP_PURPOSE,
+    uid: claims.uid,
+    email: claims.email,
+  };
 }
 
 /**
@@ -114,7 +102,3 @@ export async function ensureOwnerForFirstTimeSetup(input?: {
   });
 }
 
-export function buildSetPasswordUrl(baseUrl: string, token: string): string {
-  const base = baseUrl.replace(/\/$/, "");
-  return `${base}/set-password?token=${encodeURIComponent(token)}`;
-}

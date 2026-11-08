@@ -68,6 +68,23 @@ if (conf.identifier === "com.grantsandco.os") {
   fail(`identifier is "${conf.identifier}", expected com.grantsandco.os`);
 }
 
+if (conf.build?.frontendDist === "https://os.grantandconsultants.com") {
+  pass("desktop window loads the live operating system");
+} else {
+  fail(`frontendDist is "${conf.build?.frontendDist}", expected the live OS URL`);
+}
+
+const windowUrl = conf.app?.windows?.[0]?.url;
+if (windowUrl === "https://os.grantandconsultants.com/login") {
+  pass("main window opens the live login page directly");
+} else {
+  fail(`main window url is "${windowUrl}", expected the live login page`);
+}
+
+if (String(conf.build?.frontendDist || "").includes("os.grantsandco.com")) {
+  fail("desktop build still points at os.grantsandco.com, which has no public DNS");
+}
+
 const requiredTargets = ["dmg", "app", "nsis", "msi", "appimage", "deb"];
 const targets = conf.bundle?.targets ?? [];
 for (const target of requiredTargets) {
@@ -113,6 +130,11 @@ if (fs.existsSync(shellHtml)) {
     pass("splash shell includes offline banner");
   } else {
     fail("splash shell is missing offline banner");
+  }
+  if (html.includes("logo-lockup.png") && !html.includes(">G<")) {
+    pass("splash shell uses the Grant & Co lockup");
+  } else {
+    fail("splash shell is still using a placeholder mark");
   }
 } else {
   fail("desktop/public-desktop/index.html was not generated");
