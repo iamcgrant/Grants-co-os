@@ -88,7 +88,7 @@ Every OS and vendor `WebContentsView`:
 - Persistent `partition` per desk
 - Exact hostname allowlist (no wildcards, no suffix match)
 - Unknown top-level redirects / popups: block in the view, or open https in the system browser and tell the user to return
-- Permission requests denied
+- Permission requests: `storage-access` and `top-level-storage-access` allowed so official desks can keep their own login cookies; all others denied (camera, microphone, geolocation, notifications, clipboard, midi, media, …)
 - Downloads: confirm, choose a path, show completion / failure
 - `<webview>` attach is rejected
 
@@ -115,7 +115,7 @@ The chrome view paints the sidebar and toolbar. Each desk view is positioned in 
 
 ## Tests that exist here
 
-`npm test` checks allowlist exact-match rules, the locked official URLs, sandbox prefs, and that chrome HTML does not iframe the live OS or vendors.
+`npm test` checks allowlist exact-match rules, the locked official URLs, sandbox prefs, that only storage-access permissions are allowed, and that chrome HTML does not iframe the live OS or vendors.
 
 Those tests do **not** prove any provider login works.
 

@@ -46,8 +46,23 @@ function assertUnprivilegedPrefs(prefs) {
   }
 }
 
+/**
+ * Isolated partitions may request Storage Access so a vendor page can keep
+ * its own first-party login cookies. Camera, mic, geo, notifications, MIDI,
+ * media, clipboard, and every other permission stay denied.
+ */
+const ALLOWED_VENDOR_PERMISSIONS = new Set([
+  "storage-access",
+  "top-level-storage-access",
+]);
+
+function isAllowedVendorPermission(permission) {
+  return ALLOWED_VENDOR_PERMISSIONS.has(permission);
+}
+
 module.exports = {
   unprivilegedWebPreferences,
   chromeWebPreferences,
   assertUnprivilegedPrefs,
+  isAllowedVendorPermission,
 };
