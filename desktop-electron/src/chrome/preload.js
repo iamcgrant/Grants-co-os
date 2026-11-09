@@ -8,11 +8,13 @@ const { contextBridge, ipcRenderer } = require("electron");
  */
 contextBridge.exposeInMainWorld("spikeChrome", {
   getState: () => ipcRenderer.invoke("chrome:get-state"),
+  getBrand: () => ipcRenderer.invoke("chrome:get-brand"),
   selectDesk: (id) => ipcRenderer.invoke("chrome:select-desk", id),
   nav: (action) => ipcRenderer.invoke("chrome:nav", action),
   closeDesk: (id) => ipcRenderer.invoke("chrome:close", id),
   clearSiteData: (id) => ipcRenderer.invoke("chrome:clear", id),
   openInBrowser: (id) => ipcRenderer.invoke("chrome:open-browser", id),
+  openAbout: () => ipcRenderer.invoke("chrome:open-about"),
   dismissNotice: () => ipcRenderer.invoke("chrome:dismiss-notice"),
   onState: (callback) => {
     const listener = (_event, state) => {
