@@ -72,6 +72,26 @@ describe("spike source invariants", () => {
     assert.doesNotMatch(html, /gohighlevel|telegram\.org|experian|equifax|disputeprocess|cloudtaxoffice/i);
   });
 
+  it("titles chrome Grant & Co OS and drops prototype copy", () => {
+    const html = fs.readFileSync(path.join(root, "src/chrome/index.html"), "utf8");
+    const main = fs.readFileSync(path.join(root, "src/main/index.js"), "utf8");
+    assert.match(html, /<title>Grant &amp; Co OS<\/title>/);
+    assert.match(main, /title: "Grant & Co OS"/);
+    assert.doesNotMatch(html, /Electron spike|OS spike|DISPOSABLE|feasibility|Local chrome only/i);
+    assert.doesNotMatch(main, /Electron spike|this spike|This spike/);
+    assert.doesNotMatch(html, /id="url-bar"|id="btn-close"|id="btn-forward"/);
+    assert.doesNotMatch(html, />Back<|>Reload<|>Close</);
+  });
+
+  it("ships local desk monograms and does not fetch remote chrome images", () => {
+    const chromeJs = fs.readFileSync(path.join(root, "src/chrome/chrome.js"), "utf8");
+    assert.doesNotMatch(chromeJs, /https?:\/\//);
+    for (const id of EXPECTED.map((row) => row[0])) {
+      const icon = path.join(root, "src/chrome/icons", `${id}.svg`);
+      assert.ok(fs.existsSync(icon), icon);
+    }
+  });
+
   it("does not implement a grantscoos return or cookie export", () => {
     const main = fs.readFileSync(path.join(root, "src/main/index.js"), "utf8");
     assert.doesNotMatch(main, /setAsDefaultProtocolClient|registerStringProtocol|registerHttpProtocol|registerSchemesAsPrivileged/);
